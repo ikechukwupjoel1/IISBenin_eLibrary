@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Search, Edit2, Trash2, X, History, Eye, EyeOff, KeyRound, Printer } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, History, KeyRound, Printer } from 'lucide-react';
 import { supabase, type Student, type BorrowRecord, type Book } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
@@ -26,8 +26,6 @@ export function StudentManagement() {
   const [formData, setFormData] = useState({
     name: '',
     grade_level: '',
-    admission_number: '',
-    date_of_birth: '',
   });
 
   useEffect(() => {
@@ -48,7 +46,7 @@ export function StudentManagement() {
   const filteredStudents = students.filter((student) =>
     student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.grade_level.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.admission_number.toLowerCase().includes(searchTerm.toLowerCase())
+    (student.enrollment_id && student.enrollment_id.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const generateEnrollmentId = () => {
@@ -73,8 +71,6 @@ export function StudentManagement() {
         .update({
           name: formData.name,
           grade_level: formData.grade_level,
-          admission_number: formData.admission_number,
-          date_of_birth: formData.date_of_birth || null,
         })
         .eq('id', editingStudent.id);
 
@@ -133,7 +129,7 @@ export function StudentManagement() {
 
         loadStudents();
         closeModal();
-      } catch (error) {
+      } catch (error: any) {
         alert('Error creating student: ' + error.message);
       }
     }
@@ -141,13 +137,6 @@ export function StudentManagement() {
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this student? This will permanently remove their account.')) {
-      // Get the auth user ID before deletion
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('id, email')
-        .eq('student_id', id)
-        .maybeSingle();
-
       // Delete the student (CASCADE will delete user_profile too)
       const { error } = await supabase
         .from('students')
@@ -190,8 +179,6 @@ export function StudentManagement() {
       setFormData({
         name: student.name,
         grade_level: student.grade_level,
-        admission_number: student.admission_number,
-        date_of_birth: student.date_of_birth || '',
       });
     }
     setShowModal(true);
@@ -203,8 +190,6 @@ export function StudentManagement() {
     setFormData({
       name: '',
       grade_level: '',
-      admission_number: '',
-      date_of_birth: '',
     });
   };
 
@@ -409,7 +394,7 @@ export function StudentManagement() {
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
         <input
           type="text"
-          placeholder="Search by name, grade, or admission number..."
+          placeholder="Search by name, grade, or enrollment ID..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -423,7 +408,6 @@ export function StudentManagement() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Admission Number</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Enrollment ID</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
@@ -433,7 +417,6 @@ export function StudentManagement() {
                 <tr key={student.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">{student.name}</td>
                   <td className="px-6 py-4 text-sm text-gray-700">{student.grade_level}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{student.admission_number}</td>
                   <td className="px-6 py-4 text-sm text-gray-700 font-mono">{student.enrollment_id || '-'}</td>
                   <td className="px-6 py-4 text-sm">
                     <div className="flex gap-2">
@@ -507,27 +490,6 @@ export function StudentManagement() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="e.g., Grade 5A"
                   required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Admission Number</label>
-                <input
-                  type="text"
-                  value={formData.admission_number}
-                  onChange={(e) => setFormData({ ...formData, admission_number: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
-                <input
-                  type="date"
-                  value={formData.date_of_birth}
-                  onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 

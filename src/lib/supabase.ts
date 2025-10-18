@@ -19,9 +19,10 @@ export type Book = {
 export type Student = {
   id: string;
   name: string;
-  grade: string;
-  admission_number: string;
-  date_of_birth?: string;
+  email?: string;
+  phone_number?: string;
+  grade_level: string;
+  enrollment_id: string;
   created_at: string;
 };
 
