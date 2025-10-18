@@ -27,6 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const loadUserProfile = async (userId: string) => {
     const { data, error } = await supabase
@@ -60,6 +61,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         const userProfile = await loadUserProfile(session.user.id);
+        if (!userProfile) {
+          setAuthError('Failed to load user profile. Please contact admin.');
+        }
         setProfile(userProfile);
       }
       setLoading(false);
@@ -70,6 +74,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         if (session?.user) {
           const userProfile = await loadUserProfile(session.user.id);
+          if (!userProfile) {
+            setAuthError('Failed to load user profile. Please contact admin.');
+          }
           setProfile(userProfile);
         } else {
           setProfile(null);
@@ -82,13 +89,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (identifier: string, password: string, role?: 'librarian' | 'staff' | 'student') => {
     if (role === 'librarian') {
+      // Normalize email to lowercase and trim
+      const email = identifier.toLowerCase().trim();
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: identifier,
+        email,
         password
       });
 
       if (error) {
-        await logLogin(identifier, null, false);
+        await logLogin(email, null, false);
+        setAuthError('Invalid email or password');
         throw new Error('Invalid email or password');
       }
 
@@ -96,11 +106,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userProfile = await loadUserProfile(data.user.id);
         if (!userProfile || userProfile.role !== 'librarian') {
           await supabase.auth.signOut();
-          await logLogin(identifier, data.user.id, false);
+          await logLogin(email, data.user.id, false);
+          setAuthError('Access denied. Not a librarian account.');
           throw new Error('Access denied. Not a librarian account.');
         }
-        await logLogin(userProfile.enrollment_id || identifier, data.user.id, true);
+        await logLogin(userProfile.enrollment_id || email, data.user.id, true);
         setProfile(userProfile);
+        setAuthError(null);
       }
     } else if (role === 'staff' || role === 'student') {
       const tableName = role === 'staff' ? 'staff' : 'students';
@@ -176,6 +188,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut }}>
+      {authError && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', background: '#fee', color: '#900', zIndex: 9999, padding: '1em', textAlign: 'center' }}>
+          {authError}
+        </div>
+      )}
       {children}
     </AuthContext.Provider>
   );

@@ -13,9 +13,10 @@ export function LibrarianSetup() {
     setError('');
 
     try {
-      // Sign up the librarian
+      // Sign up the librarian (normalize email to lowercase)
+      const email = 'iksotech@gmail.com';
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: 'Iksotech@gmail.com',
+        email,
         password: '@ICTAdmin',
         options: {
           data: {
@@ -32,7 +33,7 @@ export function LibrarianSetup() {
           .from('user_profiles')
           .insert({
             id: authData.user.id,
-            email: 'Iksotech@gmail.com',
+            email,
             full_name: 'ICT Administrator',
             role: 'librarian'
           });
