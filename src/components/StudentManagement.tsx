@@ -26,6 +26,7 @@ export function StudentManagement() {
   const [formData, setFormData] = useState({
     name: '',
     grade_level: '',
+    parent_email: '',
   });
 
   useEffect(() => {
@@ -81,9 +82,9 @@ export function StudentManagement() {
         alert('Error updating student: ' + error.message);
       }
     } else {
-      const enrollmentId = generateEnrollmentId();
-      const password = generatePassword();
-      const email = `${enrollmentId.toLowerCase()}@iisbenin.edu`;
+  const enrollmentId = generateEnrollmentId();
+  const password = generatePassword();
+  const email = formData.parent_email.trim().toLowerCase();
 
       // Use Edge Function to create user without affecting current session
       const { data: { session } } = await supabase.auth.getSession();
@@ -104,12 +105,13 @@ export function StudentManagement() {
             'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({
-            email,
+            email, // parent email
             password,
             full_name: formData.name,
             role: 'student',
             enrollment_id: enrollmentId,
             grade_level: formData.grade_level,
+            parent_email: email, // store parent email if needed
             phone_number: null,
           }),
         });
@@ -179,6 +181,7 @@ export function StudentManagement() {
       setFormData({
         name: student.name,
         grade_level: student.grade_level,
+        parent_email: '', // Always reset parent_email for edit
       });
     }
     setShowModal(true);
@@ -190,6 +193,7 @@ export function StudentManagement() {
     setFormData({
       name: '',
       grade_level: '',
+      parent_email: '',
     });
   };
 
@@ -489,6 +493,18 @@ export function StudentManagement() {
                   onChange={(e) => setFormData({ ...formData, grade_level: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="e.g., Grade 5A"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Parent Email</label>
+                <input
+                  type="email"
+                  value={formData.parent_email}
+                  onChange={(e) => setFormData({ ...formData, parent_email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter parent's email address"
                   required
                 />
               </div>
