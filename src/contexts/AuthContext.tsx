@@ -128,11 +128,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Invalid enrollment ID');
       }
 
-      const { data: profileData, error: profileError } = await supabase
+      // First, try a direct lookup by enrollment_id (most reliable pre-auth)
+      let { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
-        .or(`student_id.eq.${record.id},staff_id.eq.${record.id}`)
+        .eq('enrollment_id', identifier)
         .maybeSingle();
+
+      // Fallback 1: If not found, try by role-specific foreign key
+      if ((!profileData || profileError) && role === 'student') {
+        const { data: fallbackProfile, error: fallbackError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('student_id', record.id)
+          .maybeSingle();
+        profileData = fallbackProfile ?? profileData;
+        profileError = fallbackError ?? profileError;
+      }
+
+      if ((!profileData || profileError) && role === 'staff') {
+        const { data: fallbackProfile, error: fallbackError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('staff_id', record.id)
+          .maybeSingle();
+        profileData = fallbackProfile ?? profileData;
+        profileError = fallbackError ?? profileError;
+      }
 
       if (profileError || !profileData) {
         await logLogin(identifier, null, false);
