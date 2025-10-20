@@ -39,15 +39,6 @@ Deno.serve(async (req: Request) => {
     // For students, use parent_email for auth, otherwise use email
     const authEmail = role === 'student' ? (parent_email || email) : email;
 
-    // Check if user already exists
-    const { data: existingUser } = await supabaseAdmin.auth.admin.getUserByEmail(authEmail);
-    if (existingUser.user) {
-      return new Response(
-        JSON.stringify({ error: 'User with this email already exists' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // Create auth user using admin client (doesn't affect current session)
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: authEmail,
@@ -58,6 +49,22 @@ Deno.serve(async (req: Request) => {
     if (authError || !authData.user) {
       return new Response(
         JSON.stringify({ error: authError?.message || 'Failed to create user' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if user profile already exists (shouldn't happen with new auth user)
+    const { data: existingProfile } = await supabaseAdmin
+      .from('user_profiles')
+      .select('id')
+      .eq('id', authData.user.id)
+      .maybeSingle();
+
+    if (existingProfile) {
+      // Cleanup: delete the auth user
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      return new Response(
+        JSON.stringify({ error: 'User profile already exists for this user' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
