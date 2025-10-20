@@ -53,22 +53,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Check if user profile already exists (shouldn't happen with new auth user)
-    const { data: existingProfile } = await supabaseAdmin
-      .from('user_profiles')
-      .select('id')
-      .eq('id', authData.user.id)
-      .maybeSingle();
-
-    if (existingProfile) {
-      // Cleanup: delete the auth user
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-      return new Response(
-        JSON.stringify({ error: 'User profile already exists for this user' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // Create student or staff record
     let recordId: string;
     if (role === 'student') {
