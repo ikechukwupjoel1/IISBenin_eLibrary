@@ -132,7 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
-        .eq('enrollment_id', identifier)
+        .ilike('enrollment_id', identifier.trim())
         .maybeSingle();
 
       // Fallback 1: If not found, try by role-specific foreign key
