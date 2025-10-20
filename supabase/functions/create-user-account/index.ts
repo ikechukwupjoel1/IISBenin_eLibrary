@@ -36,21 +36,25 @@ Deno.serve(async (req: Request) => {
 
     const { email, password, full_name, role, enrollment_id, grade_level, phone_number, parent_email } = await req.json();
 
-    // For students, use unique constructed email, otherwise use email
-    const authEmail = role === 'student' ? `${crypto.randomUUID()}@student.iisbenin.edu` : email;
+    // For students, don't create auth user, for others use email
+    const authEmail = role === 'student' ? null : email;
+    let authUserId = null;
 
-    // Create auth user using admin client (doesn't affect current session)
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: authEmail,
-      password,
-      email_confirm: true,
-    });
+    if (role !== 'student') {
+      // Create auth user using admin client (doesn't affect current session)
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: authEmail,
+        password,
+        email_confirm: true,
+      });
 
-    if (authError || !authData.user) {
-      return new Response(
-        JSON.stringify({ error: authError?.message || 'Failed to create user' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (authError || !authData.user) {
+        return new Response(
+          JSON.stringify({ error: authError?.message || 'Failed to create user' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      authUserId = authData.user.id;
     }
 
     // Create student or staff record
@@ -58,7 +62,7 @@ Deno.serve(async (req: Request) => {
     if (role === 'student') {
       const { data: studentIdResult, error: studentError } = await supabaseAdmin.rpc('create_student_member', {
         p_name: full_name,
-        p_email: parent_email || authEmail,
+        p_email: parent_email || null,
         p_phone_number: phone_number || null,
         p_grade_level: grade_level,
         p_enrollment_id: enrollment_id,
@@ -67,8 +71,6 @@ Deno.serve(async (req: Request) => {
       });
 
       if (studentError) {
-        // Cleanup: delete the auth user
-        await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
         return new Response(
           JSON.stringify({ error: studentError.message }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -87,7 +89,7 @@ Deno.serve(async (req: Request) => {
 
       if (staffError) {
         // Cleanup: delete the auth user
-        await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+        await supabaseAdmin.auth.admin.deleteUser(authUserId);
         return new Response(
           JSON.stringify({ error: staffError.message }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -95,7 +97,9 @@ Deno.serve(async (req: Request) => {
       }
       recordId = staffIdResult;
     } else {
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      if (authUserId) {
+        await supabaseAdmin.auth.admin.deleteUser(authUserId);
+      }
       return new Response(
         JSON.stringify({ error: 'Invalid role' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -103,12 +107,14 @@ Deno.serve(async (req: Request) => {
     }
 
     // Create user profile using admin client to bypass RLS
+    const profileId = authUserId || crypto.randomUUID();
     const profileData: any = {
-      id: authData.user.id,
+      id: profileId,
       email: authEmail,
       full_name,
       role,
       enrollment_id,
+      password_hash: role === 'student' ? password : null, // Store password for students
     };
 
     if (role === 'student') {
@@ -123,8 +129,10 @@ Deno.serve(async (req: Request) => {
       .insert(profileData);
 
     if (profileError) {
-      // Cleanup: delete the auth user
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      // Cleanup: delete the auth user if it exists
+      if (authUserId) {
+        await supabaseAdmin.auth.admin.deleteUser(authUserId);
+      }
       return new Response(
         JSON.stringify({ error: profileError.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -134,7 +142,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: true,
-        user_id: authData.user.id,
+        user_id: profileId,
         enrollment_id,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -161,20 +161,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('User profile not found');
       }
 
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: profileData.email,
-        password
-      });
+      if (role === 'student') {
+        // For students, check password directly
+        if (profileData.password_hash !== password) {
+          await logLogin(identifier, profileData.id, false);
+          throw new Error('Invalid password');
+        }
+        // Set profile directly for students (no Supabase auth)
+        await logLogin(identifier, profileData.id, true);
+        setProfile(profileData);
+        setUser({ id: profileData.id } as any); // Fake user object
+      } else {
+        // For staff, use Supabase auth
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email: profileData.email,
+          password
+        });
 
-      if (authError) {
-        await logLogin(identifier, profileData.id, false);
-        throw new Error('Authentication failed');
-      }
+        if (authError) {
+          await logLogin(identifier, profileData.id, false);
+          throw new Error('Authentication failed');
+        }
 
-      if (authData.user) {
-        const userProfile = await loadUserProfile(authData.user.id);
-        await logLogin(identifier, authData.user.id, true);
-        setProfile(userProfile);
+        if (authData.user) {
+          const userProfile = await loadUserProfile(authData.user.id);
+          await logLogin(identifier, authData.user.id, true);
+          setProfile(userProfile);
+        }
       }
     } else {
       throw new Error('Invalid role specified');
@@ -203,9 +216,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    if (profile?.role !== 'student') {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    }
     setProfile(null);
+    setUser(null);
   };
 
   return (
