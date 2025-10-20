@@ -23,6 +23,8 @@ export type Student = {
   phone_number?: string;
   grade_level: string;
   enrollment_id: string;
+  parent_email?: string;
+  admission_number?: string;
   created_at: string;
 };
 
