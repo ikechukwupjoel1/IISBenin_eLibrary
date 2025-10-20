@@ -36,8 +36,8 @@ Deno.serve(async (req: Request) => {
 
     const { email, password, full_name, role, enrollment_id, grade_level, phone_number, parent_email } = await req.json();
 
-    // For students, use constructed email, otherwise use email
-    const authEmail = role === 'student' ? `${enrollment_id}@student.iisbenin.edu` : email;
+    // For students, use unique constructed email, otherwise use email
+    const authEmail = role === 'student' ? `${crypto.randomUUID()}@student.iisbenin.edu` : email;
 
     // Create auth user using admin client (doesn't affect current session)
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
