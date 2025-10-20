@@ -39,6 +39,15 @@ Deno.serve(async (req: Request) => {
     // For students, use parent_email for auth, otherwise use email
     const authEmail = role === 'student' ? (parent_email || email) : email;
 
+    // Check if user already exists
+    const { data: existingUser } = await supabaseAdmin.auth.admin.getUserByEmail(authEmail);
+    if (existingUser.user) {
+      return new Response(
+        JSON.stringify({ error: 'User with this email already exists' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Create auth user using admin client (doesn't affect current session)
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: authEmail,
