@@ -15,9 +15,12 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    // Note: SUPABASE_URL is automatically provided by Supabase
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    
     const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      supabaseUrl,
+      Deno.env.get('SERVICE_ROLE_KEY') ?? '',
       {
         auth: {
           autoRefreshToken: false,
@@ -27,8 +30,8 @@ Deno.serve(async (req: Request) => {
     );
 
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      supabaseUrl,
+      Deno.env.get('ANON_KEY') ?? '',
       {
         global: {
           headers: { Authorization: req.headers.get('Authorization')! },
