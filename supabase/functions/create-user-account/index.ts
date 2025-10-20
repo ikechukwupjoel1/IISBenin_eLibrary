@@ -36,8 +36,8 @@ Deno.serve(async (req: Request) => {
 
     const { email, password, full_name, role, enrollment_id, grade_level, phone_number, parent_email } = await req.json();
 
-    // For students, use parent_email for auth, otherwise use email
-    const authEmail = role === 'student' ? (parent_email || email) : email;
+    // For students, use constructed email, otherwise use email
+    const authEmail = role === 'student' ? `${enrollment_id}@student.iisbenin.edu` : email;
 
     // Create auth user using admin client (doesn't affect current session)
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -74,7 +74,7 @@ Deno.serve(async (req: Request) => {
     if (role === 'student') {
       const { data: studentIdResult, error: studentError } = await supabaseAdmin.rpc('create_student_member', {
         p_name: full_name,
-        p_email: authEmail,
+        p_email: parent_email || authEmail,
         p_phone_number: phone_number || null,
         p_grade_level: grade_level,
         p_enrollment_id: enrollment_id,
@@ -129,7 +129,7 @@ Deno.serve(async (req: Request) => {
 
     if (role === 'student') {
       profileData.student_id = recordId;
-      profileData.parent_email = parent_email || authEmail;
+      profileData.parent_email = parent_email;
     } else if (role === 'staff') {
       profileData.staff_id = recordId;
     }
