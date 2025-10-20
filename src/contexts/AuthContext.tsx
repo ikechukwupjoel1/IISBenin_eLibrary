@@ -133,6 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('user_profiles')
         .select('*')
         .ilike('enrollment_id', identifier.trim())
+        .eq('role', role)
         .maybeSingle();
 
       // Fallback 1: If not found, try by role-specific foreign key
@@ -141,6 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .from('user_profiles')
           .select('*')
           .eq('student_id', record.id)
+          .eq('role', 'student')
           .maybeSingle();
         profileData = fallbackProfile ?? profileData;
         profileError = fallbackError ?? profileError;
@@ -151,6 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .from('user_profiles')
           .select('*')
           .eq('staff_id', record.id)
+          .eq('role', 'staff')
           .maybeSingle();
         profileData = fallbackProfile ?? profileData;
         profileError = fallbackError ?? profileError;
