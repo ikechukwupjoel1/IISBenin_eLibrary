@@ -31,26 +31,28 @@ Deno.serve(async (req: Request) => {
       }
     );
 
-    const supabaseClient = createClient(
-      supabaseUrl,
-      Deno.env.get('ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
-    );
-
-    // Verify the calling user is a librarian
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    if (userError || !user) {
+    // Extract JWT token from Authorization header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized - no user found' }),
+        JSON.stringify({ error: 'No authorization header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const { data: profile, error: profileFetchError } = await supabaseClient
+    // Verify the calling user is a librarian using admin client
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+    
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - no user found: ' + (userError?.message || 'Unknown error') }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { data: profile, error: profileFetchError } = await supabaseAdmin
       .from('user_profiles')
       .select('role')
       .eq('id', user.id)

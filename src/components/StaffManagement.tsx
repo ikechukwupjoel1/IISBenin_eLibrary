@@ -61,14 +61,19 @@ export function StaffManagement() {
     e.preventDefault();
 
     if (editingStaff) {
-      const { error } = await supabase
+      console.log('Updating staff:', editingStaff.id, formData);
+      
+      const { data, error } = await supabase
         .from('staff')
         .update({
           name: formData.name,
           email: formData.email || null,
           phone_number: formData.phone_number || null,
         })
-        .eq('id', editingStaff.id);
+        .eq('id', editingStaff.id)
+        .select();
+
+      console.log('Update result:', { data, error });
 
       if (error) {
         toast.error('Error updating staff member: ' + error.message);
@@ -77,7 +82,7 @@ export function StaffManagement() {
       }
 
       toast.success('Staff member updated successfully');
-      loadStaff();
+      await loadStaff();
       handleCancel();
     } else {
       const enrollmentId = generateEnrollmentId();
@@ -215,6 +220,8 @@ export function StaffManagement() {
     if (!confirm('Are you sure you want to delete this staff member? This will permanently remove their account.')) return;
 
     try {
+      console.log('Deleting staff with ID:', id);
+
       // First, get the user_profile ID to delete the auth user
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
@@ -222,18 +229,24 @@ export function StaffManagement() {
         .eq('staff_id', id)
         .maybeSingle();
 
+      console.log('Profile lookup:', { profileData, profileError });
+
       if (profileError) {
         console.error('Error fetching profile:', profileError);
       }
 
       // Delete the staff member (CASCADE will delete user_profile)
-      const { error: staffError } = await supabase
+      const { data, error: staffError } = await supabase
         .from('staff')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .select();
+
+      console.log('Delete result:', { data, error: staffError });
 
       if (staffError) {
         toast.error('Error deleting staff member: ' + staffError.message);
+        console.error('Delete error details:', staffError);
         return;
       }
 
@@ -245,9 +258,10 @@ export function StaffManagement() {
       }
 
       toast.success('Staff member deleted successfully');
-      loadStaff();
+      await loadStaff();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Catch error:', error);
       toast.error('Error deleting staff member: ' + errorMessage);
     }
   };
