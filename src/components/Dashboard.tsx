@@ -27,6 +27,7 @@ export function Dashboard() {
     overdueBooks: 0,
   });
   const [studentReadingData, setStudentReadingData] = useState<StudentReadingData[]>([]);
+  const [debugStaffResult, setDebugStaffResult] = useState<any>(null);
 
   useEffect(() => {
     loadStats();
@@ -43,6 +44,18 @@ export function Dashboard() {
         .eq('status', 'active')
         .lt('due_date', new Date().toISOString()),
     ]);
+
+    setDebugStaffResult(staffResult); // Set debug state
+
+    // Debug logging to inspect raw query results and any errors
+    console.log('Dashboard loadStats results:', {
+      booksResult,
+      studentsResult,
+      staffResult,
+      borrowedResult,
+      overdueResult,
+    });
+    console.log('staffResult details:', staffResult);
 
     setStats({
       totalBooks: booksResult.count || 0,
@@ -144,6 +157,12 @@ export function Dashboard() {
           <img src={schoolLogo} alt="IISBenin Logo" className="w-16 h-16 object-contain" />
           <h2 className="text-3xl font-bold text-gray-900">Dashboard Overview</h2>
         </div>
+        {debugStaffResult && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
+            <p className="font-bold">Debug Staff Result:</p>
+            <pre>{JSON.stringify(debugStaffResult, null, 2)}</pre>
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {statCards.map((card) => {
             const Icon = card.icon;

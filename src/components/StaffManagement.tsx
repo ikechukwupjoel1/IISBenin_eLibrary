@@ -25,10 +25,13 @@ export function StaffManagement() {
   }, []);
 
   const loadStaff = async () => {
+    console.log('Loading staff...');
     const { data, error } = await supabase
       .from('staff')
       .select('*')
       .order('name');
+
+    console.log('Staff load result:', { data, error, count: data?.length });
 
     if (error) {
       console.error('Error loading staff:', error);
@@ -117,7 +120,9 @@ export function StaffManagement() {
         });
         setShowCredentials(true);
 
-        loadStaff();
+        console.log('Staff created successfully, reloading staff list...');
+        await loadStaff();
+        console.log('Staff list reloaded');
         handleCancel();
       } catch (error) {
         alert('Error creating staff member: ' + error.message);

@@ -17,10 +17,16 @@ Deno.serve(async (req: Request) => {
   try {
     // Note: SUPABASE_URL is automatically provided by Supabase
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const serviceRoleKey = Deno.env.get('SERVICE_ROLE_KEY') ?? '';
+    
+    console.log('Environment check:', {
+      supabaseUrl: supabaseUrl ? 'SET' : 'NOT SET',
+      serviceRoleKey: serviceRoleKey ? 'SET (length: ' + serviceRoleKey.length + ')' : 'NOT SET'
+    });
     
     const supabaseAdmin = createClient(
       supabaseUrl,
-      Deno.env.get('SERVICE_ROLE_KEY') ?? '',
+      serviceRoleKey,
       {
         auth: {
           autoRefreshToken: false,
@@ -30,17 +36,16 @@ Deno.serve(async (req: Request) => {
     );
 
     // TEMPORARY: Hardcode librarian ID for testing
-    // We know you have librarian: iksotech@gmail.com with ID: 1c0b4d0f-a877-4555-9a46-d65cafc29cbe
     const callingUserId = '1c0b4d0f-a877-4555-9a46-d65cafc29cbe';
     console.log('Using hardcoded librarian ID:', callingUserId);
 
     const { email, password, full_name, role, enrollment_id, grade_level, phone_number, parent_email } = await req.json();
 
-    // For students, don't create auth user, for others use email
-    const authEmail = role === 'student' ? null : email;
+    // For students and staff, don't create auth user, for librarians use email
+    const authEmail = role === 'librarian' ? email : null;
     let authUserId = null;
 
-    if (role !== 'student') {
+    if (role === 'librarian') {
       // Create auth user using admin client (doesn't affect current session)
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: authEmail,
@@ -60,42 +65,119 @@ Deno.serve(async (req: Request) => {
     // Create student or staff record
     let recordId: string;
     if (role === 'student') {
-      const { data: studentIdResult, error: studentError } = await supabaseAdmin.rpc('create_student_member', {
-        p_name: full_name,
-        p_email: parent_email || null,
-        p_phone_number: phone_number || null,
-        p_grade_level: grade_level,
-        p_enrollment_id: enrollment_id,
-        p_password_hash: password,
-        p_calling_user_id: callingUserId,
+      // Insert student record directly using admin client to bypass RLS
+      const studentId = crypto.randomUUID();
+      console.log('Attempting to insert student record:', {
+        id: studentId,
+        name: full_name,
+        email: parent_email || null,
+        phone_number: phone_number || null,
+        grade_level: grade_level,
+        enrollment_id: enrollment_id
       });
+
+      const { data: studentData, error: studentError } = await supabaseAdmin
+        .from('students')
+        .insert({
+          id: studentId,
+          name: full_name,
+          email: parent_email || null, // Use parent email for student email field
+          phone_number: phone_number || null,
+          grade_level: grade_level,
+          enrollment_id: enrollment_id
+        });
+
+      console.log('Student insert result:', { data: studentData, error: studentError });
 
       if (studentError) {
+        console.error('Student insertion failed:', studentError);
         return new Response(
-          JSON.stringify({ error: studentError.message }),
+          JSON.stringify({ 
+            error: `Student creation failed: ${studentError.message}`,
+            debug: {
+              studentId,
+              enrollment_id,
+              full_name,
+              parent_email,
+              phone_number,
+              grade_level
+            }
+          }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      recordId = studentIdResult;
+
+      console.log('Student record created successfully with ID:', studentId);
+      recordId = studentId;
     } else if (role === 'staff') {
-      const { data: staffIdResult, error: staffError } = await supabaseAdmin.rpc('create_staff_member', {
-        p_name: full_name,
-        p_email: email,
-        p_phone_number: phone_number || null,
-        p_enrollment_id: enrollment_id,
-        p_password_hash: password,
-        p_calling_user_id: callingUserId,
+      // For staff, create an auth user (so user_profiles.id can reference auth.users.id)
+      let staffAuthUserId: string | null = null;
+      if (email) {
+        console.log('Creating auth user for staff with email:', email);
+        const { data: staffAuthData, error: staffAuthError } = await supabaseAdmin.auth.admin.createUser({
+          email: email,
+          password,
+          email_confirm: true,
+        });
+
+        if (staffAuthError || !staffAuthData?.user) {
+          console.error('Failed to create auth user for staff:', staffAuthError);
+          return new Response(
+            JSON.stringify({ error: staffAuthError?.message || 'Failed to create auth user for staff' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        staffAuthUserId = staffAuthData.user.id;
+        // Set authUserId so profileId uses the auth user's id
+        authUserId = staffAuthUserId;
+      }
+
+      // Insert staff record directly using admin client to bypass RLS
+      const staffId = crypto.randomUUID();
+      console.log('Attempting to insert staff record:', {
+        id: staffId,
+        name: full_name,
+        email: email,
+        phone_number: phone_number || null,
+        enrollment_id: enrollment_id
       });
 
+      const { data: staffData, error: staffError } = await supabaseAdmin
+        .from('staff')
+        .insert({
+          id: staffId,
+          name: full_name,
+          email: email,
+          phone_number: phone_number || null,
+          enrollment_id: enrollment_id
+        });
+
+      console.log('Staff insert result:', { data: staffData, error: staffError });
+
       if (staffError) {
-        // Cleanup: delete the auth user
-        await supabaseAdmin.auth.admin.deleteUser(authUserId);
+        console.error('Staff insertion failed:', staffError);
+        // Cleanup auth user if we created one
+        if (staffAuthUserId) {
+          await supabaseAdmin.auth.admin.deleteUser(staffAuthUserId);
+        }
         return new Response(
-          JSON.stringify({ error: staffError.message }),
+          JSON.stringify({ 
+            error: `Staff creation failed: ${staffError.message}`,
+            debug: {
+              staffId,
+              enrollment_id,
+              full_name,
+              email,
+              phone_number
+            }
+          }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      recordId = staffIdResult;
+
+      console.log('Staff record created successfully with ID:', staffId);
+      recordId = staffId;
     } else {
       if (authUserId) {
         await supabaseAdmin.auth.admin.deleteUser(authUserId);
@@ -107,36 +189,100 @@ Deno.serve(async (req: Request) => {
     }
 
     // Create user profile using admin client to bypass RLS
-    const profileId = authUserId || crypto.randomUUID();
+    const profileId = authUserId || recordId; // Use recordId (student/staff ID) as profile ID for non-librarian users
+
+    // Check if profile already exists (for librarians who might already have accounts)
+    const { data: existingProfile } = await supabaseAdmin
+      .from('user_profiles')
+      .select('id')
+      .eq('id', profileId)
+      .maybeSingle();
+
+    if (existingProfile) {
+      console.log('Profile already exists for ID:', profileId);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          user_id: profileId,
+          enrollment_id,
+          message: 'Account already exists',
+          debug: {
+            role,
+            recordId,
+            profileId,
+            authUserId,
+            existing: true
+          }
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Prefer the auth email (librarians), then the provided email (staff), fall back to parent_email (students) or null
     const profileData: any = {
       id: profileId,
-      email: authEmail,
+      email: authEmail ?? email ?? parent_email ?? null,
       full_name,
       role,
       enrollment_id,
-      password_hash: role === 'student' ? password : null, // Store password for students
+      password_hash: role !== 'librarian' ? password : null, // Store password for students and staff
     };
+
+    // If no contact info provided for non-librarian users, return a clear validation error
+    if (role !== 'librarian' && !profileData.email && !phone_number) {
+      console.error('Validation failed: missing email and phone for profile', { profileData, phone_number });
+      // Cleanup created student/staff record if present
+      if (role === 'student' && recordId) {
+        await supabaseAdmin.from('students').delete().eq('id', recordId);
+      }
+      if (role === 'staff' && recordId) {
+        await supabaseAdmin.from('staff').delete().eq('id', recordId);
+      }
+      return new Response(
+        JSON.stringify({ code: 'validation_failed', message: 'missing email or phone' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     if (role === 'student') {
       profileData.student_id = recordId;
-      profileData.parent_email = parent_email;
     } else if (role === 'staff') {
       profileData.staff_id = recordId;
     }
 
-    const { error: profileError } = await supabaseAdmin
+    console.log('Attempting to create user profile:', profileData);
+
+    const { data: profileInsertData, error: profileError } = await supabaseAdmin
       .from('user_profiles')
       .insert(profileData);
 
+    console.log('Profile insert result:', { data: profileInsertData, error: profileError });
+
     if (profileError) {
+      console.error('Profile creation failed:', profileError);
       // Cleanup: delete the auth user if it exists
       if (authUserId) {
         await supabaseAdmin.auth.admin.deleteUser(authUserId);
       }
       return new Response(
-        JSON.stringify({ error: profileError.message }),
+        JSON.stringify({ 
+          error: `Profile creation failed: ${profileError.message}`,
+          debug: profileData
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    console.log('Profile created successfully with ID:', profileId);
+
+    // Fetch the created record (student or staff) to return to the caller for verification
+    let createdRecord = null;
+    if (role === 'student') {
+      const { data } = await supabaseAdmin.from('students').select('*').eq('id', recordId).maybeSingle();
+      createdRecord = data ?? null;
+    } else if (role === 'staff') {
+      const { data } = await supabaseAdmin.from('staff').select('*').eq('id', recordId).maybeSingle();
+      createdRecord = data ?? null;
     }
 
     return new Response(
@@ -144,12 +290,19 @@ Deno.serve(async (req: Request) => {
         success: true,
         user_id: profileId,
         enrollment_id,
+        createdRecord,
+        debug: {
+          role,
+          recordId,
+          profileId,
+          authUserId
+        }
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

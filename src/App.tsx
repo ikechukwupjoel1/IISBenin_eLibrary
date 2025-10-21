@@ -19,7 +19,12 @@ function App() {
         .maybeSingle();
 
       if (error) {
-        console.error('Error checking setup:', error);
+        console.error('Error checking setup:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
         setNeedsSetup(false);
         return;
       }

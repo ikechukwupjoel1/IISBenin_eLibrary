@@ -13,12 +13,38 @@ export function Auth() {
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
 
+  const emailValid = () => {
+    if (activeTab !== 'librarian') return true;
+    const e = identifier.trim().toLowerCase();
+    return e.length > 0 && e.includes('@');
+  };
+
+  const passwordValid = () => {
+    if (activeTab !== 'librarian') return true;
+    return password.length >= 6;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
+      // Basic client-side validation for librarian (server will still validate)
+      if (activeTab === 'librarian') {
+        const email = identifier.trim().toLowerCase();
+        if (!email || !email.includes('@')) {
+          setError('Please enter a valid email address');
+          setLoading(false);
+          return;
+        }
+        if (!password || password.length < 6) {
+          setError('Password must be at least 6 characters');
+          setLoading(false);
+          return;
+        }
+      }
+
       await signIn(identifier, password, activeTab);
     } catch (err: any) {
       setError(err.message || 'Invalid credentials');
@@ -115,11 +141,18 @@ export function Auth() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !emailValid() || !passwordValid()}
             className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
           >
             {loading ? 'Signing in...' : `Sign in as ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`}
           </button>
+
+          {activeTab === 'librarian' && (!emailValid() || !passwordValid()) && (
+            <div className="mt-2 text-sm text-red-600">
+              {!emailValid() && <div>Please enter a valid email address.</div>}
+              {!passwordValid() && <div>Password must be at least 6 characters.</div>}
+            </div>
+          )}
         </form>
 
         <div className="mt-6 text-center">

@@ -91,37 +91,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (role === 'librarian') {
       // Normalize email to lowercase and trim
       const email = identifier.toLowerCase().trim();
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (error) {
-        await logLogin(email, null, false);
-        setAuthError('Invalid email or password');
-        throw new Error('Invalid email or password');
+      if (!email) {
+        setAuthError('Please enter your email');
+        throw new Error('Please enter your email');
       }
 
-      if (data.user) {
-        const userProfile = await loadUserProfile(data.user.id);
-        if (!userProfile || userProfile.role !== 'librarian') {
-          await supabase.auth.signOut();
-          await logLogin(email, data.user.id, false);
-          setAuthError('Access denied. Not a librarian account.');
-          throw new Error('Access denied. Not a librarian account.');
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (error) {
+          // Surface the exact error message from Supabase
+          console.error('Supabase auth error:', error);
+          await logLogin(email, null, false);
+          const msg = (error as any).message || JSON.stringify(error);
+          setAuthError(msg);
+          throw new Error(msg);
         }
-        await logLogin(userProfile.enrollment_id || email, data.user.id, true);
-        setProfile(userProfile);
-        setAuthError(null);
+
+        if (data?.user) {
+          const userProfile = await loadUserProfile(data.user.id);
+          if (!userProfile || userProfile.role !== 'librarian') {
+            await supabase.auth.signOut();
+            await logLogin(email, data.user.id, false);
+            setAuthError('Access denied. Not a librarian account.');
+            throw new Error('Access denied. Not a librarian account.');
+          }
+          await logLogin(userProfile.enrollment_id || email, data.user.id, true);
+          setProfile(userProfile);
+          setAuthError(null);
+        }
+      } catch (err: any) {
+        // Re-throw after ensuring authError is set
+        if (!authError) setAuthError(err?.message || 'Authentication failed');
+        throw err;
       }
     } else if (role === 'staff' || role === 'student') {
       const tableName = role === 'staff' ? 'staff' : 'students';
+
+      console.log('Starting authentication for:', { role, identifier, tableName });
 
       const { data: record, error: fetchError } = await supabase
         .from(tableName)
         .select('*')
         .eq('enrollment_id', identifier)
         .maybeSingle();
+
+      console.log('Record lookup result:', { record, fetchError });
 
       if (fetchError || !record) {
         await logLogin(identifier, null, false);
@@ -135,6 +153,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .ilike('enrollment_id', identifier.trim())
         .eq('role', role)
         .maybeSingle();
+
+      console.log('Profile lookup by enrollment_id:', {
+        identifier: identifier.trim(),
+        role,
+        profileData,
+        profileError
+      });
 
       // Fallback 1: If not found, try by role-specific foreign key
       if ((!profileData || profileError) && role === 'student') {
@@ -164,34 +189,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('User profile not found');
       }
 
-      if (role === 'student') {
-        // For students, check password directly
-        if (profileData.password_hash !== password) {
-          await logLogin(identifier, profileData.id, false);
-          throw new Error('Invalid password');
-        }
-        // Set profile directly for students (no Supabase auth)
-        await logLogin(identifier, profileData.id, true);
-        setProfile(profileData);
-        setUser({ id: profileData.id } as any); // Fake user object
-      } else {
-        // For staff, use Supabase auth
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-          email: profileData.email,
-          password
-        });
+      // For students and staff, check password directly
+      console.log('Checking password for profile:', {
+        profileId: profileData.id,
+        storedHash: profileData.password_hash,
+        providedPassword: password,
+        match: profileData.password_hash === password
+      });
 
-        if (authError) {
-          await logLogin(identifier, profileData.id, false);
-          throw new Error('Authentication failed');
-        }
-
-        if (authData.user) {
-          const userProfile = await loadUserProfile(authData.user.id);
-          await logLogin(identifier, authData.user.id, true);
-          setProfile(userProfile);
-        }
+      if (profileData.password_hash !== password) {
+        await logLogin(identifier, profileData.id, false);
+        throw new Error('Invalid password');
       }
+      // Set profile directly
+      await logLogin(identifier, profileData.id, true);
+      setProfile(profileData);
+      setUser({ id: profileData.id } as any); // Fake user object
     } else {
       throw new Error('Invalid role specified');
     }
@@ -219,7 +232,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    if (profile?.role !== 'student') {
+    if (profile?.role !== 'student' && profile?.role !== 'staff') {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     }
