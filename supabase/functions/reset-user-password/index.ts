@@ -41,9 +41,10 @@ Deno.serve(async (req: Request) => {
     }
 
     // Verify the calling user is a librarian using admin client
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    
+    console.log('Auth verification:', { hasUser: !!user, userError, userId: user?.id });
     
     if (userError || !user) {
       return new Response(
@@ -81,9 +82,23 @@ Deno.serve(async (req: Request) => {
 
     const { user_id, new_password } = await req.json();
 
+    console.log('Reset request:', { user_id, hasPassword: !!new_password });
+
     if (!user_id || !new_password) {
       return new Response(
         JSON.stringify({ error: 'user_id and new_password are required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if user exists first
+    const { data: targetUser, error: targetUserError } = await supabaseAdmin.auth.admin.getUserById(user_id);
+    
+    console.log('Target user lookup:', { found: !!targetUser, error: targetUserError });
+
+    if (targetUserError || !targetUser) {
+      return new Response(
+        JSON.stringify({ error: 'User not found' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -93,6 +108,8 @@ Deno.serve(async (req: Request) => {
       user_id,
       { password: new_password }
     );
+    
+    console.log('Password update result:', { success: !!updateData, error: updateError });
 
     if (updateError) {
       return new Response(
