@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Shield, Plus, Pencil, Trash2, Search, X } from 'lucide-react';
+import { Shield, Plus, Trash2, Search, X, KeyRound } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 type Librarian = {
@@ -21,6 +21,8 @@ export function LibrarianManagement() {
   const [isAddingLibrarian, setIsAddingLibrarian] = useState(false);
   const [showCredentials, setShowCredentials] = useState(false);
   const [generatedCredentials, setGeneratedCredentials] = useState<GeneratedCredentials | null>(null);
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+  const [selectedLibrarian, setSelectedLibrarian] = useState<Librarian | null>(null);
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -99,24 +101,95 @@ export function LibrarianManagement() {
   };
 
   const handleDelete = async (id: string, email: string) => {
-    if (!confirm(`Are you sure you want to delete librarian account for ${email}?`)) return;
+    if (!confirm(`Are you sure you want to delete librarian account for ${email}? This action is irreversible.`)) return;
 
-    const { error } = await supabase
-      .from('user_profiles')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      alert('Error deleting librarian: ' + error.message);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      alert('You must be logged in to delete users');
       return;
     }
 
-    loadLibrarians();
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`;
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ user_id: id }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || result.error) {
+        alert('Error deleting librarian: ' + (result.error || 'Unknown error'));
+        return;
+      }
+
+      alert('Librarian deleted successfully');
+      loadLibrarians();
+    } catch (error: unknown) {
+      alert('Error deleting librarian: ' + error.message);
+    }
   };
 
   const handleCancel = () => {
     setFormData({ full_name: '', email: '' });
     setIsAddingLibrarian(false);
+  };
+
+  const openResetPasswordModal = (librarian: Librarian) => {
+    setSelectedLibrarian(librarian);
+    setShowResetPasswordModal(true);
+  };
+
+  const handleResetPassword = async () => {
+    if (!selectedLibrarian) return;
+
+    const newPassword = generatePassword();
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      alert('You must be logged in to reset passwords');
+      return;
+    }
+
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-user-password`;
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          user_id: selectedLibrarian.id,
+          new_password: newPassword,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || result.error) {
+        alert('Error resetting password: ' + (result.error || 'Unknown error'));
+        return;
+      }
+
+      setGeneratedCredentials({
+        email: selectedLibrarian.email,
+        password: newPassword,
+      });
+      setShowResetPasswordModal(false);
+      setShowCredentials(true);
+      alert('Password reset successfully');
+    } catch (error: unknown) {
+      alert('Error resetting password: ' + error.message);
+    }
   };
 
   const filteredLibrarians = librarians.filter(lib =>
@@ -250,6 +323,14 @@ export function LibrarianManagement() {
                     >
                       <Trash2 className="h-5 w-5" />
                     </button>
+
+                    <button
+                      onClick={() => openResetPasswordModal(librarian)}
+                      className="text-blue-600 hover:text-blue-800 transition-colors"
+                      title="Reset Password"
+                    >
+                      <KeyRound className="h-5 w-5" />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -312,6 +393,44 @@ export function LibrarianManagement() {
               >
                 Done
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showResetPasswordModal && selectedLibrarian && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Reset Librarian Password</h3>
+              <button onClick={() => setShowResetPasswordModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-sm text-gray-700">
+                Are you sure you want to reset the password for <span className="font-semibold">{selectedLibrarian.full_name}</span>?
+              </p>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+                <p className="font-medium">A new password will be generated and displayed.</p>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowResetPasswordModal(false)}
+                  className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleResetPassword}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Reset Password
+                </button>
+              </div>
             </div>
           </div>
         </div>

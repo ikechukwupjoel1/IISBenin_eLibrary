@@ -28,13 +28,13 @@ AS $$
 DECLARE
   user_role text;
 BEGIN
-  -- This runs with SECURITY DEFINER privileges, bypassing RLS
   SELECT role INTO user_role 
   FROM user_profiles 
   WHERE id = user_uuid
   LIMIT 1;
   
-  RETURN user_role;
+  -- Return 'unknown' or NULL if no role is found, to ensure a single text value is always returned.
+  RETURN COALESCE(user_role, 'unknown');
 END;
 $$;
 

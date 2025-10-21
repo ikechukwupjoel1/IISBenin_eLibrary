@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { UserCog, Plus, Pencil, Trash2, Search, X } from 'lucide-react';
+import { UserCog, Plus, Pencil, Trash2, Search, X, KeyRound } from 'lucide-react';
 import { supabase, type Staff } from '../lib/supabase';
+import toast from 'react-hot-toast';
 
 type GeneratedCredentials = {
   enrollment_id: string;
@@ -13,6 +14,8 @@ export function StaffManagement() {
   const [isAddingStaff, setIsAddingStaff] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [showCredentials, setShowCredentials] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetPasswordStaff, setResetPasswordStaff] = useState<Staff | null>(null);
   const [generatedCredentials, setGeneratedCredentials] = useState<GeneratedCredentials | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -68,10 +71,12 @@ export function StaffManagement() {
         .eq('id', editingStaff.id);
 
       if (error) {
-        alert('Error updating staff member: ' + error.message);
+        toast.error('Error updating staff member: ' + error.message);
+        console.error('Update error:', error);
         return;
       }
 
+      toast.success('Staff member updated successfully');
       loadStaff();
       handleCancel();
     } else {
@@ -125,7 +130,8 @@ export function StaffManagement() {
         console.log('Staff list reloaded');
         handleCancel();
       } catch (error) {
-        alert('Error creating staff member: ' + error.message);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        toast.error('Error creating staff member: ' + errorMessage);
       }
     }
   };
@@ -140,22 +146,110 @@ export function StaffManagement() {
     setIsAddingStaff(true);
   };
 
+  const openResetPassword = (staffMember: Staff) => {
+    setResetPasswordStaff(staffMember);
+    setShowResetPassword(true);
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetPasswordStaff) return;
+
+    const newPassword = generatePassword();
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('You must be logged in');
+        return;
+      }
+
+      // Get the auth user ID from user_profiles linked to this staff member
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('staff_id', resetPasswordStaff.id)
+        .maybeSingle();
+
+      if (profileError || !profileData) {
+        toast.error('Could not find user profile for this staff member');
+        console.error('Profile error:', profileError);
+        return;
+      }
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-user-password`;
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          user_id: profileData.id, // Use the auth user ID, not the staff table ID
+          new_password: newPassword,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || result.error) {
+        toast.error('Error resetting password: ' + (result.error || 'Unknown error'));
+        return;
+      }
+
+      setGeneratedCredentials({
+        enrollment_id: resetPasswordStaff.enrollment_id || '',
+        password: newPassword,
+      });
+      setShowResetPassword(false);
+      setShowCredentials(true);
+      toast.success('Password reset successfully');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error('Error resetting password: ' + errorMessage);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this staff member? This will permanently remove their account.')) return;
 
-    // Delete the staff member (CASCADE will delete user_profile too)
-    const { error } = await supabase
-      .from('staff')
-      .delete()
-      .eq('id', id);
+    try {
+      // First, get the user_profile ID to delete the auth user
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('staff_id', id)
+        .maybeSingle();
 
-    if (error) {
-      alert('Error deleting staff member: ' + error.message);
-      return;
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+      }
+
+      // Delete the staff member (CASCADE will delete user_profile)
+      const { error: staffError } = await supabase
+        .from('staff')
+        .delete()
+        .eq('id', id);
+
+      if (staffError) {
+        toast.error('Error deleting staff member: ' + staffError.message);
+        return;
+      }
+
+      // If we have the profile ID, try to delete the auth user
+      if (profileData?.id) {
+        // Note: This requires admin privileges and should ideally be done via Edge Function
+        // For now, the CASCADE delete on user_profiles should handle cleanup
+        console.log('Staff and profile deleted, auth user ID:', profileData.id);
+      }
+
+      toast.success('Staff member deleted successfully');
+      loadStaff();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error('Error deleting staff member: ' + errorMessage);
     }
-
-    alert('Staff member deleted successfully');
-    loadStaff();
   };
 
   const handleCancel = () => {
@@ -313,12 +407,21 @@ export function StaffManagement() {
                       <button
                         onClick={() => handleEdit(staffMember)}
                         className="text-blue-600 hover:text-blue-800 transition-colors"
+                        title="Edit staff member"
                       >
                         <Pencil className="h-5 w-5" />
                       </button>
                       <button
+                        onClick={() => openResetPassword(staffMember)}
+                        className="text-amber-600 hover:text-amber-800 transition-colors"
+                        title="Reset password"
+                      >
+                        <KeyRound className="h-5 w-5" />
+                      </button>
+                      <button
                         onClick={() => handleDelete(staffMember.id)}
                         className="text-red-600 hover:text-red-800 transition-colors"
+                        title="Delete staff member"
                       >
                         <Trash2 className="h-5 w-5" />
                       </button>
@@ -389,6 +492,59 @@ export function StaffManagement() {
               >
                 Done
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showResetPassword && resetPasswordStaff && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <KeyRound className="h-6 w-6 text-amber-600" />
+                Reset Password
+              </h3>
+              <button onClick={() => setShowResetPassword(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p className="text-amber-800 font-medium mb-2">Confirm Password Reset</p>
+                <p className="text-sm text-amber-700">
+                  You are about to reset the password for:
+                </p>
+                <p className="text-sm font-mono mt-2 text-amber-900">
+                  {resetPasswordStaff.name} ({resetPasswordStaff.enrollment_id})
+                </p>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                <p className="font-medium">What happens next:</p>
+                <ul className="list-disc list-inside text-xs mt-2 space-y-1">
+                  <li>A new random password will be generated</li>
+                  <li>The staff member's current password will be replaced</li>
+                  <li>You will receive the new credentials to share with the staff member</li>
+                </ul>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowResetPassword(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleResetPassword}
+                  className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+                >
+                  Reset Password
+                </button>
+              </div>
             </div>
           </div>
         </div>

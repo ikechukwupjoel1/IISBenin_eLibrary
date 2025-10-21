@@ -2,7 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
 };
 
@@ -14,12 +14,8 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  console.log('Authorization Header:', req.headers.get('Authorization'));
-
   try {
-    // Note: SUPABASE_URL is automatically provided by Supabase
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    
     const supabaseAdmin = createClient(
       supabaseUrl,
       Deno.env.get('SERVICE_ROLE_KEY') ?? '',
@@ -41,11 +37,10 @@ Deno.serve(async (req: Request) => {
       }
     );
 
-    // Verify the calling user is a librarian
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized - no user found' }),
+        JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -54,57 +49,42 @@ Deno.serve(async (req: Request) => {
       .from('user_profiles')
       .select('role')
       .eq('id', user.id)
-      .maybeSingle();
+      .single();
 
-    if (profileFetchError) {
+    if (profileFetchError || !profile) {
       return new Response(
-        JSON.stringify({ error: 'Error fetching profile: ' + profileFetchError.message }),
+        JSON.stringify({ error: 'Profile not found or error fetching it' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (!profile) {
-      return new Response(
-        JSON.stringify({ error: 'User profile not found for user ID: ' + user.id }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     if (profile.role !== 'librarian') {
       return new Response(
-        JSON.stringify({ error: 'Only librarians can reset passwords. Your role: ' + profile.role }),
+        JSON.stringify({ error: 'Only librarians can delete users' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const { user_id, new_password } = await req.json();
+    const { user_id } = await req.json();
 
-    if (!user_id || !new_password) {
+    if (!user_id) {
       return new Response(
-        JSON.stringify({ error: 'user_id and new_password are required' }),
+        JSON.stringify({ error: 'user_id is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Update user password using admin API
-    const { data: updateData, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-      user_id,
-      { password: new_password }
-    );
+    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user_id);
 
-    if (updateError) {
+    if (deleteError) {
       return new Response(
-        JSON.stringify({ error: updateError.message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: deleteError.message }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'Password updated successfully',
-        user_id: user_id,
-      }),
+      JSON.stringify({ success: true, message: 'User deleted successfully' }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

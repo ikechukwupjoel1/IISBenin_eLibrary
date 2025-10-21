@@ -131,8 +131,9 @@ export function StudentManagement() {
 
         loadStudents();
         closeModal();
-      } catch (error: any) {
-        alert('Error creating student: ' + error.message);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        toast.error('Error creating student: ' + errorMessage);
       }
     }
   };
@@ -170,7 +171,7 @@ export function StudentManagement() {
       .order('created_at', { ascending: false });
 
     if (!error && data) {
-      setSelectedStudent({ ...student, borrow_records: data as any });
+      setSelectedStudent({ ...student, borrow_records: data as (BorrowRecord & { books?: Book })[] });
       setShowHistory(true);
     }
   };
@@ -208,20 +209,22 @@ export function StudentManagement() {
     const newPassword = generatePassword();
 
     try {
-      const { data: profileData } = await supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('You must be logged in');
+        return;
+      }
+
+      // Get the auth user ID from user_profiles linked to this student
+      const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
         .select('id')
         .eq('student_id', resetPasswordStudent.id)
         .maybeSingle();
 
-      if (!profileData) {
-        toast.error('Student profile not found');
-        return;
-      }
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error('You must be logged in');
+      if (profileError || !profileData) {
+        toast.error('Could not find user profile for this student');
+        console.error('Profile error:', profileError);
         return;
       }
 
@@ -235,7 +238,7 @@ export function StudentManagement() {
           'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({
-          user_id: profileData.id,
+          user_id: profileData.id, // Use the auth user ID, not the student table ID
           new_password: newPassword,
         }),
       });
@@ -254,8 +257,9 @@ export function StudentManagement() {
       setShowResetPassword(false);
       setShowCredentials(true);
       toast.success('Password reset successfully');
-    } catch (error: any) {
-      toast.error('Error resetting password: ' + error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error('Error resetting password: ' + errorMessage);
     }
   };
 
@@ -505,7 +509,7 @@ export function StudentManagement() {
                   onChange={(e) => setFormData({ ...formData, parent_email: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter parent's email address"
-                  required
+                  required={!editingStudent}
                 />
               </div>
 
@@ -617,7 +621,7 @@ export function StudentManagement() {
 
             {selectedStudent.borrow_records && selectedStudent.borrow_records.length > 0 ? (
               <div className="space-y-4">
-                {selectedStudent.borrow_records.map((record: any) => (
+                {selectedStudent.borrow_records.map((record: BorrowRecord & { books?: Book }) => (
                   <div key={record.id} className="border border-gray-200 rounded-lg p-4">
                     <h4 className="font-semibold text-gray-900">{record.books?.title || 'Unknown Book'}</h4>
                     <p className="text-sm text-gray-600">by {record.books?.author_publisher || 'Unknown Author'}</p>
