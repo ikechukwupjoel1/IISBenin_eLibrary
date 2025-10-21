@@ -215,12 +215,16 @@ export function StudentManagement() {
         return;
       }
 
+      console.log('Resetting password for student:', resetPasswordStudent.id);
+
       // Get the auth user ID from user_profiles linked to this student
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
         .select('id')
         .eq('student_id', resetPasswordStudent.id)
         .maybeSingle();
+
+      console.log('Profile lookup result:', { profileData, profileError });
 
       if (profileError || !profileData) {
         toast.error('Could not find user profile for this student');
@@ -229,6 +233,7 @@ export function StudentManagement() {
       }
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-user-password`;
+      console.log('Calling reset API:', apiUrl, 'with user_id:', profileData.id);
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -244,9 +249,11 @@ export function StudentManagement() {
       });
 
       const result = await response.json();
+      console.log('Reset API response:', { status: response.status, result });
 
       if (!response.ok || result.error) {
         toast.error('Error resetting password: ' + (result.error || 'Unknown error'));
+        console.error('Reset failed:', result);
         return;
       }
 
@@ -259,6 +266,7 @@ export function StudentManagement() {
       toast.success('Password reset successfully');
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Reset password error:', error);
       toast.error('Error resetting password: ' + errorMessage);
     }
   };
