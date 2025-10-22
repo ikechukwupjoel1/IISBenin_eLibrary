@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { BookOpen, Users, BookMarked, AlertCircle, UserCog } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import BackgroundCarousel from './BackgroundCarousel';
@@ -27,6 +27,7 @@ type StaffReadingData = {
 
 export function Dashboard() {
   const { profile } = useAuth();
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Stats>({
     totalBooks: 0,
     borrowedBooks: 0,
@@ -37,13 +38,7 @@ export function Dashboard() {
   const [studentReadingData, setStudentReadingData] = useState<StudentReadingData[]>([]);
   const [staffReadingData, setStaffReadingData] = useState<StaffReadingData[]>([]);
 
-  useEffect(() => {
-    loadStats();
-    loadStudentReadingData();
-    loadStaffReadingData();
-  }, []);
-
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     // For students, filter overdue books by their student_id
     let overdueQuery = supabase.from('borrow_records').select('id', { count: 'exact', head: true })
       .eq('status', 'active')
@@ -78,9 +73,9 @@ export function Dashboard() {
       totalStaff: staffResult.count || 0,
       overdueBooks: overdueResult.count || 0,
     });
-  };
+  }, [profile?.role, profile?.student_id]);
 
-  const loadStudentReadingData = async () => {
+  const loadStudentReadingData = useCallback(async () => {
     const { data: borrowRecords, error } = await supabase
       .from('borrow_records')
       .select(`
@@ -97,14 +92,14 @@ export function Dashboard() {
 
     const studentMap = new Map<string, { name: string; count: number }>();
 
-    borrowRecords.forEach((record: any) => {
-      if (record.student_id && record.students) {
+    borrowRecords.forEach((record) => {
+      if (record.student_id && record.students && typeof record.students === 'object' && 'name' in record.students) {
         const existing = studentMap.get(record.student_id);
         if (existing) {
           existing.count++;
         } else {
           studentMap.set(record.student_id, {
-            name: record.students.name,
+            name: record.students.name as string,
             count: 1,
           });
         }
@@ -121,14 +116,32 @@ export function Dashboard() {
       .slice(0, 10);
 
     setStudentReadingData(readingData);
-  };
+  }, []);
 
-  const loadStaffReadingData = async () => {
+  const loadStaffReadingData = useCallback(async () => {
     // Note: Staff don't have borrow_records in the current schema
     // This is a placeholder for future implementation if staff borrowing is added
     // For now, we'll return empty data
     setStaffReadingData([]);
-  };
+  }, []);
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        await Promise.all([
+          loadStats(),
+          loadStudentReadingData(),
+          loadStaffReadingData()
+        ]);
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, [loadStats, loadStudentReadingData, loadStaffReadingData]);
 
   const allStatCards = [
     {
@@ -179,6 +192,41 @@ export function Dashboard() {
   );
 
   const maxBooksRead = Math.max(...studentReadingData.map(s => s.books_read), 1);
+
+  // Loading skeleton
+  if (loading) {
+    return (
+      <div className="relative min-h-screen">
+        <BackgroundCarousel />
+        <div className="relative z-10 space-y-6 p-6">
+          <div className="flex items-center gap-4 mb-6 bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-lg">
+            <img src={schoolLogo} alt="IISBenin Logo" className="w-16 h-16 object-contain" />
+            <h2 className="text-3xl font-bold text-gray-900">Dashboard Overview</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white/95 backdrop-blur-sm rounded-xl p-6 border border-gray-200 shadow-lg animate-pulse">
+                <div className="h-12 bg-gray-200 rounded-lg mb-4 w-12"></div>
+                <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                <div className="h-8 bg-gray-200 rounded w-16"></div>
+              </div>
+            ))}
+          </div>
+          <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-6">
+            <div className="h-6 bg-gray-200 rounded w-48 mb-6"></div>
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-2 animate-pulse">
+                  <div className="h-8 bg-gray-200 rounded"></div>
+                  <div className="h-3 bg-gray-200 rounded"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen">

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Star, MessageSquare, Edit2, Trash2, Plus, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,6 +9,7 @@ type Review = {
   user_id: string;
   rating: number;
   review_text: string;
+  status: 'pending' | 'approved' | 'rejected';
   created_at: string;
   user_profiles: {
     full_name: string;
@@ -37,18 +38,27 @@ export function Reviews() {
   const [rating, setRating] = useState(5);
   const [reviewText, setReviewText] = useState('');
 
-  useEffect(() => {
-    loadReviews();
-    loadBooks();
-  }, []);
-
-  const loadReviews = async () => {
+  const loadReviews = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      // Load two types of reviews:
+      // 1. User's own reviews (any status - pending, approved, rejected)
+      // 2. Other users' APPROVED reviews only
+      
+      const userId = profile?.id;
+      
+      if (!userId) {
+        console.log('No user ID available');
+        setReviews([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get user's own reviews (all statuses)
+      const { data: myReviews, error: myError } = await supabase
         .from('reviews')
         .select(`
           *,
-          user_profiles (
+          user_profiles!reviews_user_id_fkey (
             full_name,
             role
           ),
@@ -57,23 +67,56 @@ export function Reviews() {
             author_publisher
           )
         `)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error loading reviews:', error);
-        alert('Error loading reviews: ' + error.message);
-      } else {
-        console.log('Loaded reviews:', data);
-        setReviews(data || []);
+      if (myError) {
+        console.error('Error loading my reviews:', myError);
       }
+
+      // Get other users' approved reviews only
+      const { data: approvedReviews, error: approvedError } = await supabase
+        .from('reviews')
+        .select(`
+          *,
+          user_profiles!reviews_user_id_fkey (
+            full_name,
+            role
+          ),
+          books (
+            title,
+            author_publisher
+          )
+        `)
+        .neq('user_id', userId)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false });
+
+      if (approvedError) {
+        console.error('Error loading approved reviews:', approvedError);
+      }
+
+      // Combine both arrays and remove duplicates
+      const allReviews = [...(myReviews || []), ...(approvedReviews || [])];
+      
+      // Sort by created_at descending
+      allReviews.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      console.log('Loaded reviews:', {
+        myReviews: myReviews?.length || 0,
+        approvedReviews: approvedReviews?.length || 0,
+        total: allReviews.length
+      });
+      
+      setReviews(allReviews);
     } catch (err) {
       console.error('Exception loading reviews:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile?.id]);
 
-  const loadBooks = async () => {
+  const loadBooks = useCallback(async () => {
     const { data, error } = await supabase
       .from('books')
       .select('id, title, author_publisher')
@@ -84,7 +127,12 @@ export function Reviews() {
     } else {
       setBooks(data || []);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadReviews();
+    loadBooks();
+  }, [loadReviews, loadBooks]);
 
   const handleSubmitReview = async () => {
     if (!profile || !selectedBook || !reviewText.trim()) {
@@ -114,7 +162,7 @@ export function Reviews() {
         user_id: profile.id,
         rating,
         review_text: reviewText,
-        status: 'approved', // Explicitly set status
+        status: 'pending', // Reviews need librarian approval
       }).select();
 
       if (error) {
@@ -122,7 +170,7 @@ export function Reviews() {
         alert('Error creating review: ' + error.message);
       } else {
         console.log('Review created successfully:', data);
-        alert('Review submitted successfully!');
+        alert('Review submitted successfully! It will be visible to others once approved by a librarian.');
         closeModal();
         await loadReviews(); // Wait for reviews to reload
       }
@@ -219,9 +267,24 @@ export function Reviews() {
             <div key={review.id} className="bg-white rounded-xl border border-gray-200 p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 text-lg mb-1">
-                    {review.books.title}
-                  </h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-semibold text-gray-900 text-lg">
+                      {review.books.title}
+                    </h3>
+                    {profile?.id === review.user_id && (
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        review.status === 'pending' 
+                          ? 'bg-yellow-100 text-yellow-800' 
+                          : review.status === 'approved'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {review.status === 'pending' ? '⏳ Pending Approval' : 
+                         review.status === 'approved' ? '✓ Approved' : 
+                         '✗ Rejected'}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-gray-600 mb-2">{review.books.author_publisher}</p>
                   {renderStars(review.rating)}
                 </div>

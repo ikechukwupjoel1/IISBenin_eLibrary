@@ -57,7 +57,7 @@ export default function ReviewModeration({ userId, userRole }: { userId: string;
       setLoading(true);
 
       let query = supabase
-        .from('book_reviews')
+        .from('reviews')
         .select(`
           *,
           books(title),
@@ -99,7 +99,7 @@ export default function ReviewModeration({ userId, userRole }: { userId: string;
   const fetchStats = async () => {
     try {
       const { data: allReviews, error } = await supabase
-        .from('book_reviews')
+        .from('reviews')
         .select(`
           status,
           rating,
@@ -130,7 +130,7 @@ export default function ReviewModeration({ userId, userRole }: { userId: string;
 
     try {
       const { error } = await supabase
-        .from('book_reviews')
+        .from('reviews')
         .update({
           status: action === 'approve' ? 'approved' : 'rejected',
           moderated_at: new Date().toISOString(),
@@ -156,7 +156,7 @@ export default function ReviewModeration({ userId, userRole }: { userId: string;
 
     try {
       const { error } = await supabase
-        .from('book_reviews')
+        .from('reviews')
         .delete()
         .eq('id', reviewId);
 
