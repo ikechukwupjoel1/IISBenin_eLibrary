@@ -33,18 +33,31 @@ export function DigitalLibrary() {
   const loadMaterials = async () => {
     setLoading(true);
 
-    // Query books with category that indicates digital materials
-    const query = supabase
+    // Query ALL books first, then filter in JavaScript for better reliability
+    const { data, error } = await supabase
       .from('books')
       .select('*')
-      .or('category.ilike.%ebook%,category.ilike.%electronic%,category.ilike.%digital%')
       .order('created_at', { ascending: false });
 
-    const { data, error } = await query;
-
     if (!error && data) {
-      setMaterials(data);
-      setFilteredMaterials(data);
+      // Filter to only include digital materials (ebook, electronic, digital in category)
+      const digitalMaterials = data.filter(book => {
+        const category = book.category?.toLowerCase() || '';
+        return category.includes('ebook') || 
+               category.includes('electronic') || 
+               category.includes('digital') ||
+               category.includes('e-book') ||
+               category.includes('online');
+      });
+      
+      console.log('Total books:', data.length);
+      console.log('Digital materials found:', digitalMaterials.length);
+      console.log('Digital categories:', digitalMaterials.map(m => m.category));
+      
+      setMaterials(digitalMaterials);
+      setFilteredMaterials(digitalMaterials);
+    } else {
+      console.error('Error loading materials:', error);
     }
     setLoading(false);
   };
@@ -126,13 +139,48 @@ export function DigitalLibrary() {
 
       <AdvancedBookSearch onResults={handleSearchResults} />
 
+      {/* Info box about digital materials */}
+      <div className="bg-gradient-to-r from-teal-50 to-blue-50 border border-teal-200 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <BookOpen className="h-5 w-5 text-teal-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <h4 className="font-medium text-teal-900 mb-1">📚 About Digital Library</h4>
+            <p className="text-sm text-teal-800">
+              <strong>Digital materials are NOT borrowed.</strong> They are instantly accessible - just click "View" to read.
+              No due dates, no returns needed. Available 24/7 for all students!
+            </p>
+            {profile?.role === 'librarian' && (
+              <p className="text-sm text-teal-700 mt-2">
+                💡 <strong>Tip:</strong> To add ebooks, use categories like "Science eBook", "Mathematics Electronic Material", etc., 
+                and paste the PDF URL in the ISBN field.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
       {filteredMaterials.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
           <Monitor className="h-16 w-16 mx-auto mb-4 text-gray-300" />
           <h3 className="text-xl font-semibold text-gray-900 mb-2">No Digital Materials Found</h3>
-          <p className="text-gray-500">
-            Try adjusting your search or filters
+          <p className="text-gray-500 mb-4">
+            {materials.length === 0 
+              ? 'No eBooks or electronic materials have been uploaded yet.'
+              : 'Try adjusting your search or filters'
+            }
           </p>
+          {profile?.role === 'librarian' && materials.length === 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4 text-left">
+              <h4 className="font-semibold text-blue-900 mb-2">💡 How to add digital materials:</h4>
+              <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800">
+                <li>Go to "Book Management" tab</li>
+                <li>Click "Add New Book"</li>
+                <li>Select a category containing "eBook", "Electronic", or "Digital" (e.g., "Science eBook", "Mathematics Electronic Material")</li>
+                <li>In the ISBN field, paste the URL of the PDF/document</li>
+                <li>Fill in other details and save</li>
+              </ol>
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
