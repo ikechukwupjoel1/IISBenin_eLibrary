@@ -1,26 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import { Monitor, BookOpen, Download, ExternalLink, Search, Filter, Eye } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { useEffect, useState } from 'react';
+import { Monitor, BookOpen, ExternalLink, Eye } from 'lucide-react';
+import { supabase, type Book } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { MaterialViewer } from './MaterialViewer';
+import { AdvancedBookSearch } from './AdvancedBookSearch';
+import toast from 'react-hot-toast';
 
 type DigitalMaterial = {
   id: string;
   title: string;
-  author_publisher: string;
+  author: string;
   category: string;
-  material_type: string;
-  class_specific: string;
-  isbn: string;
+  material_type?: string;
+  class_specific?: string;
+  isbn?: string;
+  file_url?: string;
   created_at: string;
 };
 
 export function DigitalLibrary() {
   const { profile } = useAuth();
   const [materials, setMaterials] = useState<DigitalMaterial[]>([]);
+  const [filteredMaterials, setFilteredMaterials] = useState<DigitalMaterial[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'ebook' | 'electronic_material'>('all');
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   const [viewerTitle, setViewerTitle] = useState('');
 
@@ -31,64 +33,72 @@ export function DigitalLibrary() {
   const loadMaterials = async () => {
     setLoading(true);
 
-    let query = supabase
+    // Query books with category that indicates digital materials
+    const query = supabase
       .from('books')
       .select('*')
-      .in('material_type', ['ebook', 'electronic_material'])
+      .or('category.ilike.%ebook%,category.ilike.%electronic%,category.ilike.%digital%')
       .order('created_at', { ascending: false });
-
-    if (profile?.role === 'student') {
-      const studentGradeLevel = await getStudentGradeLevel();
-
-      query = query.or(`class_specific.is.null,class_specific.eq.,class_specific.eq.${studentGradeLevel}`);
-    }
 
     const { data, error } = await query;
 
     if (!error && data) {
-      setMaterials(data as any);
+      setMaterials(data);
+      setFilteredMaterials(data);
     }
     setLoading(false);
   };
 
-  const getStudentGradeLevel = async () => {
-    if (!profile?.student_id) return '';
-
-    const { data } = await supabase
-      .from('students')
-      .select('grade_level')
-      .eq('id', profile.student_id)
-      .maybeSingle();
-
-    return data?.grade_level || '';
+  const handleSearchResults = (results: Book[]) => {
+    // Filter results to only include digital materials
+    const digitalResults = results.filter(book => 
+      book.category?.toLowerCase().includes('ebook') ||
+      book.category?.toLowerCase().includes('electronic') ||
+      book.category?.toLowerCase().includes('digital')
+    ) as DigitalMaterial[];
+    setFilteredMaterials(digitalResults);
   };
 
-  const filteredMaterials = materials.filter((material) => {
-    const matchesSearch =
-      material.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      material.author_publisher.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      material.category?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesType =
-      filterType === 'all' || material.material_type === filterType;
-
-    return matchesSearch && matchesType;
-  });
-
-  const getMaterialIcon = (type: string) => {
-    return type === 'ebook' ? BookOpen : Monitor;
+  const getMaterialIcon = (category: string) => {
+    return category?.toLowerCase().includes('ebook') ? BookOpen : Monitor;
   };
 
-  const getMaterialTypeLabel = (type: string) => {
-    return type === 'ebook' ? 'eBook' : 'Electronic Material';
+  const getMaterialTypeLabel = (category: string) => {
+    if (category?.toLowerCase().includes('ebook')) return 'eBook';
+    if (category?.toLowerCase().includes('electronic')) return 'Electronic Material';
+    return 'Digital Material';
   };
 
-  const handleAccessMaterial = (url: string, title: string) => {
-    if (!url) return;
+  const handleAccessMaterial = async (book: DigitalMaterial) => {
+    if (!book) return;
+
+    // If book has an isbn field with a URL, use it directly
+    if (book.isbn && (book.isbn.startsWith('http://') || book.isbn.startsWith('https://'))) {
+      if (profile?.role === 'student') {
+        setViewerUrl(book.isbn);
+        setViewerTitle(book.title);
+      } else {
+        window.open(book.isbn, '_blank', 'noopener,noreferrer');
+      }
+      return;
+    }
+
+    // Otherwise, try to get the file from storage bucket using book ID
+    const { data: storageData } = await supabase
+      .storage
+      .from('ebooks')
+      .getPublicUrl(`${book.id}.pdf`);
+
+    if (!storageData?.publicUrl) {
+      toast.error('File not found. Please contact the librarian.');
+      return;
+    }
+
+    const url = storageData.publicUrl;
 
     if (profile?.role === 'student') {
       setViewerUrl(url);
-      setViewerTitle(title);
+      setViewerTitle(book.title);
     } else {
       window.open(url, '_blank', 'noopener,noreferrer');
     }
@@ -114,46 +124,20 @@ export function DigitalLibrary() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search digital materials..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Filter className="h-5 w-5 text-gray-400" />
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value as any)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            >
-              <option value="all">All Types</option>
-              <option value="ebook">eBooks</option>
-              <option value="electronic_material">Electronic Materials</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      <AdvancedBookSearch onResults={handleSearchResults} />
 
       {filteredMaterials.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
           <Monitor className="h-16 w-16 mx-auto mb-4 text-gray-300" />
           <h3 className="text-xl font-semibold text-gray-900 mb-2">No Digital Materials Found</h3>
           <p className="text-gray-500">
-            {searchTerm ? 'Try adjusting your search' : 'No digital materials available yet'}
+            Try adjusting your search or filters
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredMaterials.map((material) => {
-            const Icon = getMaterialIcon(material.material_type);
+            const Icon = getMaterialIcon(material.category || '');
 
             return (
               <div
@@ -167,7 +151,7 @@ export function DigitalLibrary() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-gray-900 line-clamp-2">{material.title}</h3>
-                      <p className="text-sm text-gray-600 mt-1">{material.author_publisher}</p>
+                      <p className="text-sm text-gray-600 mt-1">{material.author}</p>
                     </div>
                   </div>
 
@@ -180,21 +164,20 @@ export function DigitalLibrary() {
 
                     <div className="flex items-center gap-2">
                       <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-teal-100 text-teal-700 rounded">
-                        {getMaterialTypeLabel(material.material_type)}
+                        {getMaterialTypeLabel(material.category || '')}
                       </span>
 
-                      {material.class_specific && (
-                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded">
-                          {material.class_specific}
+                      {material.isbn && (
+                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded text-[10px]">
+                          ISBN: {material.isbn}
                         </span>
                       )}
                     </div>
                   </div>
 
                   <button
-                    onClick={() => handleAccessMaterial(material.isbn, material.title)}
-                    disabled={!material.isbn}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    onClick={() => handleAccessMaterial(material)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
                   >
                     {profile?.role === 'student' ? (
                       <Eye className="h-4 w-4" />
@@ -203,8 +186,8 @@ export function DigitalLibrary() {
                     )}
                     <span>
                       {profile?.role === 'student'
-                        ? (material.material_type === 'ebook' ? 'View eBook' : 'View Material')
-                        : (material.material_type === 'ebook' ? 'Read eBook' : 'Access Material')
+                        ? (material.category?.toLowerCase().includes('ebook') ? 'View eBook' : 'View Material')
+                        : (material.category?.toLowerCase().includes('ebook') ? 'Read eBook' : 'Access Material')
                       }
                     </span>
                   </button>

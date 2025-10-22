@@ -43,27 +43,34 @@ export function Reviews() {
   }, []);
 
   const loadReviews = async () => {
-    const { data, error } = await supabase
-      .from('reviews')
-      .select(`
-        *,
-        user_profiles (
-          full_name,
-          role
-        ),
-        books (
-          title,
-          author_publisher
-        )
-      `)
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select(`
+          *,
+          user_profiles (
+            full_name,
+            role
+          ),
+          books (
+            title,
+            author_publisher
+          )
+        `)
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error loading reviews:', error);
-    } else {
-      setReviews(data || []);
+      if (error) {
+        console.error('Error loading reviews:', error);
+        alert('Error loading reviews: ' + error.message);
+      } else {
+        console.log('Loaded reviews:', data);
+        setReviews(data || []);
+      }
+    } catch (err) {
+      console.error('Exception loading reviews:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const loadBooks = async () => {
@@ -102,18 +109,22 @@ export function Reviews() {
         loadReviews();
       }
     } else {
-      const { error } = await supabase.from('reviews').insert({
+      const { data, error } = await supabase.from('reviews').insert({
         book_id: selectedBook,
         user_id: profile.id,
         rating,
         review_text: reviewText,
-      });
+        status: 'approved', // Explicitly set status
+      }).select();
 
       if (error) {
+        console.error('Error creating review:', error);
         alert('Error creating review: ' + error.message);
       } else {
+        console.log('Review created successfully:', data);
+        alert('Review submitted successfully!');
         closeModal();
-        loadReviews();
+        await loadReviews(); // Wait for reviews to reload
       }
     }
   };

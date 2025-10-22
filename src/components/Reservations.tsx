@@ -30,6 +30,7 @@ export function Reservations() {
   const [loading, setLoading] = useState(true);
   const [showReserveModal, setShowReserveModal] = useState(false);
   const [selectedBook, setSelectedBook] = useState<string>('');
+  const [materialTypeFilter, setMaterialTypeFilter] = useState<'all' | 'physical' | 'ebook' | 'electronic'>('all');
 
   useEffect(() => {
     loadReservations();
@@ -60,10 +61,12 @@ export function Reservations() {
   };
 
   const loadAvailableBooks = async () => {
+    // Only show books that are currently borrowed (not available)
+    // Users can reserve books that are currently checked out
     const { data, error } = await supabase
       .from('books')
       .select('*')
-      .eq('status', 'borrowed')
+      .neq('status', 'available') // Show books that are NOT available
       .order('title');
 
     if (error) {
@@ -224,6 +227,22 @@ export function Reservations() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Material Type
+                </label>
+                <select
+                  value={materialTypeFilter}
+                  onChange={(e) => setMaterialTypeFilter(e.target.value as typeof materialTypeFilter)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="all">All Materials</option>
+                  <option value="physical">Physical Books Only</option>
+                  <option value="ebook">eBooks Only</option>
+                  <option value="electronic">Electronic Materials Only</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select Book
                 </label>
                 <select
@@ -232,7 +251,22 @@ export function Reservations() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">Choose a book...</option>
-                  {books.map((book) => (
+                  {books
+                    .filter((book) => {
+                      if (materialTypeFilter === 'all') return true;
+                      if (materialTypeFilter === 'physical') {
+                        const category = book.author_publisher?.toLowerCase() || '';
+                        return !category.includes('ebook') && !category.includes('electronic');
+                      }
+                      if (materialTypeFilter === 'ebook') {
+                        return book.author_publisher?.toLowerCase().includes('ebook');
+                      }
+                      if (materialTypeFilter === 'electronic') {
+                        return book.author_publisher?.toLowerCase().includes('electronic');
+                      }
+                      return true;
+                    })
+                    .map((book) => (
                     <option key={book.id} value={book.id}>
                       {book.title} - {book.author_publisher}
                     </option>

@@ -110,29 +110,7 @@ Deno.serve(async (req: Request) => {
       console.log('Student record created successfully with ID:', studentId);
       recordId = studentId;
     } else if (role === 'staff') {
-      // For staff, create an auth user (so user_profiles.id can reference auth.users.id)
-      let staffAuthUserId: string | null = null;
-      if (email) {
-        console.log('Creating auth user for staff with email:', email);
-        const { data: staffAuthData, error: staffAuthError } = await supabaseAdmin.auth.admin.createUser({
-          email: email,
-          password,
-          email_confirm: true,
-        });
-
-        if (staffAuthError || !staffAuthData?.user) {
-          console.error('Failed to create auth user for staff:', staffAuthError);
-          return new Response(
-            JSON.stringify({ error: staffAuthError?.message || 'Failed to create auth user for staff' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        staffAuthUserId = staffAuthData.user.id;
-        // Set authUserId so profileId uses the auth user's id
-        authUserId = staffAuthUserId;
-      }
-
+      // For staff, DON'T create auth users - they work like students with password hashes
       // Insert staff record directly using admin client to bypass RLS
       const staffId = crypto.randomUUID();
       console.log('Attempting to insert staff record:', {
@@ -157,10 +135,6 @@ Deno.serve(async (req: Request) => {
 
       if (staffError) {
         console.error('Staff insertion failed:', staffError);
-        // Cleanup auth user if we created one
-        if (staffAuthUserId) {
-          await supabaseAdmin.auth.admin.deleteUser(staffAuthUserId);
-        }
         return new Response(
           JSON.stringify({ 
             error: `Staff creation failed: ${staffError.message}`,

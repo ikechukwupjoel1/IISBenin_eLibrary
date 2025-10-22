@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { UserCog, Plus, Pencil, Trash2, Search, X, KeyRound } from 'lucide-react';
+import { UserCog, Plus, Pencil, Trash2, Search, X, KeyRound, Printer } from 'lucide-react';
 import { supabase, type Staff } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
 type GeneratedCredentials = {
   enrollment_id: string;
   password: string;
+  full_name?: string;
+  email?: string;
 };
 
 export function StaffManagement() {
@@ -99,6 +101,14 @@ export function StaffManagement() {
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user-account`;
 
+      console.log('Creating staff with:', {
+        email,
+        full_name: formData.name,
+        role: 'staff',
+        enrollment_id: enrollmentId,
+        phone_number: formData.phone_number || null,
+      });
+
       try {
         const response = await fetch(apiUrl, {
           method: 'POST',
@@ -119,14 +129,24 @@ export function StaffManagement() {
 
         const result = await response.json();
 
+        console.log('Staff creation response:', { 
+          status: response.status, 
+          statusText: response.statusText,
+          result 
+        });
+
         if (!response.ok || result.error) {
-          alert('Error creating staff member: ' + (result.error || 'Unknown error'));
+          const errorMsg = result.error || `HTTP ${response.status}: ${response.statusText}`;
+          console.error('Staff creation failed:', { status: response.status, result });
+          alert('Error creating staff member: ' + errorMsg + (result.debug ? '\nDebug: ' + JSON.stringify(result.debug) : ''));
           return;
         }
 
         setGeneratedCredentials({
           enrollment_id: enrollmentId,
           password,
+          full_name: formData.name,
+          email,
         });
         setShowCredentials(true);
 
@@ -168,20 +188,41 @@ export function StaffManagement() {
         return;
       }
 
+      console.log('Resetting password for staff:', resetPasswordStaff);
+
       // Get the auth user ID from user_profiles linked to this staff member
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
-        .select('id')
+        .select('id, email, role, staff_id')
         .eq('staff_id', resetPasswordStaff.id)
         .maybeSingle();
 
-      if (profileError || !profileData) {
-        toast.error('Could not find user profile for this staff member');
+      console.log('Profile lookup result:', { 
+        profileData, 
+        profileError,
+        staffId: resetPasswordStaff.id 
+      });
+
+      if (profileError) {
+        toast.error('Error looking up user profile: ' + profileError.message);
         console.error('Profile error:', profileError);
         return;
       }
 
+      if (!profileData) {
+        toast.error('No user account found for this staff member. They may not have been registered properly.');
+        console.error('No profile found for staff_id:', resetPasswordStaff.id);
+        return;
+      }
+
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-user-password`;
+      console.log('Calling reset API:', apiUrl, 'with user_id:', profileData.id);
+
+      console.log('Sending reset request with:', {
+        user_id: profileData.id,
+        userEmail: profileData.email,
+        staffName: resetPasswordStaff.name
+      });
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -197,9 +238,16 @@ export function StaffManagement() {
       });
 
       const result = await response.json();
+      console.log('Reset API response:', { 
+        status: response.status, 
+        statusText: response.statusText,
+        result 
+      });
 
       if (!response.ok || result.error) {
-        toast.error('Error resetting password: ' + (result.error || 'Unknown error'));
+        const errorMsg = result.error || `HTTP ${response.status}: ${response.statusText}`;
+        toast.error('Error resetting password: ' + errorMsg);
+        console.error('Reset failed:', { status: response.status, result });
         return;
       }
 
@@ -212,6 +260,7 @@ export function StaffManagement() {
       toast.success('Password reset successfully');
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Reset password error:', error);
       toast.error('Error resetting password: ' + errorMessage);
     }
   };
@@ -264,6 +313,133 @@ export function StaffManagement() {
       console.error('Catch error:', error);
       toast.error('Error deleting staff member: ' + errorMessage);
     }
+  };
+
+  const handlePrintCredentials = () => {
+    if (!generatedCredentials) return;
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Please allow popups to print credentials');
+      return;
+    }
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Staff Account Credentials</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            max-width: 600px;
+            margin: 0 auto;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+          }
+          .header h1 {
+            margin: 0;
+            color: #059669;
+          }
+          .credentials {
+            background: #f3f4f6;
+            border: 2px solid #d1d5db;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+          }
+          .credential-row {
+            margin: 15px 0;
+          }
+          .label {
+            font-weight: bold;
+            color: #374151;
+            display: block;
+            margin-bottom: 5px;
+          }
+          .value {
+            font-size: 16px;
+            color: #111827;
+            padding: 8px;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-family: monospace;
+          }
+          .warning {
+            background: #fef3c7;
+            border: 1px solid #fbbf24;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+          }
+          .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 12px;
+            border-top: 1px solid #d1d5db;
+            padding-top: 20px;
+          }
+          @media print {
+            body { padding: 20px; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>IIS Benin eLibrary</h1>
+          <h2>Staff Account Credentials</h2>
+        </div>
+
+        <div class="credentials">
+          <div class="credential-row">
+            <span class="label">Full Name:</span>
+            <div class="value">${generatedCredentials.full_name || 'N/A'}</div>
+          </div>
+          <div class="credential-row">
+            <span class="label">Enrollment ID:</span>
+            <div class="value">${generatedCredentials.enrollment_id}</div>
+          </div>
+          <div class="credential-row">
+            <span class="label">Email:</span>
+            <div class="value">${generatedCredentials.email || 'N/A'}</div>
+          </div>
+          <div class="credential-row">
+            <span class="label">Password:</span>
+            <div class="value">${generatedCredentials.password}</div>
+          </div>
+        </div>
+
+        <div class="warning">
+          <p><strong>⚠️ Important:</strong></p>
+          <ul>
+            <li>Keep these credentials secure and confidential</li>
+            <li>Change your password after first login</li>
+            <li>This password cannot be retrieved later</li>
+          </ul>
+        </div>
+
+        <div class="footer">
+          <p>Generated on ${new Date().toLocaleString()}</p>
+          <p>IIS Benin eLibrary Management System</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+    
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
   };
 
   const handleCancel = () => {
@@ -500,12 +676,21 @@ export function StaffManagement() {
                 <p className="text-xs mt-1">Save these credentials now. They cannot be retrieved later.</p>
               </div>
 
-              <button
-                onClick={() => setShowCredentials(false)}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Done
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handlePrintCredentials}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Printer className="h-5 w-5" />
+                  Print Credentials
+                </button>
+                <button
+                  onClick={() => setShowCredentials(false)}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Done
+                </button>
+              </div>
             </div>
           </div>
         </div>

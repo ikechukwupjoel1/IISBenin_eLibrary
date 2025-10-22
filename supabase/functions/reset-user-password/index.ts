@@ -91,31 +91,76 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Check if user exists first
-    const { data: targetUser, error: targetUserError } = await supabaseAdmin.auth.admin.getUserById(user_id);
-    
-    console.log('Target user lookup:', { found: !!targetUser, error: targetUserError });
+    // First, check if this is a student or staff (non-auth user) by looking at user_profiles
+    const { data: profileData, error: profileError } = await supabaseAdmin
+      .from('user_profiles')
+      .select('id, role, student_id, staff_id')
+      .eq('id', user_id)
+      .maybeSingle();
 
-    if (targetUserError || !targetUser) {
+    console.log('Profile lookup:', { profileData, profileError });
+
+    if (profileError) {
       return new Response(
-        JSON.stringify({ error: 'User not found' }),
+        JSON.stringify({ error: 'Error looking up user profile: ' + profileError.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Update user password using admin API
-    const { data: updateData, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-      user_id,
-      { password: new_password }
-    );
-    
-    console.log('Password update result:', { success: !!updateData, error: updateError });
-
-    if (updateError) {
+    if (!profileData) {
       return new Response(
-        JSON.stringify({ error: updateError.message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'User profile not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // For students and staff, update password_hash directly in user_profiles
+    // For librarians, use auth admin API
+    if (profileData.role === 'student' || profileData.role === 'staff') {
+      console.log('Updating password for non-auth user (student/staff)');
+      
+      // Update password_hash in user_profiles table
+      const { error: updateError } = await supabaseAdmin
+        .from('user_profiles')
+        .update({ password_hash: new_password })
+        .eq('id', user_id);
+
+      console.log('Password hash update result:', { error: updateError });
+
+      if (updateError) {
+        return new Response(
+          JSON.stringify({ error: 'Failed to update password: ' + updateError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else {
+      // For librarians, use auth admin API
+      console.log('Updating password for auth user (librarian)');
+      
+      const { data: targetUser, error: targetUserError } = await supabaseAdmin.auth.admin.getUserById(user_id);
+      
+      console.log('Target auth user lookup:', { found: !!targetUser, error: targetUserError });
+
+      if (targetUserError || !targetUser) {
+        return new Response(
+          JSON.stringify({ error: 'Auth user not found' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { data: updateData, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        user_id,
+        { password: new_password }
+      );
+      
+      console.log('Auth password update result:', { success: !!updateData, error: updateError });
+
+      if (updateError) {
+        return new Response(
+          JSON.stringify({ error: updateError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     return new Response(

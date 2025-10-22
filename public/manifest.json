@@ -1,0 +1,52 @@
+{
+  "name": "IISBenin Library Management System",
+  "short_name": "IISBenin Library",
+  "description": "Digital library management system for IISBenin",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/Iisbenin%20logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/Iisbenin%20logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "productivity"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "My Books",
+      "short_name": "My Books",
+      "description": "View your borrowed books",
+      "url": "/?tab=mybooks",
+      "icons": [
+        {
+          "src": "/Iisbenin%20logo.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Digital Library",
+      "short_name": "Digital",
+      "description": "Access digital materials",
+      "url": "/?tab=digital",
+      "icons": [
+        {
+          "src": "/Iisbenin%20logo.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
+}

@@ -21,6 +21,7 @@ export function BorrowingSystem() {
   const [selectedStaff, setSelectedStaff] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [activeTab, setActiveTab] = useState<'borrow' | 'active' | 'overdue'>('borrow');
+  const [materialTypeFilter, setMaterialTypeFilter] = useState<'all' | 'physical' | 'ebook' | 'electronic'>('all');
 
   useEffect(() => {
     loadData();
@@ -28,7 +29,8 @@ export function BorrowingSystem() {
 
   const loadData = async () => {
     const [booksResult, studentsResult, staffResult, recordsResult] = await Promise.all([
-      supabase.from('books').select('*').gt('available_copies', 0).order('title'),
+      // Only show books with available status for borrowing
+      supabase.from('books').select('*').eq('status', 'available').order('title'),
       supabase.from('students').select('*').order('name'),
       supabase.from('staff').select('*').order('name'),
       supabase.from('borrow_records').select(`
@@ -209,6 +211,20 @@ export function BorrowingSystem() {
 
           <form onSubmit={handleBorrow} className="space-y-4">
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Material Type</label>
+              <select
+                value={materialTypeFilter}
+                onChange={(e) => setMaterialTypeFilter(e.target.value as any)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All Materials</option>
+                <option value="physical">Physical Books Only</option>
+                <option value="ebook">eBooks Only</option>
+                <option value="electronic">Electronic Materials Only</option>
+              </select>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Borrower Type</label>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2">
@@ -287,9 +303,24 @@ export function BorrowingSystem() {
                 required
               >
                 <option value="">Choose a book...</option>
-                {books.map((book) => (
+                {books
+                  .filter((book) => {
+                    if (materialTypeFilter === 'all') return true;
+                    if (materialTypeFilter === 'physical') {
+                      return !book.category?.toLowerCase().includes('ebook') && 
+                             !book.category?.toLowerCase().includes('electronic');
+                    }
+                    if (materialTypeFilter === 'ebook') {
+                      return book.category?.toLowerCase().includes('ebook');
+                    }
+                    if (materialTypeFilter === 'electronic') {
+                      return book.category?.toLowerCase().includes('electronic');
+                    }
+                    return true;
+                  })
+                  .map((book) => (
                   <option key={book.id} value={book.id}>
-                    {book.title} by {book.author}
+                    {book.title} by {book.author} ({book.category || 'Uncategorized'})
                   </option>
                 ))}
               </select>

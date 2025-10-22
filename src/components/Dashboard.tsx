@@ -3,6 +3,7 @@ import { BookOpen, Users, BookMarked, AlertCircle, UserCog } from 'lucide-react'
 import { supabase } from '../lib/supabase';
 import BackgroundCarousel from './BackgroundCarousel';
 import schoolLogo from '../assets/Iisbenin logo.png';
+import { useAuth } from '../contexts/AuthContext';
 
 type Stats = {
   totalBooks: number;
@@ -18,7 +19,14 @@ type StudentReadingData = {
   books_read: number;
 };
 
+type StaffReadingData = {
+  staff_id: string;
+  staff_name: string;
+  books_read: number;
+};
+
 export function Dashboard() {
+  const { profile } = useAuth();
   const [stats, setStats] = useState<Stats>({
     totalBooks: 0,
     borrowedBooks: 0,
@@ -27,21 +35,30 @@ export function Dashboard() {
     overdueBooks: 0,
   });
   const [studentReadingData, setStudentReadingData] = useState<StudentReadingData[]>([]);
+  const [staffReadingData, setStaffReadingData] = useState<StaffReadingData[]>([]);
 
   useEffect(() => {
     loadStats();
     loadStudentReadingData();
+    loadStaffReadingData();
   }, []);
 
   const loadStats = async () => {
+    // For students, filter overdue books by their student_id
+    let overdueQuery = supabase.from('borrow_records').select('id', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .lt('due_date', new Date().toISOString());
+
+    if (profile?.role === 'student' && profile?.student_id) {
+      overdueQuery = overdueQuery.eq('student_id', profile.student_id);
+    }
+
     const [booksResult, studentsResult, staffResult, borrowedResult, overdueResult] = await Promise.all([
       supabase.from('books').select('id', { count: 'exact', head: true }),
       supabase.from('students').select('id', { count: 'exact', head: true }),
       supabase.from('staff').select('id', { count: 'exact', head: true }),
       supabase.from('books').select('id', { count: 'exact', head: true }).eq('status', 'borrowed'),
-      supabase.from('borrow_records').select('id', { count: 'exact', head: true })
-        .eq('status', 'active')
-        .lt('due_date', new Date().toISOString()),
+      overdueQuery,
     ]);
 
     // Debug logging to inspect raw query results and any errors
@@ -106,13 +123,21 @@ export function Dashboard() {
     setStudentReadingData(readingData);
   };
 
-  const statCards = [
+  const loadStaffReadingData = async () => {
+    // Note: Staff don't have borrow_records in the current schema
+    // This is a placeholder for future implementation if staff borrowing is added
+    // For now, we'll return empty data
+    setStaffReadingData([]);
+  };
+
+  const allStatCards = [
     {
       title: 'Total Books',
       value: stats.totalBooks,
       icon: BookOpen,
       color: 'bg-blue-500',
       bgColor: 'bg-blue-50',
+      roles: ['librarian', 'staff', 'student'],
     },
     {
       title: 'Borrowed Books',
@@ -120,6 +145,7 @@ export function Dashboard() {
       icon: BookMarked,
       color: 'bg-green-500',
       bgColor: 'bg-green-50',
+      roles: ['librarian', 'staff', 'student'],
     },
     {
       title: 'Total Students',
@@ -127,6 +153,7 @@ export function Dashboard() {
       icon: Users,
       color: 'bg-slate-500',
       bgColor: 'bg-slate-50',
+      roles: ['librarian', 'staff'],
     },
     {
       title: 'Total Staff',
@@ -134,15 +161,22 @@ export function Dashboard() {
       icon: UserCog,
       color: 'bg-teal-500',
       bgColor: 'bg-teal-50',
+      roles: ['librarian'], // Only librarians can see staff count
     },
     {
-      title: 'Overdue Books',
+      title: profile?.role === 'student' ? 'My Overdue Books' : 'Overdue Books',
       value: stats.overdueBooks,
       icon: AlertCircle,
       color: 'bg-red-500',
       bgColor: 'bg-red-50',
+      roles: ['librarian', 'staff', 'student'], // Students can see their own overdue books
     },
   ];
+
+  // Filter stat cards based on user role
+  const statCards = allStatCards.filter(card => 
+    profile?.role && card.roles.includes(profile.role)
+  );
 
   const maxBooksRead = Math.max(...studentReadingData.map(s => s.books_read), 1);
 
@@ -171,6 +205,7 @@ export function Dashboard() {
           })}
         </div>
 
+        {/* Top Reading Students Chart - visible to all roles */}
         <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-6">
           <div className="flex items-center gap-2 mb-6">
             <BookMarked className="h-6 w-6 text-blue-600" />
@@ -209,6 +244,48 @@ export function Dashboard() {
             </div>
           )}
         </div>
+
+        {/* Top Reading Staff Chart - only visible to librarians and staff */}
+        {profile?.role && (profile.role === 'librarian' || profile.role === 'staff') && (
+          <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <UserCog className="h-6 w-6 text-teal-600" />
+              <h3 className="text-xl font-bold text-gray-900">Top Reading Staff</h3>
+            </div>
+
+            {staffReadingData.length > 0 ? (
+              <div className="space-y-4">
+                {staffReadingData.map((staff, index) => (
+                  <div key={staff.staff_id} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-teal-100 text-teal-700 font-semibold text-sm">
+                          {index + 1}
+                        </span>
+                        <span className="font-medium text-gray-900">{staff.staff_name}</span>
+                      </div>
+                      <span className="text-sm font-semibold text-gray-700">
+                        {staff.books_read} {staff.books_read === 1 ? 'book' : 'books'}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                      <div
+                        className="bg-gradient-to-r from-teal-500 to-blue-500 h-3 rounded-full transition-all duration-500"
+                        style={{ width: `${(staff.books_read / Math.max(...staffReadingData.map(s => s.books_read), 1)) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                <UserCog className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg font-medium">No reading data yet</p>
+                <p className="text-sm mt-1">Staff reading activity will appear here once they complete borrowing books</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

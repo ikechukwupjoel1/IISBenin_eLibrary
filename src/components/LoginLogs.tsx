@@ -7,11 +7,14 @@ type LoginLog = {
   id: string;
   user_id: string | null;
   enrollment_id: string;
+  full_name?: string;
+  role?: string;
+  status?: string;
   login_at: string;
   ip_address: string | null;
   user_agent: string | null;
-  success: boolean;
-  created_at: string;
+  success?: boolean;
+  created_at?: string;
   user_profiles?: {
     full_name: string;
     role: string;
@@ -32,28 +35,81 @@ export function LoginLogs() {
 
   const loadLogs = async () => {
     setLoading(true);
-    let query = supabase
-      .from('login_logs')
-      .select(`
-        *,
-        user_profiles (
-          full_name,
-          role
-        )
-      `)
-      .order('login_at', { ascending: false })
-      .limit(100);
+    console.log('Loading login logs...');
+    
+    try {
+      // First, try to load with relationship
+      const query = supabase
+        .from('login_logs')
+        .select(`
+          *,
+          user_profiles (
+            full_name,
+            role
+          )
+        `)
+        .order('login_at', { ascending: false })
+        .limit(100);
 
-    const { data, error } = await query;
+      let { data, error } = await query;
 
-    if (!error && data) {
-      let filteredData = data;
-      if (roleFilter !== 'all') {
-        filteredData = data.filter(log => log.user_profiles?.role === roleFilter);
+      // If relationship error, try without it (use fields directly from login_logs)
+      if (error && error.message.includes('relationship')) {
+        console.warn('Relationship not found, using direct fields from login_logs');
+        toast.error('Login logs table needs to be fixed. Please run fix_login_logs_relationship.sql', {
+          duration: 6000
+        });
+        
+        const simpleQuery = await supabase
+          .from('login_logs')
+          .select('*')
+          .order('login_at', { ascending: false })
+          .limit(100);
+        
+        data = simpleQuery.data;
+        error = simpleQuery.error;
       }
-      setLogs(filteredData as LoginLog[]);
+
+      console.log('Login logs query result:', { data, error, count: data?.length });
+
+      if (error) {
+        console.error('Error loading login logs:', error);
+        
+        // Check if it's a network error
+        if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+          toast.error('Network error: Unable to connect to server. Please check your internet connection.');
+        } else if (error.code === '42P01') {
+          toast.error('Login logs table does not exist. Please contact administrator.');
+        } else {
+          toast.error('Error loading login logs: ' + error.message);
+        }
+        
+        setLoading(false);
+        return;
+      }
+
+      if (data) {
+        let filteredData = data;
+        if (roleFilter !== 'all') {
+          // Filter by role from user_profiles if available, otherwise from direct field
+          filteredData = data.filter(log => {
+            const role = log.user_profiles?.role || log.role;
+            return role === roleFilter;
+          });
+        }
+        console.log('Setting logs:', filteredData.length, 'records');
+        setLogs(filteredData as LoginLog[]);
+      } else {
+        console.log('No data returned from query');
+        setLogs([]);
+      }
+      
+      setLoading(false);
+    } catch (err) {
+      console.error('Unexpected error loading login logs:', err);
+      toast.error('Network error: Unable to connect to server. Please check your internet connection and try again.');
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleUpdateEnrollmentId = async (logId: string) => {
@@ -176,7 +232,7 @@ export function LoginLogs() {
                   <tr key={log.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {log.user_profiles?.full_name || 'Unknown User'}
+                        {log.user_profiles?.full_name || log.full_name || 'Unknown User'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -209,14 +265,14 @@ export function LoginLogs() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          log.user_profiles?.role === 'student'
+                          (log.user_profiles?.role || log.role) === 'student'
                             ? 'bg-blue-100 text-blue-800'
-                            : log.user_profiles?.role === 'staff'
+                            : (log.user_profiles?.role || log.role) === 'staff'
                             ? 'bg-green-100 text-green-800'
                             : 'bg-purple-100 text-purple-800'
                         }`}
                       >
-                        {log.user_profiles?.role || 'Unknown'}
+                        {log.user_profiles?.role || log.role || 'Unknown'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
@@ -228,12 +284,12 @@ export function LoginLogs() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          log.success
+                          (log.success !== false && log.status !== 'failed')
                             ? 'bg-green-100 text-green-800'
                             : 'bg-red-100 text-red-800'
                         }`}
                       >
-                        {log.success ? 'Success' : 'Failed'}
+                        {log.status === 'success' || log.success ? 'Success' : 'Failed'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">

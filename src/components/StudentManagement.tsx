@@ -215,25 +215,41 @@ export function StudentManagement() {
         return;
       }
 
-      console.log('Resetting password for student:', resetPasswordStudent.id);
+      console.log('Resetting password for student:', resetPasswordStudent);
 
       // Get the auth user ID from user_profiles linked to this student
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
-        .select('id')
+        .select('id, email, role, student_id')
         .eq('student_id', resetPasswordStudent.id)
         .maybeSingle();
 
-      console.log('Profile lookup result:', { profileData, profileError });
+      console.log('Profile lookup result:', { 
+        profileData, 
+        profileError,
+        studentId: resetPasswordStudent.id 
+      });
 
-      if (profileError || !profileData) {
-        toast.error('Could not find user profile for this student');
+      if (profileError) {
+        toast.error('Error looking up user profile: ' + profileError.message);
         console.error('Profile error:', profileError);
+        return;
+      }
+
+      if (!profileData) {
+        toast.error('No user account found for this student. They may not have been registered properly.');
+        console.error('No profile found for student_id:', resetPasswordStudent.id);
         return;
       }
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-user-password`;
       console.log('Calling reset API:', apiUrl, 'with user_id:', profileData.id);
+
+      console.log('Sending reset request with:', {
+        user_id: profileData.id,
+        userEmail: profileData.email,
+        studentName: resetPasswordStudent.name
+      });
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -249,11 +265,16 @@ export function StudentManagement() {
       });
 
       const result = await response.json();
-      console.log('Reset API response:', { status: response.status, result });
+      console.log('Reset API response:', { 
+        status: response.status, 
+        statusText: response.statusText,
+        result 
+      });
 
       if (!response.ok || result.error) {
-        toast.error('Error resetting password: ' + (result.error || 'Unknown error'));
-        console.error('Reset failed:', result);
+        const errorMsg = result.error || `HTTP ${response.status}: ${response.statusText}`;
+        toast.error('Error resetting password: ' + errorMsg);
+        console.error('Reset failed:', { status: response.status, result });
         return;
       }
 

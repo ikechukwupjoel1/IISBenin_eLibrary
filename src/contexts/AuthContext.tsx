@@ -43,14 +43,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return data;
   };
 
-  const logLogin = async (enrollmentId: string, userId: string | null, success: boolean) => {
+  const logLogin = async (enrollmentId: string, userId: string | null, success: boolean, role?: string, fullName?: string) => {
     try {
-      await supabase.from('login_logs').insert({
-        user_id: userId,
+      console.log('Logging login attempt:', { enrollmentId, userId, success, role, fullName });
+      
+      const logData: any = {
         enrollment_id: enrollmentId,
-        success,
+        status: success ? 'success' : 'failed',
+        role: role || 'unknown',
         login_at: new Date().toISOString(),
-      });
+      };
+      
+      // Add user_id if we have it
+      if (userId) {
+        logData.user_id = userId;
+      }
+      
+      // Add full_name if we have it
+      if (fullName) {
+        logData.full_name = fullName;
+      }
+      
+      const { data, error } = await supabase.from('login_logs').insert([logData]);
+      
+      if (error) {
+        console.error('Error inserting login log:', error);
+      } else {
+        console.log('Login log created successfully:', data);
+      }
     } catch (error) {
       console.error('Error logging login:', error);
     }
@@ -115,11 +135,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const userProfile = await loadUserProfile(data.user.id);
           if (!userProfile || userProfile.role !== 'librarian') {
             await supabase.auth.signOut();
-            await logLogin(email, data.user.id, false);
+            await logLogin(email, data.user.id, false, 'librarian');
             setAuthError('Access denied. Not a librarian account.');
             throw new Error('Access denied. Not a librarian account.');
           }
-          await logLogin(userProfile.enrollment_id || email, data.user.id, true);
+          await logLogin(userProfile.enrollment_id || email, data.user.id, true, 'librarian', userProfile.full_name);
           setProfile(userProfile);
           setAuthError(null);
         }
@@ -133,6 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('Starting authentication for:', { role, identifier, tableName });
 
+      // First verify the enrollment_id exists in the staff/students table
       const { data: record, error: fetchError } = await supabase
         .from(tableName)
         .select('*')
@@ -142,69 +163,94 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Record lookup result:', { record, fetchError });
 
       if (fetchError || !record) {
-        await logLogin(identifier, null, false);
+        await logLogin(identifier, null, false, role);
         throw new Error('Invalid enrollment ID');
       }
 
-      // First, try a direct lookup by enrollment_id (most reliable pre-auth)
-      let { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .ilike('enrollment_id', identifier.trim())
-        .eq('role', role)
-        .maybeSingle();
+      // Use edge function to verify password (supports both bcrypt and plain text)
+      try {
+        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-login`;
+        
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            enrollment_id: identifier,
+            password: password,
+            role: role,
+          }),
+        });
 
-      console.log('Profile lookup by enrollment_id:', {
-        identifier: identifier.trim(),
-        role,
-        profileData,
-        profileError
-      });
+        const data = await response.json();
 
-      // Fallback 1: If not found, try by role-specific foreign key
-      if ((!profileData || profileError) && role === 'student') {
-        const { data: fallbackProfile, error: fallbackError } = await supabase
+        if (!response.ok || !data.valid) {
+          await logLogin(identifier, data.profile?.id || null, false, role, data.profile?.full_name);
+          throw new Error(data.error || 'Invalid password');
+        }
+
+        const profileData = data.profile;
+        
+        console.log('Login verified via edge function:', {
+          profileId: profileData.id,
+          role: profileData.role
+        });
+
+        // Set profile directly
+        await logLogin(identifier, profileData.id, true, role, profileData.full_name);
+        setProfile(profileData);
+        setUser({ id: profileData.id } as any); // Fake user object
+      } catch (error) {
+        console.error('Error calling verify-login edge function:', error);
+        // Fallback to direct password check if edge function fails
+        console.log('Falling back to direct password verification');
+        
+        let { data: profileData, error: profileError } = await supabase
           .from('user_profiles')
           .select('*')
-          .eq('student_id', record.id)
-          .eq('role', 'student')
+          .ilike('enrollment_id', identifier.trim())
+          .eq('role', role)
           .maybeSingle();
-        profileData = fallbackProfile ?? profileData;
-        profileError = fallbackError ?? profileError;
-      }
 
-      if ((!profileData || profileError) && role === 'staff') {
-        const { data: fallbackProfile, error: fallbackError } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('staff_id', record.id)
-          .eq('role', 'staff')
-          .maybeSingle();
-        profileData = fallbackProfile ?? profileData;
-        profileError = fallbackError ?? profileError;
-      }
+        if ((!profileData || profileError) && role === 'student') {
+          const { data: fallbackProfile, error: fallbackError } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('student_id', record.id)
+            .eq('role', 'student')
+            .maybeSingle();
+          profileData = fallbackProfile ?? profileData;
+          profileError = fallbackError ?? profileError;
+        }
 
-      if (profileError || !profileData) {
-        await logLogin(identifier, null, false);
-        throw new Error('User profile not found');
-      }
+        if ((!profileData || profileError) && role === 'staff') {
+          const { data: fallbackProfile, error: fallbackError } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('staff_id', record.id)
+            .eq('role', 'staff')
+            .maybeSingle();
+          profileData = fallbackProfile ?? profileData;
+          profileError = fallbackError ?? profileError;
+        }
 
-      // For students and staff, check password directly
-      console.log('Checking password for profile:', {
-        profileId: profileData.id,
-        storedHash: profileData.password_hash,
-        providedPassword: password,
-        match: profileData.password_hash === password
-      });
+        if (profileError || !profileData) {
+          await logLogin(identifier, null, false, role);
+          throw new Error('User profile not found');
+        }
 
-      if (profileData.password_hash !== password) {
-        await logLogin(identifier, profileData.id, false);
-        throw new Error('Invalid password');
+        // Direct password check (plain text only in fallback)
+        if (profileData.password_hash !== password) {
+          await logLogin(identifier, profileData.id, false, role, profileData.full_name);
+          throw new Error('Invalid password');
+        }
+        
+        await logLogin(identifier, profileData.id, true, role, profileData.full_name);
+        setProfile(profileData);
+        setUser({ id: profileData.id } as any);
       }
-      // Set profile directly
-      await logLogin(identifier, profileData.id, true);
-      setProfile(profileData);
-      setUser({ id: profileData.id } as any); // Fake user object
     } else {
       throw new Error('Invalid role specified');
     }

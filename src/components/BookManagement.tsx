@@ -12,9 +12,11 @@ export function BookManagement() {
   const [showModal, setShowModal] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [shelves, setShelves] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     title: '',
-    author_publisher: '',
+    author: '',
     isbn: '',
     category: '',
     total_copies: 1,
@@ -32,9 +34,80 @@ export function BookManagement() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
+  // Predefined category options
+  const categoryOptions = [
+    'Fiction',
+    'Non-Fiction',
+    'Science',
+    'Mathematics',
+    'History',
+    'Geography',
+    'Literature',
+    'English Language',
+    'Biology',
+    'Chemistry',
+    'Physics',
+    'Computer Science',
+    'Art & Design',
+    'Music',
+    'Physical Education',
+    'Religious Studies',
+    'Social Studies',
+    'Economics',
+    'Commerce',
+    'Accounting',
+    'Agricultural Science',
+    'Technical Drawing',
+    'Home Economics',
+    'French Language',
+    'Reference',
+    'Dictionary',
+    'Encyclopedia',
+    'Science eBook',
+    'Mathematics eBook',
+    'History eBook',
+    'Literature eBook',
+    'Science Electronic Material',
+    'Mathematics Electronic Material',
+    'History Electronic Material',
+    'Other',
+  ];
+
   useEffect(() => {
     loadBooks();
+    loadSettings();
   }, []);
+
+  const loadSettings = async () => {
+    try {
+      // Load categories
+      const { data: categoriesData } = await supabase
+        .from('library_settings')
+        .select('value')
+        .eq('key', 'category')
+        .order('value');
+
+      if (categoriesData) {
+        setCategories(categoriesData.map(item => item.value));
+      }
+
+      // Load shelves
+      const { data: shelvesData } = await supabase
+        .from('library_settings')
+        .select('value')
+        .eq('key', 'shelf')
+        .order('value');
+
+      if (shelvesData) {
+        setShelves(shelvesData.map(item => item.value));
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+      // Fallback to hardcoded values if table doesn't exist
+      setCategories(['Fiction', 'Non-Fiction', 'Science', 'Mathematics', 'History']);
+      setShelves(['Shelf A1', 'Shelf A2', 'Shelf B1', 'Shelf B2']);
+    }
+  };
 
   const loadBooks = async () => {
     const { data, error } = await supabase
@@ -50,7 +123,7 @@ export function BookManagement() {
   const filteredBooks = books.filter((book) => {
     const matchesSearch =
       book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      book.author_publisher.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      book.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
       book.isbn?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       book.category?.toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -60,7 +133,7 @@ export function BookManagement() {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  const categories = ['all', ...Array.from(new Set(books.map(b => b.category).filter(Boolean)))];
+  const allCategories = ['all', ...categories];
   const statuses = ['all', 'available', 'borrowed'];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,7 +150,7 @@ export function BookManagement() {
 
       try {
         const fileName = `${Date.now()}-${selectedFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-        const { data, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('ebooks')
           .upload(fileName, selectedFile);
 
@@ -102,22 +175,24 @@ export function BookManagement() {
       setUploading(false);
     }
 
+    // Only submit columns that exist in the database
     const dataToSubmit = {
-      ...formData,
+      title: formData.title,
+      author: formData.author,
       isbn: fileUrl,
+      category: formData.category || null,
+      status: 'available',
     };
 
     if (editingBook) {
       const { error } = await supabase
         .from('books')
-        .update({
-          ...dataToSubmit,
-          updated_at: new Date().toISOString(),
-        })
+        .update(dataToSubmit)
         .eq('id', editingBook.id);
 
       if (error) {
-        toast.error('Error updating book');
+        console.error('Error updating book:', error);
+        toast.error('Error updating book: ' + error.message);
       } else {
         toast.success('Book updated successfully');
         loadBooks();
@@ -129,7 +204,8 @@ export function BookManagement() {
         .insert([dataToSubmit]);
 
       if (error) {
-        toast.error('Error adding book');
+        console.error('Error adding book:', error);
+        toast.error('Error adding book: ' + error.message);
       } else {
         toast.success('Book added successfully');
         loadBooks();
@@ -156,19 +232,19 @@ export function BookManagement() {
       setEditingBook(book);
       setFormData({
         title: book.title,
-        author_publisher: book.author_publisher,
+        author: book.author,
         isbn: book.isbn || '',
         category: book.category || '',
-        total_copies: book.total_copies || 1,
-        available_copies: book.available_copies || 1,
-        condition: book.condition || 'good',
-        location: book.location || '',
-        barcode: book.barcode || '',
-        material_type: book.material_type || 'book',
-        is_ebook: book.is_ebook || false,
-        class_specific: book.class_specific || '',
-        recommended_grade_levels: book.recommended_grade_levels || [],
-        reading_level: book.reading_level || '',
+        total_copies: 1,
+        available_copies: 1,
+        condition: 'good',
+        location: '',
+        barcode: '',
+        material_type: 'book',
+        is_ebook: false,
+        class_specific: '',
+        recommended_grade_levels: [],
+        reading_level: '',
       });
     }
     setShowModal(true);
@@ -181,7 +257,7 @@ export function BookManagement() {
     setUploadMethod('url');
     setFormData({
       title: '',
-      author_publisher: '',
+      author: '',
       isbn: '',
       category: '',
       total_copies: 1,
@@ -238,7 +314,7 @@ export function BookManagement() {
               {filteredBooks.map((book) => (
                 <tr key={book.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">{book.title}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{book.author_publisher}</td>
+                  <td className="px-6 py-4 text-sm text-gray-700">{book.author}</td>
                   <td className="px-6 py-4 text-sm text-gray-700">{book.isbn || '-'}</td>
                   <td className="px-6 py-4 text-sm text-gray-700">{book.category || '-'}</td>
                   <td className="px-6 py-4">
@@ -301,8 +377,8 @@ export function BookManagement() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Author/Publisher</label>
                 <input
                   type="text"
-                  value={formData.author_publisher}
-                  onChange={(e) => setFormData({ ...formData, author_publisher: e.target.value })}
+                  value={formData.author}
+                  onChange={(e) => setFormData({ ...formData, author: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
@@ -320,12 +396,19 @@ export function BookManagement() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <input
-                  type="text"
+                <select
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                  required
+                >
+                  <option value="">Select a category</option>
+                  {categoryOptions.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -483,14 +566,20 @@ export function BookManagement() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Location (Shelf)</label>
-                    <input
-                      type="text"
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Location (Shelf) *</label>
+                    <select
                       value={formData.location}
                       onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      placeholder="e.g., Shelf A1, Section B"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                      required
+                    >
+                      <option value="">Select shelf location</option>
+                      {shelves.map((shelf) => (
+                        <option key={shelf} value={shelf}>
+                          {shelf}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </>
               )}

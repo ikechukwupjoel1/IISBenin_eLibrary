@@ -8,12 +8,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export type Book = {
   id: string;
   title: string;
-  author_publisher: string;
+  author: string;
   isbn?: string;
   category?: string;
   status: 'available' | 'borrowed';
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 };
 
 export type Student = {

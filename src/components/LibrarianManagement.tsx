@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { Shield, Plus, Trash2, Search, X, KeyRound } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Shield, Plus, Trash2, Search, X, KeyRound, Printer } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import toast from 'react-hot-toast';
 
 type Librarian = {
   id: string;
@@ -13,6 +14,8 @@ type Librarian = {
 type GeneratedCredentials = {
   email: string;
   password: string;
+  enrollmentId?: string;
+  fullName?: string;
 };
 
 export function LibrarianManagement() {
@@ -23,6 +26,7 @@ export function LibrarianManagement() {
   const [generatedCredentials, setGeneratedCredentials] = useState<GeneratedCredentials | null>(null);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [selectedLibrarian, setSelectedLibrarian] = useState<Librarian | null>(null);
+  const printRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -60,79 +64,169 @@ export function LibrarianManagement() {
     e.preventDefault();
 
     const password = generatePassword();
+    const enrollmentId = `LIB${Math.floor(Math.random() * 100000000)}`;
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: formData.email,
-      password,
-    });
+    console.log('Creating librarian account with:', { email: formData.email, full_name: formData.full_name, enrollmentId });
 
-    if (authError) {
-      alert('Error creating librarian account: ' + authError.message);
-      return;
-    }
+    try {
+      // First, check if user profile already exists
+      const { data: existingProfile } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('email', formData.email)
+        .maybeSingle();
 
-    if (!authData.user) {
-      alert('Failed to create user account');
-      return;
-    }
+      if (existingProfile) {
+        toast.error('A user with this email already exists');
+        return;
+      }
 
-    const { error: profileError } = await supabase
-      .from('user_profiles')
-      .insert({
-        id: authData.user.id,
+      // Show loading message
+      toast.loading('Creating librarian account...', { id: 'create-librarian' });
+
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
-        full_name: formData.full_name,
-        role: 'librarian',
+        password,
+        options: {
+          emailRedirectTo: undefined, // Disable email confirmation
+        },
       });
 
-    if (profileError) {
-      alert('Error creating librarian profile: ' + profileError.message);
-      return;
+      console.log('Auth signup result:', { authData, authError });
+
+      if (authError) {
+        console.error('Auth error:', authError);
+        
+        // Check if it's a rate limit error
+        if (authError.message && authError.message.includes('rate limit')) {
+          toast.error('Please wait a moment before creating another account. Email rate limit reached.');
+        } else {
+          toast.error('Error creating librarian account: ' + authError.message);
+        }
+        return;
+      }
+
+      if (!authData.user) {
+        toast.dismiss('create-librarian');
+        toast.error('Failed to create user account');
+        return;
+      }
+
+      // Wait a bit to ensure auth user is fully created and avoid rate limits
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Check again if profile was auto-created by a trigger
+      const { data: autoProfile } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('id', authData.user.id)
+        .maybeSingle();
+
+      if (autoProfile) {
+        // Profile already exists, just update it
+        const { error: updateError } = await supabase
+          .from('user_profiles')
+          .update({
+            email: formData.email,
+            full_name: formData.full_name,
+            role: 'librarian',
+            enrollment_id: enrollmentId,
+          })
+          .eq('id', authData.user.id);
+
+        if (updateError) {
+          console.error('Profile update error:', updateError);
+          alert('Error updating librarian profile: ' + updateError.message);
+          return;
+        }
+      } else {
+        // Create new profile
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .insert({
+            id: authData.user.id,
+            email: formData.email,
+            full_name: formData.full_name,
+            role: 'librarian',
+            enrollment_id: enrollmentId,
+          });
+
+        console.log('Profile insert result:', { profileError });
+
+        if (profileError) {
+          console.error('Profile error:', profileError);
+          alert('Error creating librarian profile: ' + profileError.message);
+          return;
+        }
+      }
+
+      setGeneratedCredentials({
+        email: formData.email,
+        password,
+        enrollmentId,
+        fullName: formData.full_name,
+      });
+
+      toast.dismiss('create-librarian');
+      toast.success('Librarian account created successfully!');
+      setShowCredentials(true);
+
+      loadLibrarians();
+      handleCancel();
+    } catch (error) {
+      toast.dismiss('create-librarian');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Unexpected error:', error);
+      toast.error('Error creating librarian: ' + errorMessage);
     }
-
-    setGeneratedCredentials({
-      email: formData.email,
-      password,
-    });
-    setShowCredentials(true);
-
-    loadLibrarians();
-    handleCancel();
   };
 
   const handleDelete = async (id: string, email: string) => {
     if (!confirm(`Are you sure you want to delete librarian account for ${email}? This action is irreversible.`)) return;
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      alert('You must be logged in to delete users');
-      return;
-    }
-
-    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`;
-
     try {
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify({ user_id: id }),
-      });
+      // First delete from user_profiles (will cascade to other tables)
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .delete()
+        .eq('id', id);
 
-      const result = await response.json();
-
-      if (!response.ok || result.error) {
-        alert('Error deleting librarian: ' + (result.error || 'Unknown error'));
+      if (profileError) {
+        console.error('Error deleting profile:', profileError);
+        toast.error('Error deleting librarian profile: ' + profileError.message);
         return;
       }
 
-      alert('Librarian deleted successfully');
+      // Then try to delete auth user (this might fail if no edge function, but profile is already deleted)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`;
+        
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json',
+              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+            },
+            body: JSON.stringify({ user_id: id }),
+          });
+
+          if (!response.ok) {
+            console.warn('Edge function delete failed, but profile deleted successfully');
+          }
+        } catch (fetchError) {
+          console.warn('Edge function not available, but profile deleted successfully');
+        }
+      }
+
+      toast.success('Librarian deleted successfully');
       loadLibrarians();
-    } catch (error: unknown) {
-      alert('Error deleting librarian: ' + error.message);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error('Error deleting librarian: ' + errorMessage);
+      console.error('Delete error:', error);
     }
   };
 
@@ -144,6 +238,133 @@ export function LibrarianManagement() {
   const openResetPasswordModal = (librarian: Librarian) => {
     setSelectedLibrarian(librarian);
     setShowResetPasswordModal(true);
+  };
+
+  const handlePrintCredentials = () => {
+    if (!generatedCredentials) return;
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Please allow popups to print credentials');
+      return;
+    }
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Librarian Account Credentials</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            max-width: 600px;
+            margin: 0 auto;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+          }
+          .header h1 {
+            margin: 0;
+            color: #1e40af;
+          }
+          .credentials {
+            background: #f3f4f6;
+            border: 2px solid #d1d5db;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+          }
+          .credential-row {
+            margin: 15px 0;
+          }
+          .label {
+            font-weight: bold;
+            color: #374151;
+            display: block;
+            margin-bottom: 5px;
+          }
+          .value {
+            font-size: 16px;
+            color: #111827;
+            padding: 8px;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-family: monospace;
+          }
+          .warning {
+            background: #fef3c7;
+            border: 1px solid #fbbf24;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+          }
+          .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 12px;
+            border-top: 1px solid #d1d5db;
+            padding-top: 20px;
+          }
+          @media print {
+            body { padding: 20px; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>IIS Benin eLibrary</h1>
+          <h2>Librarian Account Credentials</h2>
+        </div>
+
+        <div class="credentials">
+          <div class="credential-row">
+            <span class="label">Full Name:</span>
+            <div class="value">${generatedCredentials.fullName || 'N/A'}</div>
+          </div>
+          <div class="credential-row">
+            <span class="label">Enrollment ID:</span>
+            <div class="value">${generatedCredentials.enrollmentId || 'N/A'}</div>
+          </div>
+          <div class="credential-row">
+            <span class="label">Email:</span>
+            <div class="value">${generatedCredentials.email}</div>
+          </div>
+          <div class="credential-row">
+            <span class="label">Password:</span>
+            <div class="value">${generatedCredentials.password}</div>
+          </div>
+        </div>
+
+        <div class="warning">
+          <p><strong>⚠️ Important:</strong></p>
+          <ul>
+            <li>Keep these credentials secure and confidential</li>
+            <li>Change your password after first login</li>
+            <li>This password cannot be retrieved later</li>
+          </ul>
+        </div>
+
+        <div class="footer">
+          <p>Generated on ${new Date().toLocaleString()}</p>
+          <p>IIS Benin eLibrary Management System</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+    
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
   };
 
   const handleResetPassword = async () => {
@@ -387,12 +608,21 @@ export function LibrarianManagement() {
                 <p className="text-xs mt-1">Save these credentials now. The password cannot be retrieved later.</p>
               </div>
 
-              <button
-                onClick={() => setShowCredentials(false)}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Done
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handlePrintCredentials}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Printer className="h-5 w-5" />
+                  Print Credentials
+                </button>
+                <button
+                  onClick={() => setShowCredentials(false)}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Done
+                </button>
+              </div>
             </div>
           </div>
         </div>
