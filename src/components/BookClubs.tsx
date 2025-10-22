@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Users, MessageCircle, BookOpen, Plus, Search, UserPlus, Send, Heart, ChevronRight } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface BookClub {
   id: string;
@@ -47,6 +48,7 @@ interface ReadingListItem {
 }
 
 export default function BookClubs({ userId }: { userId: string; userName?: string }) {
+  const { profile } = useAuth();
   const [view, setView] = useState<'browse' | 'myClubs' | 'clubDetail'>('browse');
   const [clubs, setClubs] = useState<BookClub[]>([]);
   const [myClubs, setMyClubs] = useState<BookClub[]>([]);
@@ -59,6 +61,9 @@ export default function BookClubs({ userId }: { userId: string; userName?: strin
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newMessage, setNewMessage] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
+  
+  // Check if user can create clubs (staff or librarian only)
+  const canCreateClub = profile?.role === 'staff' || profile?.role === 'librarian';
 
   // Create Club Form
   const [newClub, setNewClub] = useState({
@@ -211,6 +216,12 @@ export default function BookClubs({ userId }: { userId: string; userName?: strin
   };
 
   const createClub = async () => {
+    // Only staff and librarians can create clubs
+    if (!canCreateClub) {
+      alert('Only staff and librarians can create book clubs');
+      return;
+    }
+
     if (!newClub.name.trim() || !newClub.description.trim()) {
       alert('Please fill in all fields');
       return;
@@ -413,13 +424,15 @@ export default function BookClubs({ userId }: { userId: string; userName?: strin
         >
           My Clubs ({myClubs.length})
         </button>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="ml-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Create Club
-        </button>
+        {canCreateClub && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="ml-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Create Club
+          </button>
+        )}
       </div>
 
       {/* Club Detail View */}
