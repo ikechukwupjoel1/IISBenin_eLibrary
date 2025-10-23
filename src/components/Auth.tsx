@@ -71,14 +71,14 @@ export function Auth() {
     <div className="min-h-screen flex items-center justify-center p-4 relative">
       <BackgroundCarousel />
 
-      <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md p-8 relative z-10">
+      <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md p-8 relative z-10 transition-all duration-300 hover:shadow-3xl">
         <div className="text-center mb-8">
           <img
             src={schoolLogo}
             alt="IISBenin Logo"
-            className="w-24 h-24 mx-auto mb-4 object-contain"
+            className="w-24 h-24 mx-auto mb-4 object-contain transition-transform duration-300 hover:scale-110"
           />
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">IISBenin Library</h1>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent mb-2">IISBenin Library</h1>
           <p className="text-gray-600">Sign in to access the library system</p>
         </div>
 
@@ -92,10 +92,10 @@ export function Auth() {
                 setPassword('');
                 setError('');
               }}
-              className={`flex-1 py-3 text-sm font-medium transition-colors ${
+              className={`flex-1 py-3 text-sm font-medium transition-all duration-200 min-h-[44px] ${
                 activeTab === tab.id
                   ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-500 hover:text-gray-700'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               }`}
             >
               {tab.label}
@@ -112,7 +112,7 @@ export function Auth() {
               type="text"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-300 focus:outline-none transition-all duration-200 min-h-[44px]"
               placeholder={getIdentifierPlaceholder()}
               required
             />
@@ -126,7 +126,7 @@ export function Auth() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-300 focus:outline-none transition-all duration-200 min-h-[44px]"
               placeholder="Enter your password"
               required
               minLength={6}
@@ -134,7 +134,7 @@ export function Auth() {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm animate-pulse">
               {error}
             </div>
           )}
@@ -142,7 +142,7 @@ export function Auth() {
           <button
             type="submit"
             disabled={loading || !emailValid() || !passwordValid()}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl active:scale-95 min-h-[44px]"
           >
             {loading ? 'Signing in...' : `Sign in as ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`}
           </button>

@@ -148,6 +148,7 @@ export function Dashboard() {
       title: 'Total Books',
       value: stats.totalBooks,
       icon: BookOpen,
+      gradient: 'from-blue-500 to-blue-600',
       color: 'bg-blue-500',
       bgColor: 'bg-blue-50',
       roles: ['librarian', 'staff', 'student'],
@@ -156,6 +157,7 @@ export function Dashboard() {
       title: 'Borrowed Books',
       value: stats.borrowedBooks,
       icon: BookMarked,
+      gradient: 'from-green-500 to-green-600',
       color: 'bg-green-500',
       bgColor: 'bg-green-50',
       roles: ['librarian', 'staff', 'student'],
@@ -164,6 +166,7 @@ export function Dashboard() {
       title: 'Total Students',
       value: stats.totalStudents,
       icon: Users,
+      gradient: 'from-slate-500 to-slate-600',
       color: 'bg-slate-500',
       bgColor: 'bg-slate-50',
       roles: ['librarian', 'staff'],
@@ -172,6 +175,7 @@ export function Dashboard() {
       title: 'Total Staff',
       value: stats.totalStaff,
       icon: UserCog,
+      gradient: 'from-teal-500 to-teal-600',
       color: 'bg-teal-500',
       bgColor: 'bg-teal-50',
       roles: ['librarian'], // Only librarians can see staff count
@@ -180,6 +184,7 @@ export function Dashboard() {
       title: profile?.role === 'student' ? 'My Overdue Books' : 'Overdue Books',
       value: stats.overdueBooks,
       icon: AlertCircle,
+      gradient: 'from-red-500 to-red-600',
       color: 'bg-red-500',
       bgColor: 'bg-red-50',
       roles: ['librarian', 'staff', 'student'], // Students can see their own overdue books
@@ -240,9 +245,9 @@ export function Dashboard() {
           {statCards.map((card) => {
             const Icon = card.icon;
             return (
-              <div key={card.title} className="bg-white/95 backdrop-blur-sm rounded-xl p-6 border border-gray-200 shadow-lg">
+              <div key={card.title} className="bg-white/95 backdrop-blur-sm rounded-xl p-6 border border-gray-200 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer active:scale-95">
                 <div className="flex items-center justify-between mb-4">
-                  <div className={`${card.color} p-3 rounded-lg`}>
+                  <div className={`bg-gradient-to-br ${card.gradient} p-3 rounded-lg shadow-md`}>
                     <Icon className="h-6 w-6 text-white" />
                   </div>
                 </div>
@@ -254,7 +259,7 @@ export function Dashboard() {
         </div>
 
         {/* Top Reading Students Chart - visible to all roles */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-6">
+        <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-6 transition-all duration-300 hover:shadow-2xl">
           <div className="flex items-center gap-2 mb-6">
             <BookMarked className="h-6 w-6 text-blue-600" />
             <h3 className="text-xl font-bold text-gray-900">Top Reading Students</h3>
@@ -263,10 +268,10 @@ export function Dashboard() {
           {studentReadingData.length > 0 ? (
             <div className="space-y-4">
               {studentReadingData.map((student, index) => (
-                <div key={student.student_id} className="space-y-2">
+                <div key={student.student_id} className="space-y-2 transition-all duration-200 hover:translate-x-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-semibold text-sm">
+                      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold text-sm shadow-md">
                         {index + 1}
                       </span>
                       <span className="font-medium text-gray-900">{student.student_name}</span>

@@ -196,30 +196,30 @@ export function BorrowingSystem() {
       <div className="flex gap-2 border-b border-gray-200">
         <button
           onClick={() => setActiveTab('borrow')}
-          className={`px-4 py-2 font-medium transition-colors ${
+          className={`px-4 py-2 font-medium transition-all duration-200 min-h-[44px] ${
             activeTab === 'borrow'
               ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
           }`}
         >
           Borrow Book
         </button>
         <button
           onClick={() => setActiveTab('active')}
-          className={`px-4 py-2 font-medium transition-colors ${
+          className={`px-4 py-2 font-medium transition-all duration-200 min-h-[44px] ${
             activeTab === 'active'
               ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
           }`}
         >
           Active Borrows ({activeRecords.length})
         </button>
         <button
           onClick={() => setActiveTab('overdue')}
-          className={`px-4 py-2 font-medium transition-colors ${
+          className={`px-4 py-2 font-medium transition-all duration-200 min-h-[44px] ${
             activeTab === 'overdue'
               ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
           }`}
         >
           Overdue ({overdueRecords.length})
@@ -227,7 +227,7 @@ export function BorrowingSystem() {
       </div>
 
       {activeTab === 'borrow' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 transition-all duration-300 hover:shadow-lg">
           <div className="flex items-center gap-2 mb-6">
             <BookMarked className="h-6 w-6 text-blue-600" />
             <h3 className="text-lg font-semibold text-gray-900">New Borrow Transaction</h3>
@@ -418,7 +418,7 @@ export function BorrowingSystem() {
                     <td className="px-6 py-4 text-sm">
                       <button
                         onClick={() => handleReturn(record.id, record.book_id)}
-                        className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition-colors"
+                        className="bg-gradient-to-r from-green-600 to-green-700 text-white px-4 py-2 rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 min-w-[88px] min-h-[44px]"
                       >
                         Return
                       </button>
