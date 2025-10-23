@@ -23,12 +23,7 @@ export function Auth() {
   const passwordValid = () => {
     if (activeTab !== 'librarian') return true;
     const validation = validatePassword(password);
-    if (!validation.valid) {
-      setPasswordError(validation.message);
-      return false;
-    }
-    setPasswordError('');
-    return true;
+    return validation.valid;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -137,8 +132,20 @@ export function Auth() {
               type="password"
               value={password}
               onChange={(e) => {
-                setPassword(e.target.value);
-                setPasswordError('');
+                const newPassword = e.target.value;
+                setPassword(newPassword);
+                if (activeTab === 'librarian' && newPassword) {
+                  const validation = validatePassword(newPassword);
+                  setPasswordError(validation.valid ? '' : validation.message);
+                } else {
+                  setPasswordError('');
+                }
+              }}
+              onBlur={() => {
+                if (activeTab === 'librarian' && password) {
+                  const validation = validatePassword(password);
+                  setPasswordError(validation.valid ? '' : validation.message);
+                }
               }}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-300 focus:outline-none transition-all duration-200 min-h-[44px]"
               placeholder="Enter your password"
