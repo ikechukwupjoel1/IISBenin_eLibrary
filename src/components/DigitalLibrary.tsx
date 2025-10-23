@@ -210,16 +210,12 @@ export function DigitalLibrary() {
                       </span>
                     )}
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-teal-100 text-teal-700 rounded">
                         {getMaterialTypeLabel(material.category || '')}
                       </span>
 
-                      {material.isbn && (
-                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded text-[10px]">
-                          ISBN: {material.isbn}
-                        </span>
-                      )}
+                      {/* Don't show ISBN for digital materials since it contains the URL */}
                     </div>
                   </div>
 
