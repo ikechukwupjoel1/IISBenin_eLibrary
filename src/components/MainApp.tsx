@@ -28,8 +28,9 @@ const ReadingStreaks = lazy(() => import('./ReadingStreaks'));
 const BookClubs = lazy(() => import('./BookClubs'));
 const WaitingList = lazy(() => import('./WaitingList'));
 const ReviewModeration = lazy(() => import('./ReviewModeration'));
+const ChatMessaging = lazy(() => import('./ChatMessaging').then(m => ({ default: m.ChatMessaging })));
 
-type Tab = 'dashboard' | 'books' | 'mybooks' | 'digital' | 'students' | 'staff' | 'librarians' | 'borrowing' | 'reservations' | 'leaderboard' | 'reviews' | 'challenges' | 'loginlogs' | 'settings' | 'changePassword' | 'recommendations' | 'analytics' | 'reports' | 'securitylogs' | 'streaks' | 'bookclubs' | 'waitinglist' | 'moderation';
+type Tab = 'dashboard' | 'books' | 'mybooks' | 'digital' | 'students' | 'staff' | 'librarians' | 'borrowing' | 'reservations' | 'leaderboard' | 'reviews' | 'challenges' | 'loginlogs' | 'settings' | 'changePassword' | 'recommendations' | 'analytics' | 'reports' | 'securitylogs' | 'streaks' | 'bookclubs' | 'waitinglist' | 'moderation' | 'messages';
 
 export function MainApp() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -46,6 +47,7 @@ export function MainApp() {
   const getAvailableTabs = () => {
     const allTabs = [
       { id: 'dashboard' as Tab, label: 'Dashboard', icon: LayoutDashboard, roles: ['librarian', 'staff', 'student'] },
+      { id: 'messages' as Tab, label: 'Messages', icon: MessageCircle, roles: ['librarian', 'staff', 'student'] },
       { id: 'mybooks' as Tab, label: 'My Books', icon: Library, roles: ['student', 'staff'] },
       { id: 'digital' as Tab, label: 'Digital Library', icon: Monitor, roles: ['librarian', 'staff', 'student'] },
       { id: 'books' as Tab, label: 'Books', icon: BookOpen, roles: ['librarian', 'staff'] },
@@ -60,7 +62,7 @@ export function MainApp() {
       { id: 'borrowing' as Tab, label: 'Borrowing', icon: BookMarked, roles: ['librarian', 'staff'] },
       { id: 'reservations' as Tab, label: 'Reservations', icon: Calendar, roles: ['librarian', 'staff', 'student'] },
       { id: 'waitinglist' as Tab, label: 'Waiting Lists', icon: Clock, roles: ['librarian', 'staff', 'student'] },
-      { id: 'bookclubs' as Tab, label: 'Book Clubs', icon: MessageCircle, roles: ['librarian', 'staff', 'student'] },
+      { id: 'bookclubs' as Tab, label: 'Book Clubs', icon: Users, roles: ['librarian', 'staff', 'student'] },
       { id: 'leaderboard' as Tab, label: 'Leaderboard', icon: Trophy, roles: ['librarian', 'staff', 'student'] },
       { id: 'streaks' as Tab, label: 'My Progress', icon: Flame, roles: ['student', 'staff'] },
       { id: 'reviews' as Tab, label: 'Reviews', icon: Star, roles: ['librarian', 'staff', 'student'] },
@@ -135,6 +137,7 @@ export function MainApp() {
             </div>
           }>
             {activeTab === 'dashboard' && <Dashboard />}
+            {activeTab === 'messages' && <ChatMessaging />}
             {activeTab === 'mybooks' && <MyBooks />}
             {activeTab === 'digital' && <DigitalLibrary />}
             {activeTab === 'books' && <BookManagement />}
