@@ -44,8 +44,52 @@ export function ChatMessaging() {
     if (profile) {
       loadConversations();
       loadAvailableUsers();
+      
+      // Set up real-time subscription for new messages
+      const messagesChannel = supabase
+        .channel('messages-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+          },
+          (payload) => {
+            console.log('📨 New message received:', payload);
+            // Reload conversations to update last message time and unread count
+            loadConversations();
+            // If the message is for the currently selected conversation, add it
+            if (payload.new.conversation_id === selectedConversation) {
+              setMessages(prev => [...prev, payload.new as Message]);
+            }
+          }
+        )
+        .subscribe();
+
+      // Set up real-time subscription for conversations
+      const conversationsChannel = supabase
+        .channel('conversations-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'conversations',
+          },
+          () => {
+            console.log('💬 Conversation updated');
+            loadConversations();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        messagesChannel.unsubscribe();
+        conversationsChannel.unsubscribe();
+      };
     }
-  }, [profile]);
+  }, [profile, selectedConversation]);
 
   useEffect(() => {
     if (selectedConversation) {

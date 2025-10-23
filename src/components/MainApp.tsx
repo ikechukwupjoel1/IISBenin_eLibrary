@@ -1,5 +1,5 @@
 import { useState, lazy, Suspense } from 'react';
-import { BookOpen, Users, BookMarked, LayoutDashboard, LogOut, UserCog, Calendar, Trophy, Star, Target, Shield, Library, Monitor, Settings, TrendingUp, BarChart3, FileText, Flame, MessageCircle, Clock, ThumbsUp } from 'lucide-react';
+import { BookOpen, Users, BookMarked, LayoutDashboard, LogOut, UserCog, Calendar, Trophy, Star, Target, Shield, Library, Monitor, Settings, TrendingUp, BarChart3, FileText, Flame, MessageCircle, Clock, ThumbsUp, Upload } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import schoolLogo from '../assets/Iisbenin logo.png';
 import BackgroundCarousel from './BackgroundCarousel';
@@ -29,8 +29,10 @@ const BookClubs = lazy(() => import('./BookClubs'));
 const WaitingList = lazy(() => import('./WaitingList'));
 const ReviewModeration = lazy(() => import('./ReviewModeration'));
 const ChatMessaging = lazy(() => import('./ChatMessaging').then(m => ({ default: m.ChatMessaging })));
+const BulkBookUpload = lazy(() => import('./BulkBookUpload').then(m => ({ default: m.BulkBookUpload })));
+const BulkUserRegistration = lazy(() => import('./BulkUserRegistration').then(m => ({ default: m.BulkUserRegistration })));
 
-type Tab = 'dashboard' | 'books' | 'mybooks' | 'digital' | 'students' | 'staff' | 'librarians' | 'borrowing' | 'reservations' | 'leaderboard' | 'reviews' | 'challenges' | 'loginlogs' | 'settings' | 'changePassword' | 'recommendations' | 'analytics' | 'reports' | 'securitylogs' | 'streaks' | 'bookclubs' | 'waitinglist' | 'moderation' | 'messages';
+type Tab = 'dashboard' | 'books' | 'mybooks' | 'digital' | 'students' | 'staff' | 'librarians' | 'borrowing' | 'reservations' | 'leaderboard' | 'reviews' | 'challenges' | 'loginlogs' | 'settings' | 'changePassword' | 'recommendations' | 'analytics' | 'reports' | 'securitylogs' | 'streaks' | 'bookclubs' | 'waitinglist' | 'moderation' | 'messages' | 'bulkbooks' | 'bulkusers';
 
 export function MainApp() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -51,10 +53,12 @@ export function MainApp() {
       { id: 'mybooks' as Tab, label: 'My Books', icon: Library, roles: ['student', 'staff'] },
       { id: 'digital' as Tab, label: 'Digital Library', icon: Monitor, roles: ['librarian', 'staff', 'student'] },
       { id: 'books' as Tab, label: 'Books', icon: BookOpen, roles: ['librarian', 'staff'] },
+      { id: 'bulkbooks' as Tab, label: 'Bulk Upload Books', icon: Upload, roles: ['librarian'] },
       { id: 'recommendations' as Tab, label: 'Recommended', icon: TrendingUp, roles: ['librarian', 'staff', 'student'] },
       { id: 'analytics' as Tab, label: 'Analytics', icon: BarChart3, roles: ['librarian'] },
       { id: 'reports' as Tab, label: 'Reports', icon: FileText, roles: ['librarian'] },
       { id: 'students' as Tab, label: 'Students', icon: Users, roles: ['librarian'] },
+      { id: 'bulkusers' as Tab, label: 'Bulk Register Users', icon: Users, roles: ['librarian'] },
       { id: 'staff' as Tab, label: 'Staff', icon: UserCog, roles: ['librarian'] },
       { id: 'librarians' as Tab, label: 'Librarians', icon: Shield, roles: ['librarian'] },
       { id: 'securitylogs' as Tab, label: 'Security Logs', icon: Shield, roles: ['librarian'] },
@@ -141,10 +145,12 @@ export function MainApp() {
             {activeTab === 'mybooks' && <MyBooks />}
             {activeTab === 'digital' && <DigitalLibrary />}
             {activeTab === 'books' && <BookManagement />}
+            {activeTab === 'bulkbooks' && <BulkBookUpload />}
             {activeTab === 'recommendations' && <BookRecommendations />}
             {activeTab === 'analytics' && <LibrarianAnalytics />}
             {activeTab === 'reports' && <ReportsExports />}
             {activeTab === 'students' && <StudentManagement />}
+            {activeTab === 'bulkusers' && <BulkUserRegistration />}
             {activeTab === 'staff' && <StaffManagement />}
             {activeTab === 'librarians' && <LibrarianManagement />}
             {activeTab === 'securitylogs' && <EnhancedLoginLogs />}
