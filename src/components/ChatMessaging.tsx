@@ -1,8 +1,16 @@
 import { useEffect, useState, useRef } from 'react';
-import { Send, MessageCircle, Users, Search, X } from 'lucide-react';
+import { Send, MessageCircle, Users, Search, X, Circle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
+
+type PresenceState = {
+  [key: string]: Array<{
+    user_id: string;
+    online_at: string;
+    typing: boolean;
+  }>;
+};
 
 type UserProfile = {
   id: string;
@@ -38,7 +46,10 @@ export function ChatMessaging() {
   const [showNewChat, setShowNewChat] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (profile) {
@@ -124,6 +135,57 @@ export function ChatMessaging() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Presence tracking for online/typing indicators
+  useEffect(() => {
+    if (!selectedConversation || !profile) return;
+
+    const channel = supabase.channel(`presence-${selectedConversation}`, {
+      config: {
+        presence: {
+          key: profile.id,
+        },
+      },
+    });
+
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState<PresenceState>();
+        const onlineUserIds = new Set<string>();
+        const typingUserIds = new Set<string>();
+
+        Object.values(state).forEach((presences) => {
+          presences.forEach((presence) => {
+            onlineUserIds.add(presence.user_id);
+            if (presence.typing) {
+              typingUserIds.add(presence.user_id);
+            }
+          });
+        });
+
+        setOnlineUsers(onlineUserIds);
+        setTypingUsers(typingUserIds);
+      })
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        console.log('👋 User joined:', key, newPresences);
+      })
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+        console.log('👋 User left:', key, leftPresences);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({
+            user_id: profile.id,
+            online_at: new Date().toISOString(),
+            typing: false,
+          });
+        }
+      });
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [selectedConversation, profile]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -268,6 +330,31 @@ export function ChatMessaging() {
     }
   };
 
+  const handleTyping = () => {
+    if (!selectedConversation || !profile) return;
+
+    const channel = supabase.channel(`presence-${selectedConversation}`);
+    channel.track({
+      user_id: profile.id,
+      online_at: new Date().toISOString(),
+      typing: true,
+    });
+
+    // Clear previous timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Stop typing after 3 seconds of no activity
+    typingTimeoutRef.current = setTimeout(() => {
+      channel.track({
+        user_id: profile.id,
+        online_at: new Date().toISOString(),
+        typing: false,
+      });
+    }, 3000);
+  };
+
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !selectedConversation || !profile) return;
@@ -372,8 +459,31 @@ export function ChatMessaging() {
           <>
             {/* Chat Header */}
             <div className="p-4 border-b border-gray-200">
-              <h3 className="font-bold text-gray-900">{selectedConvData.other_user.full_name}</h3>
-              <p className="text-xs text-gray-500 capitalize">{selectedConvData.other_user.role}</p>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  {onlineUsers.has(selectedConvData.other_user.id) && (
+                    <Circle className="h-3 w-3 text-green-500 fill-green-500 absolute -top-1 -right-1" />
+                  )}
+                  <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
+                    {selectedConvData.other_user.full_name.charAt(0).toUpperCase()}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900">{selectedConvData.other_user.full_name}</h3>
+                  <p className="text-xs text-gray-500">
+                    {onlineUsers.has(selectedConvData.other_user.id) ? (
+                      <span className="text-green-600">● Online</span>
+                    ) : (
+                      <span className="capitalize">{selectedConvData.other_user.role}</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              {typingUsers.has(selectedConvData.other_user.id) && (
+                <div className="mt-2 text-xs text-gray-500 italic">
+                  typing...
+                </div>
+              )}
             </div>
 
             {/* Messages */}
@@ -416,7 +526,10 @@ export function ChatMessaging() {
                 <input
                   type="text"
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={(e) => {
+                    setNewMessage(e.target.value);
+                    handleTyping();
+                  }}
                   placeholder="Type a message..."
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
