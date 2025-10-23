@@ -187,6 +187,11 @@ export function BookManagement() {
       page_number: formData.page_number || null,
     };
 
+    // Debug logging
+    console.log('📝 Form Data:', formData);
+    console.log('📤 Submitting to database:', dataToSubmit);
+    console.log('🏷️ Material Type:', formData.material_type);
+
     if (editingBook) {
       const { error } = await supabase
         .from('books')
