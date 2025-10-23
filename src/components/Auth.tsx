@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import BackgroundCarousel from './BackgroundCarousel';
 import schoolLogo from '../assets/Iisbenin logo.png';
+import { validateEmail, validatePassword } from '../utils/validation';
 
 type UserRole = 'librarian' | 'staff' | 'student';
 
@@ -10,44 +11,54 @@ export function Auth() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
 
   const emailValid = () => {
     if (activeTab !== 'librarian') return true;
-    const e = identifier.trim().toLowerCase();
-    return e.length > 0 && e.includes('@');
+    return validateEmail(identifier);
   };
 
   const passwordValid = () => {
     if (activeTab !== 'librarian') return true;
-    return password.length >= 6;
+    const validation = validatePassword(password);
+    if (!validation.valid) {
+      setPasswordError(validation.message);
+      return false;
+    }
+    setPasswordError('');
+    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setPasswordError('');
     setLoading(true);
 
     try {
-      // Basic client-side validation for librarian (server will still validate)
+      // Enhanced client-side validation for librarian
       if (activeTab === 'librarian') {
         const email = identifier.trim().toLowerCase();
-        if (!email || !email.includes('@')) {
+        if (!validateEmail(email)) {
           setError('Please enter a valid email address');
           setLoading(false);
           return;
         }
-        if (!password || password.length < 6) {
-          setError('Password must be at least 6 characters');
+        
+        const passwordValidation = validatePassword(password);
+        if (!passwordValidation.valid) {
+          setError(passwordValidation.message);
           setLoading(false);
           return;
         }
       }
 
       await signIn(identifier, password, activeTab);
-    } catch (err: any) {
-      setError(err.message || 'Invalid credentials');
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message || 'Invalid credentials');
     } finally {
       setLoading(false);
     }
@@ -125,12 +136,23 @@ export function Auth() {
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setPasswordError('');
+              }}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-300 focus:outline-none transition-all duration-200 min-h-[44px]"
               placeholder="Enter your password"
               required
-              minLength={6}
+              minLength={10}
             />
+            {activeTab === 'librarian' && password && passwordError && (
+              <p className="mt-1 text-xs text-red-600">{passwordError}</p>
+            )}
+            {activeTab === 'librarian' && !password && (
+              <p className="mt-1 text-xs text-gray-500">
+                Must be 10+ characters with uppercase, lowercase, number, and special character
+              </p>
+            )}
           </div>
 
           {error && (
@@ -141,18 +163,11 @@ export function Auth() {
 
           <button
             type="submit"
-            disabled={loading || !emailValid() || !passwordValid()}
+            disabled={loading || (activeTab === 'librarian' && (!emailValid() || !passwordValid()))}
             className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl active:scale-95 min-h-[44px]"
           >
             {loading ? 'Signing in...' : `Sign in as ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`}
           </button>
-
-          {activeTab === 'librarian' && (!emailValid() || !passwordValid()) && (
-            <div className="mt-2 text-sm text-red-600">
-              {!emailValid() && <div>Please enter a valid email address.</div>}
-              {!passwordValid() && <div>Password must be at least 6 characters.</div>}
-            </div>
-          )}
         </form>
 
         <div className="mt-6 text-center">
