@@ -147,15 +147,32 @@ export function BookManagement() {
         uploadMethod === 'file' &&
         selectedFile &&
         !editingBook) {
+      
+      // Check file size (max 50MB)
+      const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+      if (selectedFile.size > maxSize) {
+        toast.error('File too large! Maximum size is 50MB. Please compress the file or use a URL instead.');
+        return;
+      }
+
       setUploading(true);
+      const uploadToast = toast.loading(`Uploading ${selectedFile.name}... Please wait.`);
 
       try {
         const fileName = `${Date.now()}-${selectedFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        
+        console.log('📤 Uploading file:', fileName, 'Size:', (selectedFile.size / 1024 / 1024).toFixed(2), 'MB');
+        
         const { error: uploadError } = await supabase.storage
           .from('ebooks')
-          .upload(fileName, selectedFile);
+          .upload(fileName, selectedFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
         if (uploadError) {
+          console.error('Upload error:', uploadError);
+          toast.dismiss(uploadToast);
           toast.error('Error uploading file: ' + uploadError.message);
           setUploading(false);
           return;
@@ -167,7 +184,12 @@ export function BookManagement() {
           .getPublicUrl(fileName);
 
         fileUrl = publicUrl;
+        console.log('✅ File uploaded successfully:', publicUrl);
+        toast.dismiss(uploadToast);
+        toast.success('File uploaded successfully!');
       } catch (error) {
+        console.error('Upload exception:', error);
+        toast.dismiss(uploadToast);
         toast.error('Error uploading file');
         setUploading(false);
         return;
@@ -442,12 +464,18 @@ export function BookManagement() {
                     let materialType = 'book'; // default
                     if (lowerCategory.includes('ebook') || lowerCategory.includes('e-book')) {
                       materialType = 'ebook';
+                      console.log('🔄 Auto-detected: eBook from category:', newCategory);
                     } else if (lowerCategory.includes('electronic')) {
                       materialType = 'electronic_material';
+                      console.log('🔄 Auto-detected: Electronic Material from category:', newCategory);
                     } else if (lowerCategory.includes('digital') || lowerCategory.includes('online')) {
                       materialType = 'ebook';
+                      console.log('🔄 Auto-detected: eBook (digital) from category:', newCategory);
+                    } else {
+                      console.log('📚 Physical Book selected - category:', newCategory);
                     }
                     
+                    console.log('✅ Setting material_type to:', materialType);
                     setFormData({ ...formData, category: newCategory, material_type: materialType });
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -462,27 +490,37 @@ export function BookManagement() {
                 </select>
               </div>
 
-              <div>
+              <div className={`p-3 rounded-lg border-2 ${
+                formData.material_type === 'ebook' ? 'border-blue-500 bg-blue-50' : 
+                formData.material_type === 'electronic_material' ? 'border-purple-500 bg-purple-50' : 
+                'border-gray-300 bg-white'
+              }`}>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Material Type
+                  Material Type ⚠️ IMPORTANT
                   {formData.category && (formData.category.toLowerCase().includes('ebook') || 
                    formData.category.toLowerCase().includes('electronic')) && (
-                    <span className="ml-2 text-xs text-green-600">✓ Auto-detected from category</span>
+                    <span className="ml-2 text-xs text-green-600 font-bold">✓ Auto-detected from category</span>
                   )}
                 </label>
                 <select
                   value={formData.material_type}
-                  onChange={(e) => setFormData({ ...formData, material_type: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={(e) => {
+                    console.log('🎯 Manual material type change:', e.target.value);
+                    setFormData({ ...formData, material_type: e.target.value });
+                  }}
+                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-bold text-lg"
+                  required
                 >
                   <option value="book">📚 Physical Book</option>
                   <option value="ebook">📱 eBook</option>
                   <option value="electronic_material">💻 Electronic Material</option>
                 </select>
-                <p className="mt-1 text-xs text-gray-500">
-                  {formData.material_type === 'book' 
-                    ? 'Physical books need shelf location and ISBN'
-                    : 'Digital materials need a URL in the ISBN field'}
+                <p className="mt-2 text-sm font-semibold">
+                  Current: {
+                    formData.material_type === 'book' ? '📚 Physical Book (needs ISBN)' :
+                    formData.material_type === 'ebook' ? '📱 eBook (needs URL/File)' :
+                    '💻 Electronic Material (needs URL/File)'
+                  }
                 </p>
               </div>
 
