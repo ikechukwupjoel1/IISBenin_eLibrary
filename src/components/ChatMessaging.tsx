@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Send, MessageCircle, Users, Search, X, Circle } from 'lucide-react';
+import { Send, MessageCircle, Users, Search, X, Circle, Paperclip, Download, FileText, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -34,6 +34,10 @@ type Message = {
   message: string;
   created_at: string;
   is_read: boolean;
+  attachment_url?: string;
+  attachment_name?: string;
+  attachment_size?: number;
+  attachment_type?: string;
 };
 
 export function ChatMessaging() {
@@ -48,8 +52,11 @@ export function ChatMessaging() {
   const [loading, setLoading] = useState(true);
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (profile) {
@@ -357,22 +364,66 @@ export function ChatMessaging() {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedConversation || !profile) return;
+    if ((!newMessage.trim() && !selectedFile) || !selectedConversation || !profile) return;
 
-    const { error } = await supabase
-      .from('messages')
-      .insert({
-        conversation_id: selectedConversation,
-        sender_id: profile.id,
-        message: newMessage.trim(),
-      });
+    setUploading(true);
+    let attachmentData = null;
 
-    if (!error) {
-      setNewMessage('');
-      loadMessages(selectedConversation);
-      loadConversations(); // Refresh to update last message time
-    } else {
-      toast.error('Failed to send message');
+    try {
+      // Upload file if selected
+      if (selectedFile) {
+        const fileExt = selectedFile.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `${selectedConversation}/${fileName}`;
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('message-attachments')
+          .upload(filePath, selectedFile);
+
+        if (uploadError) {
+          toast.error('Failed to upload file');
+          setUploading(false);
+          return;
+        }
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from('message-attachments')
+          .getPublicUrl(filePath);
+
+        attachmentData = {
+          attachment_url: urlData.publicUrl,
+          attachment_name: selectedFile.name,
+          attachment_size: selectedFile.size,
+          attachment_type: selectedFile.type,
+        };
+      }
+
+      // Send message
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: selectedConversation,
+          sender_id: profile.id,
+          message: newMessage.trim() || '📎 Attachment',
+          ...attachmentData,
+        });
+
+      if (!error) {
+        setNewMessage('');
+        setSelectedFile(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        loadMessages(selectedConversation);
+        loadConversations(); // Refresh to update last message time
+      } else {
+        toast.error('Failed to send message');
+      }
+    } catch (error) {
+      toast.error('Error sending message');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -507,7 +558,42 @@ export function ChatMessaging() {
                           : 'bg-gray-100 text-gray-900'
                       }`}
                     >
-                      <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
+                      {msg.attachment_url && (
+                        <div className="mb-2">
+                          {msg.attachment_type?.startsWith('image/') ? (
+                            <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer">
+                              <img 
+                                src={msg.attachment_url} 
+                                alt={msg.attachment_name} 
+                                className="max-w-full rounded max-h-64 object-cover"
+                              />
+                            </a>
+                          ) : (
+                            <a
+                              href={msg.attachment_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`flex items-center gap-2 p-2 rounded ${
+                                msg.sender_id === profile?.id ? 'bg-blue-700' : 'bg-gray-200'
+                              }`}
+                            >
+                              <FileText className="h-5 w-5" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm truncate">{msg.attachment_name}</p>
+                                <p className={`text-xs ${
+                                  msg.sender_id === profile?.id ? 'text-blue-200' : 'text-gray-500'
+                                }`}>
+                                  {msg.attachment_size && `${(msg.attachment_size / 1024).toFixed(1)} KB`}
+                                </p>
+                              </div>
+                              <Download className="h-4 w-4" />
+                            </a>
+                          )}
+                        </div>
+                      )}
+                      {msg.message && msg.message !== '📎 Attachment' && (
+                        <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
+                      )}
                       <p className={`text-xs mt-1 ${
                         msg.sender_id === profile?.id ? 'text-blue-100' : 'text-gray-500'
                       }`}>
@@ -522,7 +608,47 @@ export function ChatMessaging() {
 
             {/* Message Input */}
             <form onSubmit={sendMessage} className="p-4 border-t border-gray-200">
+              {selectedFile && (
+                <div className="mb-2 flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
+                  <FileText className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm text-gray-700 flex-1 truncate">{selectedFile.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedFile(null);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
               <div className="flex gap-2">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      // Max 10MB
+                      if (file.size > 10 * 1024 * 1024) {
+                        toast.error('File size must be less than 10MB');
+                        return;
+                      }
+                      setSelectedFile(file);
+                    }
+                  }}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                  title="Attach file"
+                >
+                  <Paperclip className="h-5 w-5" />
+                </button>
                 <input
                   type="text"
                   value={newMessage}
@@ -535,10 +661,14 @@ export function ChatMessaging() {
                 />
                 <button
                   type="submit"
-                  disabled={!newMessage.trim()}
+                  disabled={(!newMessage.trim() && !selectedFile) || uploading}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
-                  <Send className="h-5 w-5" />
+                  {uploading ? (
+                    <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Send className="h-5 w-5" />
+                  )}
                 </button>
               </div>
             </form>
