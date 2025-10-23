@@ -61,7 +61,21 @@ export function EnhancedLoginLogs() {
       .order('login_at', { ascending: false })
       .limit(500);
 
+    console.log('📊 Login logs query result:', { data, error, count: data?.length });
+    
+    if (error) {
+      console.error('❌ Error loading login logs:', error);
+    }
+
     if (!error && data) {
+      // Log first record to see what data we have
+      if (data.length > 0) {
+        console.log('🔍 Sample login log:', data[0]);
+        console.log('📱 User Agent:', data[0].user_agent);
+        console.log('📍 Location:', data[0].location);
+        console.log('🌐 IP Address:', data[0].ip_address);
+      }
+
       // Parse user agent and detect device/browser
       const enhancedLogs = data.map(log => ({
         ...log,
@@ -71,6 +85,8 @@ export function EnhancedLoginLogs() {
         city: log.location ? parseLocation(log.location).city : 'Unknown',
         country: log.location ? parseLocation(log.location).country : 'Unknown',
       }));
+
+      console.log('✅ Enhanced logs:', enhancedLogs.slice(0, 2));
 
       setLogs(enhancedLogs);
 

@@ -47,11 +47,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Logging login attempt:', { enrollmentId, userId, success, role, fullName });
       
+      // Capture user agent (browser/device info)
+      const userAgent = navigator.userAgent || 'Unknown';
+      
+      // Try to get IP address (this will need a third-party service or edge function)
+      let ipAddress = null;
+      let location = null;
+      
+      try {
+        // Get IP and location from ipapi.co (free tier allows 1000 requests/day)
+        const ipResponse = await fetch('https://ipapi.co/json/');
+        if (ipResponse.ok) {
+          const ipData = await ipResponse.json();
+          ipAddress = ipData.ip || null;
+          location = ipData.city && ipData.country_name 
+            ? `${ipData.city}, ${ipData.country_name}` 
+            : null;
+          
+          console.log('📍 Captured location data:', ipData);
+        }
+      } catch (ipError) {
+        console.warn('Could not fetch IP/location:', ipError);
+      }
+      
       const logData: any = {
         enrollment_id: enrollmentId,
         status: success ? 'success' : 'failed',
         role: role || 'unknown',
         login_at: new Date().toISOString(),
+        user_agent: userAgent,
+        ip_address: ipAddress,
+        location: location,
       };
       
       // Add user_id if we have it
@@ -63,6 +89,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (fullName) {
         logData.full_name = fullName;
       }
+      
+      console.log('📝 Login log data:', logData);
       
       const { data, error } = await supabase.from('login_logs').insert([logData]);
       
