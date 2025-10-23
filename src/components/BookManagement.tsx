@@ -77,6 +77,30 @@ export function BookManagement() {
   useEffect(() => {
     loadBooks();
     loadSettings();
+    
+    // Set up real-time subscription for books table
+    const channel = supabase
+      .channel('books-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'books',
+        },
+        (payload) => {
+          console.log('📚 Book changed:', payload);
+          // Reload books when any change occurs
+          loadBooks();
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Books subscription status:', status);
+      });
+    
+    return () => {
+      channel.unsubscribe();
+    };
   }, []);
 
   const loadSettings = async () => {

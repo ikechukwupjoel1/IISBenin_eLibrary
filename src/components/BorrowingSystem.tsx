@@ -25,6 +25,30 @@ export function BorrowingSystem() {
 
   useEffect(() => {
     loadData();
+    
+    // Set up real-time subscription for borrow records
+    const channel = supabase
+      .channel('borrowing-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'borrow_records',
+        },
+        (payload) => {
+          console.log('📖 Borrow record changed:', payload);
+          // Reload data when any borrow record changes
+          loadData();
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Borrowing subscription status:', status);
+      });
+    
+    return () => {
+      channel.unsubscribe();
+    };
   }, []);
 
   const loadData = async () => {
