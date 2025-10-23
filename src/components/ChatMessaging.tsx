@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
-import { Send, MessageCircle, Users, Search, X, Circle, Paperclip, Download, FileText, Image as ImageIcon } from 'lucide-react';
+import { Send, MessageCircle, Users, Search, X, Circle, Paperclip, Download, FileText, Image as ImageIcon, Smile, Plus } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 
 type PresenceState = {
   [key: string]: Array<{
@@ -40,6 +41,23 @@ type Message = {
   attachment_type?: string;
 };
 
+type Reaction = {
+  id: string;
+  message_id: string;
+  user_id: string;
+  reaction: string;
+  created_at: string;
+};
+
+type MessageWithReactions = Message & {
+  reactions?: Array<{
+    emoji: string;
+    count: number;
+    users: string[];
+    hasReacted: boolean;
+  }>;
+};
+
 export function ChatMessaging() {
   const { profile } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -54,6 +72,8 @@ export function ChatMessaging() {
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
+  const [reactions, setReactions] = useState<Record<string, Reaction[]>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -276,7 +296,96 @@ export function ChatMessaging() {
 
     if (!error && data) {
       setMessages(data);
+      loadReactions(data.map(m => m.id));
     }
+  };
+
+  const loadReactions = async (messageIds: string[]) => {
+    if (messageIds.length === 0) return;
+
+    const { data, error } = await supabase
+      .from('message_reactions')
+      .select('*')
+      .in('message_id', messageIds);
+
+    if (!error && data) {
+      const reactionsMap: Record<string, Reaction[]> = {};
+      data.forEach((reaction: Reaction) => {
+        if (!reactionsMap[reaction.message_id]) {
+          reactionsMap[reaction.message_id] = [];
+        }
+        reactionsMap[reaction.message_id].push(reaction);
+      });
+      setReactions(reactionsMap);
+    }
+  };
+
+  const addReaction = async (messageId: string, emoji: string) => {
+    if (!profile) return;
+
+    const { error } = await supabase
+      .from('message_reactions')
+      .insert({
+        message_id: messageId,
+        user_id: profile.id,
+        reaction: emoji,
+      });
+
+    if (!error) {
+      loadReactions([messageId]);
+    } else {
+      toast.error('Failed to add reaction');
+    }
+  };
+
+  const removeReaction = async (messageId: string, emoji: string) => {
+    if (!profile) return;
+
+    const { error } = await supabase
+      .from('message_reactions')
+      .delete()
+      .eq('message_id', messageId)
+      .eq('user_id', profile.id)
+      .eq('reaction', emoji);
+
+    if (!error) {
+      loadReactions([messageId]);
+    } else {
+      toast.error('Failed to remove reaction');
+    }
+  };
+
+  const toggleReaction = async (messageId: string, emoji: string) => {
+    if (!profile) return;
+
+    const messageReactions = reactions[messageId] || [];
+    const userReaction = messageReactions.find(
+      r => r.user_id === profile.id && r.reaction === emoji
+    );
+
+    if (userReaction) {
+      await removeReaction(messageId, emoji);
+    } else {
+      await addReaction(messageId, emoji);
+    }
+  };
+
+  const getReactionSummary = (messageId: string) => {
+    const messageReactions = reactions[messageId] || [];
+    const summary: Record<string, { count: number; users: string[]; hasReacted: boolean }> = {};
+
+    messageReactions.forEach(reaction => {
+      if (!summary[reaction.reaction]) {
+        summary[reaction.reaction] = { count: 0, users: [], hasReacted: false };
+      }
+      summary[reaction.reaction].count++;
+      summary[reaction.reaction].users.push(reaction.user_id);
+      if (reaction.user_id === profile?.id) {
+        summary[reaction.reaction].hasReacted = true;
+      }
+    });
+
+    return summary;
   };
 
   const markAsRead = async (conversationId: string) => {
@@ -546,62 +655,124 @@ export function ChatMessaging() {
                   <p className="text-xs mt-1">Send a message to start the conversation</p>
                 </div>
               ) : (
-                messages.map(msg => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${msg.sender_id === profile?.id ? 'justify-end' : 'justify-start'}`}
-                  >
+                messages.map(msg => {
+                  const reactionSummary = getReactionSummary(msg.id);
+                  const hasReactions = Object.keys(reactionSummary).length > 0;
+
+                  return (
                     <div
-                      className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                        msg.sender_id === profile?.id
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-900'
-                      }`}
+                      key={msg.id}
+                      className={`flex ${msg.sender_id === profile?.id ? 'justify-end' : 'justify-start'}`}
                     >
-                      {msg.attachment_url && (
-                        <div className="mb-2">
-                          {msg.attachment_type?.startsWith('image/') ? (
-                            <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer">
-                              <img 
-                                src={msg.attachment_url} 
-                                alt={msg.attachment_name} 
-                                className="max-w-full rounded max-h-64 object-cover"
-                              />
-                            </a>
-                          ) : (
-                            <a
-                              href={msg.attachment_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={`flex items-center gap-2 p-2 rounded ${
-                                msg.sender_id === profile?.id ? 'bg-blue-700' : 'bg-gray-200'
-                              }`}
+                      <div className="max-w-[70%]">
+                        <div
+                          className={`rounded-lg px-4 py-2 ${
+                            msg.sender_id === profile?.id
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-100 text-gray-900'
+                          }`}
+                        >
+                          {msg.attachment_url && (
+                            <div className="mb-2">
+                              {msg.attachment_type?.startsWith('image/') ? (
+                                <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer">
+                                  <img 
+                                    src={msg.attachment_url} 
+                                    alt={msg.attachment_name} 
+                                    className="max-w-full rounded max-h-64 object-cover"
+                                  />
+                                </a>
+                              ) : (
+                                <a
+                                  href={msg.attachment_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={`flex items-center gap-2 p-2 rounded ${
+                                    msg.sender_id === profile?.id ? 'bg-blue-700' : 'bg-gray-200'
+                                  }`}
+                                >
+                                  <FileText className="h-5 w-5" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm truncate">{msg.attachment_name}</p>
+                                    <p className={`text-xs ${
+                                      msg.sender_id === profile?.id ? 'text-blue-200' : 'text-gray-500'
+                                    }`}>
+                                      {msg.attachment_size && `${(msg.attachment_size / 1024).toFixed(1)} KB`}
+                                    </p>
+                                  </div>
+                                  <Download className="h-4 w-4" />
+                                </a>
+                              )}
+                            </div>
+                          )}
+                          {msg.message && msg.message !== '📎 Attachment' && (
+                            <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
+                          )}
+                          <p className={`text-xs mt-1 ${
+                            msg.sender_id === profile?.id ? 'text-blue-100' : 'text-gray-500'
+                          }`}>
+                            {new Date(msg.created_at).toLocaleTimeString()}
+                          </p>
+                        </div>
+
+                        {/* Reactions Display */}
+                        {hasReactions && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {Object.entries(reactionSummary).map(([emoji, data]) => (
+                              <button
+                                key={emoji}
+                                onClick={() => toggleReaction(msg.id, emoji)}
+                                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
+                                  data.hasReacted
+                                    ? 'bg-blue-100 border border-blue-300'
+                                    : 'bg-gray-100 border border-gray-200 hover:bg-gray-200'
+                                }`}
+                              >
+                                <span>{emoji}</span>
+                                <span className="font-medium">{data.count}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Quick Reactions */}
+                        <div className="flex items-center gap-1 mt-1 relative">
+                          {['👍', '❤️', '😊', '🎉'].map(emoji => (
+                            <button
+                              key={emoji}
+                              onClick={() => toggleReaction(msg.id, emoji)}
+                              className="opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity text-lg hover:scale-125 transform"
+                              title={`React with ${emoji}`}
                             >
-                              <FileText className="h-5 w-5" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm truncate">{msg.attachment_name}</p>
-                                <p className={`text-xs ${
-                                  msg.sender_id === profile?.id ? 'text-blue-200' : 'text-gray-500'
-                                }`}>
-                                  {msg.attachment_size && `${(msg.attachment_size / 1024).toFixed(1)} KB`}
-                                </p>
-                              </div>
-                              <Download className="h-4 w-4" />
-                            </a>
+                              {emoji}
+                            </button>
+                          ))}
+                          <button
+                            onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)}
+                            className="opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-200 rounded"
+                            title="More reactions"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                          
+                          {/* Emoji Picker */}
+                          {showEmojiPicker === msg.id && (
+                            <div className="absolute bottom-full left-0 mb-2 z-50">
+                              <EmojiPicker
+                                onEmojiClick={(emojiData: EmojiClickData) => {
+                                  toggleReaction(msg.id, emojiData.emoji);
+                                  setShowEmojiPicker(null);
+                                }}
+                                width={300}
+                                height={400}
+                              />
+                            </div>
                           )}
                         </div>
-                      )}
-                      {msg.message && msg.message !== '📎 Attachment' && (
-                        <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
-                      )}
-                      <p className={`text-xs mt-1 ${
-                        msg.sender_id === profile?.id ? 'text-blue-100' : 'text-gray-500'
-                      }`}>
-                        {new Date(msg.created_at).toLocaleTimeString()}
-                      </p>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
               <div ref={messagesEndRef} />
             </div>
