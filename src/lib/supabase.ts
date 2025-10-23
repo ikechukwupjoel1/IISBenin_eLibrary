@@ -12,6 +12,8 @@ export type Book = {
   isbn?: string;
   category?: string;
   status: 'available' | 'borrowed';
+  material_type?: 'book' | 'ebook' | 'electronic_material';
+  page_number?: string;
   created_at: string;
   updated_at?: string;
 };
