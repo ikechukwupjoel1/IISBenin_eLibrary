@@ -35,14 +35,14 @@ export function BulkUserRegistration() {
 
   const downloadTemplate = () => {
     const csvContent = userType === 'student' 
-      ? `full_name,email,phone,department,level
-"John Doe","john.doe@example.com","08012345678","Computer Science","100"
-"Jane Smith","jane.smith@example.com","08087654321","Engineering","200"
-"Bob Johnson","bob.johnson@example.com","08098765432","Medicine","300"`
+      ? `Name,Grade,Parent Email
+"John Doe","Grade 7","parent1@example.com"
+"Jane Smith","Grade 8","parent2@example.com"
+"Bob Johnson","Grade 9","parent3@example.com"`
       : `full_name,email,phone,department,position
-"Mary Manager","mary.manager@example.com","08011111111","Administration","Librarian"
-"Tom Staff","tom.staff@example.com","08022222222","IT Department","Assistant"
-"Sarah Support","sarah.support@example.com","08033333333","Library","Staff"`;
+"Mary Manager","mary.manager@example.com","+2290153077528","Administration","Librarian"
+"Tom Staff","tom.staff@example.com","+2290143088639","IT Department","Assistant"
+"Sarah Support","sarah.support@example.com","+2290123456789","Library","Staff"`;
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -54,19 +54,19 @@ export function BulkUserRegistration() {
     toast.success('Template downloaded!');
   };
 
-  const parseCSV = (text: string): any[] => {
+  const parseCSV = (text: string): Record<string, string>[] => {
     const lines = text.split('\n').filter(line => line.trim());
     if (lines.length < 2) return [];
 
     const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-    const users: any[] = [];
+    const users: Record<string, string>[] = [];
 
     for (let i = 1; i < lines.length; i++) {
       const values: string[] = [];
       let current = '';
       let inQuotes = false;
 
-      for (let char of lines[i]) {
+      for (const char of lines[i]) {
         if (char === '"') {
           inQuotes = !inQuotes;
         } else if (char === ',' && !inQuotes) {
@@ -79,7 +79,7 @@ export function BulkUserRegistration() {
       values.push(current.trim().replace(/^"|"$/g, ''));
 
       if (values.length === headers.length) {
-        const user: any = {};
+        const user: Record<string, string> = {};
         headers.forEach((header, index) => {
           user[header] = values[index];
         });
@@ -120,17 +120,39 @@ export function BulkUserRegistration() {
         const user = users[i];
         
         try {
-          // Validate required fields
-          if (!user.full_name || !user.email) {
-            uploadResults.push({
-              row: i + 2,
-              name: user.full_name || 'Unknown',
-              enrollmentId: '',
-              password: '',
-              status: 'error',
-              message: 'Missing required fields (full_name, email)',
-            });
-            continue;
+          // Map CSV headers - support both formats
+          const fullName = user.Name || user.full_name;
+          const grade = user.Grade || user.level;
+          const email = user['Parent Email'] || user.email;
+          const phone = user.phone;
+          const department = user.department;
+          const position = user.position;
+          
+          // Validate required fields based on user type
+          if (userType === 'student') {
+            if (!fullName || !grade || !email) {
+              uploadResults.push({
+                row: i + 2,
+                name: fullName || 'Unknown',
+                enrollmentId: '',
+                password: '',
+                status: 'error',
+                message: 'Missing required fields (Name, Grade, Parent Email)',
+              });
+              continue;
+            }
+          } else {
+            if (!fullName || !email) {
+              uploadResults.push({
+                row: i + 2,
+                name: fullName || 'Unknown',
+                enrollmentId: '',
+                password: '',
+                status: 'error',
+                message: 'Missing required fields (full_name, email)',
+              });
+              continue;
+            }
           }
 
           // Generate enrollment ID and password
@@ -153,26 +175,21 @@ export function BulkUserRegistration() {
               const hashData = await hashResponse.json();
               hashedPassword = hashData.hash;
             }
-          } catch (hashError) {
+          } catch {
             console.warn('Password hashing failed, using plain text');
           }
 
           // Insert into students/staff table
           const tableName = userType === 'student' ? 'students' : 'staff';
-          const recordData: any = {
+          const recordData = {
             enrollment_id: enrollmentId,
-            full_name: user.full_name,
-            email: user.email,
-            phone: user.phone || null,
-            department: user.department || null,
+            full_name: fullName,
+            email: email,
+            phone: phone || null,
+            department: department || null,
             password_hash: hashedPassword,
+            ...(userType === 'student' ? { level: grade || null } : { position: position || null })
           };
-
-          if (userType === 'student') {
-            recordData.level = user.level || null;
-          } else {
-            recordData.position = user.position || null;
-          }
 
           const { data: record, error: recordError } = await supabase
             .from(tableName)
@@ -183,7 +200,7 @@ export function BulkUserRegistration() {
           if (recordError) {
             uploadResults.push({
               row: i + 2,
-              name: user.full_name,
+              name: fullName,
               enrollmentId: enrollmentId,
               password: password,
               status: 'error',
@@ -193,20 +210,18 @@ export function BulkUserRegistration() {
           }
 
           // Create user profile
-          const profileData = {
+          const baseProfileData = {
             id: record.id,
-            email: user.email,
-            full_name: user.full_name,
+            email: email,
+            full_name: fullName,
             role: userType,
             enrollment_id: enrollmentId,
             password_hash: hashedPassword,
           };
 
-          if (userType === 'student') {
-            profileData['student_id'] = record.id;
-          } else {
-            profileData['staff_id'] = record.id;
-          }
+          const profileData = userType === 'student'
+            ? { ...baseProfileData, student_id: record.id }
+            : { ...baseProfileData, staff_id: record.id };
 
           const { error: profileError } = await supabase
             .from('user_profiles')
@@ -218,7 +233,7 @@ export function BulkUserRegistration() {
             
             uploadResults.push({
               row: i + 2,
-              name: user.full_name,
+              name: fullName,
               enrollmentId: enrollmentId,
               password: password,
               status: 'error',
@@ -229,21 +244,21 @@ export function BulkUserRegistration() {
 
           uploadResults.push({
             row: i + 2,
-            name: user.full_name,
+            name: fullName,
             enrollmentId: enrollmentId,
             password: password,
             status: 'success',
             message: 'Successfully registered',
           });
 
-        } catch (err: any) {
+        } catch (err) {
           uploadResults.push({
             row: i + 2,
-            name: user.full_name || 'Unknown',
+            name: user.Name || user.full_name || 'Unknown',
             enrollmentId: '',
             password: '',
             status: 'error',
-            message: err.message,
+            message: err instanceof Error ? err.message : 'Unknown error occurred',
           });
         }
       }
@@ -254,8 +269,8 @@ export function BulkUserRegistration() {
       const errorCount = uploadResults.filter(r => r.status === 'error').length;
 
       toast.success(`Registration complete! ${successCount} users added, ${errorCount} failed`, { id: 'bulk-register' });
-    } catch (error: any) {
-      toast.error(`Error reading file: ${error.message}`, { id: 'bulk-register' });
+    } catch (error) {
+      toast.error(`Error reading file: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: 'bulk-register' });
     }
 
     setUploading(false);

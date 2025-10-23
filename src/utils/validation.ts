@@ -45,15 +45,17 @@ export const validateEmail = (email: string): boolean => {
 };
 
 /**
- * Validates Nigerian phone number format
- * Accepts: +234XXXXXXXXXX or 0XXXXXXXXXX
+ * Validates Benin Republic phone number format
+ * Accepts: +229XXXXXXXXXX or XXXXXXXXXX (8 digits after country code)
+ * Example: +2290153077528 or 0153077528
  * @param phone - The phone number to validate
- * @returns true if valid Nigerian phone format
+ * @returns true if valid Benin Republic phone format
  */
 export const validatePhone = (phone: string): boolean => {
   if (!phone) return false;
   const cleaned = phone.replace(/[\s\-()]/g, '');
-  return /^(\+?234|0)[789]\d{9}$/.test(cleaned);
+  // Benin numbers: +229 followed by 8 digits, or just 8 digits starting with 0
+  return /^(\+?229)?[0-9]{8,10}$/.test(cleaned);
 };
 
 /**
