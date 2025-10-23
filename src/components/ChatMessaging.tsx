@@ -44,52 +44,75 @@ export function ChatMessaging() {
     if (profile) {
       loadConversations();
       loadAvailableUsers();
-      
-      // Set up real-time subscription for new messages
-      const messagesChannel = supabase
-        .channel('messages-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'messages',
-          },
-          (payload) => {
-            console.log('📨 New message received:', payload);
-            // Reload conversations to update last message time and unread count
-            loadConversations();
-            // If the message is for the currently selected conversation, add it
-            if (payload.new.conversation_id === selectedConversation) {
-              setMessages(prev => [...prev, payload.new as Message]);
-            }
-          }
-        )
-        .subscribe();
-
-      // Set up real-time subscription for conversations
-      const conversationsChannel = supabase
-        .channel('conversations-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'conversations',
-          },
-          () => {
-            console.log('💬 Conversation updated');
-            loadConversations();
-          }
-        )
-        .subscribe();
-
-      return () => {
-        messagesChannel.unsubscribe();
-        conversationsChannel.unsubscribe();
-      };
     }
-  }, [profile, selectedConversation]);
+  }, [profile]);
+
+  // Separate useEffect for realtime subscriptions to avoid channel conflicts
+  useEffect(() => {
+    if (!profile) return;
+    
+    // Set up real-time subscription for conversations (global)
+    const conversationsChannel = supabase
+      .channel('user-conversations')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'conversations',
+        },
+        () => {
+          console.log('� Conversation updated');
+          loadConversations();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      conversationsChannel.unsubscribe();
+    };
+  }, [profile]);
+
+  // Separate useEffect for message subscriptions per conversation
+  useEffect(() => {
+    if (!selectedConversation) return;
+
+    console.log('🔌 Setting up realtime for conversation:', selectedConversation);
+
+    // Set up real-time subscription for messages in this specific conversation
+    const messagesChannel = supabase
+      .channel(`conversation-${selectedConversation}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${selectedConversation}`,
+        },
+        (payload) => {
+          console.log('� New message received:', payload);
+          const newMsg = payload.new as Message;
+          
+          // Only add if not already in the list (avoid duplicates)
+          setMessages(prev => {
+            const exists = prev.some(m => m.id === newMsg.id);
+            return exists ? prev : [...prev, newMsg];
+          });
+          
+          // Reload conversations to update last message time
+          loadConversations();
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Subscription status:', status);
+      });
+
+    return () => {
+      console.log('🔌 Unsubscribing from conversation:', selectedConversation);
+      messagesChannel.unsubscribe();
+    };
+  }, [selectedConversation]);
 
   useEffect(() => {
     if (selectedConversation) {
@@ -159,11 +182,11 @@ export function ChatMessaging() {
 
     // Apply role-based filtering
     if (profile.role === 'student') {
-      // Students can chat with librarians and other students
-      query = query.in('role', ['librarian', 'student']);
+      // Students can chat with librarians, other students, and staff
+      query = query.in('role', ['librarian', 'student', 'staff']);
     } else if (profile.role === 'staff') {
-      // Staff can chat with librarians and other staff
-      query = query.in('role', ['librarian', 'staff']);
+      // Staff can chat with librarians, other staff, and students
+      query = query.in('role', ['librarian', 'staff', 'student']);
     }
     // Librarians can chat with everyone (no filter needed)
 

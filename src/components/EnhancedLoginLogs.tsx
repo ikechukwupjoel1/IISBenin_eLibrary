@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Shield, MapPin, Smartphone, Clock, AlertTriangle, CheckCircle, XCircle, Filter, Search } from 'lucide-react';
+import { Shield, MapPin, Smartphone, Clock, AlertTriangle, CheckCircle, XCircle, Filter, Search, Monitor, Tablet, Phone } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { UAParser } from 'ua-parser-js';
 
 type LoginLog = {
   id: string;
@@ -139,38 +140,47 @@ export function EnhancedLoginLogs() {
   const detectDeviceType = (userAgent?: string): string => {
     if (!userAgent) return 'Unknown';
     
-    const ua = userAgent.toLowerCase();
-    if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) {
-      return 'tablet';
-    }
-    if (/Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(ua)) {
-      return 'mobile';
-    }
-    return 'desktop';
+    const parser = new UAParser(userAgent);
+    const deviceType = parser.getDevice().type;
+    
+    // Map UAParser device types to our categories
+    if (deviceType === 'tablet') return 'tablet';
+    if (deviceType === 'mobile') return 'mobile';
+    if (deviceType === 'wearable') return 'mobile';
+    if (deviceType === 'smarttv') return 'desktop';
+    if (deviceType === 'console') return 'desktop';
+    
+    // If no device type, it's usually desktop
+    return deviceType || 'desktop';
   };
 
   const detectBrowser = (userAgent?: string): string => {
     if (!userAgent) return 'Unknown';
     
-    const ua = userAgent.toLowerCase();
-    if (ua.includes('edg')) return 'Edge';
-    if (ua.includes('chrome')) return 'Chrome';
-    if (ua.includes('firefox')) return 'Firefox';
-    if (ua.includes('safari') && !ua.includes('chrome')) return 'Safari';
-    if (ua.includes('opera') || ua.includes('opr')) return 'Opera';
-    if (ua.includes('trident') || ua.includes('msie')) return 'Internet Explorer';
+    const parser = new UAParser(userAgent);
+    const browser = parser.getBrowser();
+    
+    // Return browser name with version
+    if (browser.name) {
+      const version = browser.version ? ` ${browser.version.split('.')[0]}` : '';
+      return `${browser.name}${version}`;
+    }
+    
     return 'Unknown';
   };
 
   const detectOS = (userAgent?: string): string => {
     if (!userAgent) return 'Unknown';
     
-    const ua = userAgent.toLowerCase();
-    if (ua.includes('win')) return 'Windows';
-    if (ua.includes('mac')) return 'macOS';
-    if (ua.includes('linux')) return 'Linux';
-    if (ua.includes('android')) return 'Android';
-    if (ua.includes('iphone') || ua.includes('ipad')) return 'iOS';
+    const parser = new UAParser(userAgent);
+    const os = parser.getOS();
+    
+    // Return OS name with version
+    if (os.name) {
+      const version = os.version ? ` ${os.version}` : '';
+      return `${os.name}${version}`;
+    }
+    
     return 'Unknown';
   };
 
@@ -193,7 +203,9 @@ export function EnhancedLoginLogs() {
   };
 
   const getDeviceIcon = (deviceType?: string) => {
-    return <Smartphone className="h-4 w-4" />;
+    if (deviceType === 'mobile') return <Phone className="h-4 w-4" />;
+    if (deviceType === 'tablet') return <Tablet className="h-4 w-4" />;
+    return <Monitor className="h-4 w-4" />;
   };
 
   if (profile?.role !== 'librarian') {
