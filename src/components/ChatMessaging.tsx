@@ -223,7 +223,7 @@ export function ChatMessaging() {
   };
 
   const filteredUsers = availableUsers.filter(user =>
-    user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.enrollment_id?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
