@@ -324,15 +324,33 @@ export function BulkUserRegistration() {
 
         {/* Instructions */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <h3 className="font-semibold text-blue-900 mb-2">📋 Instructions:</h3>
+          <h3 className="font-semibold text-blue-900 mb-2">📋 Instructions for {userType === 'student' ? 'Student' : 'Staff'} Registration:</h3>
           <ol className="text-sm text-blue-800 space-y-1 ml-4 list-decimal">
             <li>Download the CSV template for {userType}s</li>
             <li>Fill in user data (one user per row)</li>
-            <li>Required fields: full_name, email</li>
-            <li>Enrollment IDs and passwords will be auto-generated</li>
+            <li>
+              <strong>Required fields:</strong> full_name, email
+              <br />
+              <strong>Optional fields:</strong> phone, department
+              {userType === 'student' && <>, level (e.g., 100, 200, 300)</>}
+              {userType === 'staff' && <>, position (e.g., Librarian, Assistant, Clerk)</>}
+            </li>
+            <li>Enrollment IDs (STU/STF prefix) and passwords will be auto-generated</li>
             <li>Upload the completed CSV file</li>
-            <li>Download the credentials file to distribute to users</li>
+            <li>Download the credentials file to distribute to users securely</li>
           </ol>
+          
+          {userType === 'student' && (
+            <div className="mt-3 p-2 bg-blue-100 rounded text-xs text-blue-900">
+              <strong>Student Template Columns:</strong> full_name, email, phone, department, level
+            </div>
+          )}
+          
+          {userType === 'staff' && (
+            <div className="mt-3 p-2 bg-blue-100 rounded text-xs text-blue-900">
+              <strong>Staff Template Columns:</strong> full_name, email, phone, department, position
+            </div>
+          )}
         </div>
 
         {/* Actions */}
