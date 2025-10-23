@@ -398,7 +398,22 @@ export function BookManagement() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                 <select
                   value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  onChange={(e) => {
+                    const newCategory = e.target.value;
+                    const lowerCategory = newCategory.toLowerCase();
+                    
+                    // Auto-detect material type based on category
+                    let materialType = 'book'; // default
+                    if (lowerCategory.includes('ebook') || lowerCategory.includes('e-book')) {
+                      materialType = 'ebook';
+                    } else if (lowerCategory.includes('electronic')) {
+                      materialType = 'electronic_material';
+                    } else if (lowerCategory.includes('digital') || lowerCategory.includes('online')) {
+                      materialType = 'ebook';
+                    }
+                    
+                    setFormData({ ...formData, category: newCategory, material_type: materialType });
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 >
@@ -412,16 +427,27 @@ export function BookManagement() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Material Type</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Material Type
+                  {formData.category && (formData.category.toLowerCase().includes('ebook') || 
+                   formData.category.toLowerCase().includes('electronic')) && (
+                    <span className="ml-2 text-xs text-green-600">✓ Auto-detected from category</span>
+                  )}
+                </label>
                 <select
                   value={formData.material_type}
                   onChange={(e) => setFormData({ ...formData, material_type: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="book">Physical Book</option>
-                  <option value="ebook">eBook</option>
-                  <option value="electronic_material">Electronic Material</option>
+                  <option value="book">📚 Physical Book</option>
+                  <option value="ebook">📱 eBook</option>
+                  <option value="electronic_material">💻 Electronic Material</option>
                 </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  {formData.material_type === 'book' 
+                    ? 'Physical books need shelf location and ISBN'
+                    : 'Digital materials need a URL in the ISBN field'}
+                </p>
               </div>
 
               <div>

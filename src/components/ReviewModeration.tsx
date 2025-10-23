@@ -61,7 +61,7 @@ export default function ReviewModeration({ userId, userRole }: { userId: string;
         .select(`
           *,
           books(title),
-          user_profiles(full_name),
+          user_profiles!reviews_user_id_fkey(full_name),
           review_likes(count),
           review_reports(count)
         `)
@@ -72,6 +72,10 @@ export default function ReviewModeration({ userId, userRole }: { userId: string;
       }
 
       const { data: reviewsData, error: reviewsError } = await query;
+
+      console.log('Review Moderation - Raw data:', reviewsData);
+      console.log('Review Moderation - Error:', reviewsError);
+      console.log('Review Moderation - Filter:', filter);
 
       if (reviewsError) throw reviewsError;
 
@@ -88,9 +92,13 @@ export default function ReviewModeration({ userId, userRole }: { userId: string;
         formattedReviews = formattedReviews.filter(r => r.reports_count > 0);
       }
 
+      console.log('Review Moderation - Formatted reviews:', formattedReviews);
+      console.log('Review Moderation - Count:', formattedReviews.length);
+
       setReviews(formattedReviews);
     } catch (error) {
       console.error('Error fetching reviews:', error);
+      alert('Error loading reviews: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
