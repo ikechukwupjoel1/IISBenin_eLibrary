@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Send, MessageCircle, Users, Search, X, Circle, Paperclip, Download, FileText, Image as ImageIcon, Smile, Plus } from 'lucide-react';
+import { Send, MessageCircle, Users, Search, X, Circle, Paperclip, Download, FileText, Image as ImageIcon, Smile, Plus, Languages } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -74,6 +74,8 @@ export function ChatMessaging() {
   const [uploading, setUploading] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [reactions, setReactions] = useState<Record<string, Reaction[]>>({});
+  const [translations, setTranslations] = useState<Record<string, string>>({});
+  const [translatingMessage, setTranslatingMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -386,6 +388,61 @@ export function ChatMessaging() {
     });
 
     return summary;
+  };
+
+  const translateMessage = async (messageId: string, text: string, targetLang: string = 'en') => {
+    // Check cache first
+    const cacheKey = `${messageId}-${targetLang}`;
+    if (translations[cacheKey]) {
+      return translations[cacheKey];
+    }
+
+    setTranslatingMessage(messageId);
+
+    try {
+      // Using MyMemory Translation API (free, no key required)
+      const response = await fetch(
+        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=auto|${targetLang}`
+      );
+      
+      const data = await response.json();
+      
+      if (data.responseStatus === 200 && data.responseData?.translatedText) {
+        const translated = data.responseData.translatedText;
+        
+        // Cache the translation
+        setTranslations(prev => ({
+          ...prev,
+          [cacheKey]: translated
+        }));
+        
+        return translated;
+      } else {
+        toast.error('Translation failed');
+        return null;
+      }
+    } catch (error) {
+      toast.error('Translation service unavailable');
+      return null;
+    } finally {
+      setTranslatingMessage(null);
+    }
+  };
+
+  const handleTranslate = async (messageId: string, text: string) => {
+    const cacheKey = `${messageId}-en`;
+    
+    if (translations[cacheKey]) {
+      // Already translated, show original
+      setTranslations(prev => {
+        const newTranslations = { ...prev };
+        delete newTranslations[cacheKey];
+        return newTranslations;
+      });
+    } else {
+      // Translate to English
+      await translateMessage(messageId, text, 'en');
+    }
   };
 
   const markAsRead = async (conversationId: string) => {
@@ -706,7 +763,32 @@ export function ChatMessaging() {
                             </div>
                           )}
                           {msg.message && msg.message !== '📎 Attachment' && (
-                            <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
+                            <div>
+                              <p className="text-sm whitespace-pre-wrap break-words">
+                                {translations[`${msg.id}-en`] || msg.message}
+                              </p>
+                              {msg.message.length > 10 && (
+                                <button
+                                  onClick={() => handleTranslate(msg.id, msg.message)}
+                                  disabled={translatingMessage === msg.id}
+                                  className={`flex items-center gap-1 mt-1 text-xs ${
+                                    msg.sender_id === profile?.id
+                                      ? 'text-blue-100 hover:text-white'
+                                      : 'text-gray-500 hover:text-gray-700'
+                                  }`}
+                                  title={translations[`${msg.id}-en`] ? 'Show original' : 'Translate to English'}
+                                >
+                                  <Languages className="h-3 w-3" />
+                                  {translatingMessage === msg.id ? (
+                                    'Translating...'
+                                  ) : translations[`${msg.id}-en`] ? (
+                                    'Show original'
+                                  ) : (
+                                    'Translate'
+                                  )}
+                                </button>
+                              )}
+                            </div>
                           )}
                           <p className={`text-xs mt-1 ${
                             msg.sender_id === profile?.id ? 'text-blue-100' : 'text-gray-500'
