@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Upload, Download, Users, CheckCircle, XCircle, Key } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { generateSecurePassword } from '../utils/validation';
 
 type UploadResult = {
   row: number;
@@ -18,12 +19,9 @@ export function BulkUserRegistration() {
   const [userType, setUserType] = useState<'student' | 'staff'>('student');
 
   const generatePassword = (): string => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-    let password = '';
-    for (let i = 0; i < 8; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
+    // Use the secure password generator that guarantees all requirements:
+    // 10+ chars, uppercase, lowercase, number, special char
+    return generateSecurePassword(12);
   };
 
   const generateEnrollmentId = (role: 'student' | 'staff'): string => {

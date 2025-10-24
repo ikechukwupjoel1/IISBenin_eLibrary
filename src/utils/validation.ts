@@ -177,3 +177,53 @@ export const sanitizeInput = (input: string): string => {
     .replace(/'/g, '&#x27;')
     .replace(/\//g, '&#x2F;');
 };
+
+/**
+ * Generates a secure random password that meets all validation requirements
+ * Requirements: 10+ chars, uppercase, lowercase, number, special char
+ * @param length - Length of password (minimum 10, default 12)
+ * @returns Generated password that passes validatePassword()
+ */
+export const generateSecurePassword = (length: number = 12): string => {
+  // Ensure minimum length
+  const finalLength = Math.max(length, 10);
+  
+  // Character sets for each requirement
+  const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lowercase = 'abcdefghjkmnpqrstuvwxyz';
+  const numbers = '23456789';
+  const special = '!@#$%^&*';
+  
+  // Combine all characters for random selection
+  const allChars = uppercase + lowercase + numbers + special;
+  
+  // Start with one character from each required set to guarantee requirements
+  let password = '';
+  password += uppercase.charAt(Math.floor(Math.random() * uppercase.length));
+  password += lowercase.charAt(Math.floor(Math.random() * lowercase.length));
+  password += numbers.charAt(Math.floor(Math.random() * numbers.length));
+  password += special.charAt(Math.floor(Math.random() * special.length));
+  
+  // Fill remaining length with random characters from all sets
+  for (let i = password.length; i < finalLength; i++) {
+    password += allChars.charAt(Math.floor(Math.random() * allChars.length));
+  }
+  
+  // Shuffle the password to randomize position of guaranteed characters
+  const passwordArray = password.split('');
+  for (let i = passwordArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [passwordArray[i], passwordArray[j]] = [passwordArray[j], passwordArray[i]];
+  }
+  
+  const finalPassword = passwordArray.join('');
+  
+  // Verify it passes validation (should always pass)
+  const validation = validatePassword(finalPassword);
+  if (!validation.valid) {
+    // Fallback: recursively generate until valid (should never happen)
+    return generateSecurePassword(length);
+  }
+  
+  return finalPassword;
+};

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Plus, Search, Edit2, Trash2, X, History, KeyRound, Printer } from 'lucide-react';
 import { supabase, type Student, type BorrowRecord, type Book } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { generateSecurePassword } from '../utils/validation';
 
 type StudentWithHistory = Student & {
   borrow_records?: (BorrowRecord & { books?: Book })[];
@@ -55,12 +56,9 @@ export function StudentManagement() {
   };
 
   const generatePassword = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-    let password = '';
-    for (let i = 0; i < 8; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
+    // Use the secure password generator that guarantees all requirements:
+    // 10+ chars, uppercase, lowercase, number, special char
+    return generateSecurePassword(12);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

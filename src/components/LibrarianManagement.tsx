@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Shield, Plus, Trash2, Search, X, KeyRound, Printer } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Shield, Plus, Edit2, Trash2, Search, X, KeyRound, AlertTriangle, CheckCircle, Clock, Printer } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { generateSecurePassword } from '../utils/validation';
 
 type Librarian = {
   id: string;
@@ -52,12 +53,9 @@ export function LibrarianManagement() {
   };
 
   const generatePassword = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
-    let password = '';
-    for (let i = 0; i < 12; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
+    // Use the secure password generator that guarantees all requirements:
+    // 10+ chars, uppercase, lowercase, number, special char
+    return generateSecurePassword(12);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
