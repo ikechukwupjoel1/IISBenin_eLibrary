@@ -31,8 +31,9 @@ const ReviewModeration = lazy(() => import('./ReviewModeration'));
 const ChatMessaging = lazy(() => import('./ChatMessaging').then(m => ({ default: m.ChatMessaging })));
 const BulkBookUpload = lazy(() => import('./BulkBookUpload').then(m => ({ default: m.BulkBookUpload })));
 const BulkUserRegistration = lazy(() => import('./BulkUserRegistration').then(m => ({ default: m.BulkUserRegistration })));
+const BookReportReview = lazy(() => import('./BookReportReview').then(m => ({ default: m.BookReportReview })));
 
-type Tab = 'dashboard' | 'books' | 'mybooks' | 'digital' | 'students' | 'staff' | 'librarians' | 'borrowing' | 'reservations' | 'leaderboard' | 'reviews' | 'challenges' | 'loginlogs' | 'settings' | 'changePassword' | 'recommendations' | 'analytics' | 'reports' | 'securitylogs' | 'streaks' | 'bookclubs' | 'waitinglist' | 'moderation' | 'messages' | 'bulkbooks' | 'bulkusers';
+type Tab = 'dashboard' | 'books' | 'mybooks' | 'digital' | 'students' | 'staff' | 'librarians' | 'borrowing' | 'reservations' | 'leaderboard' | 'reviews' | 'challenges' | 'loginlogs' | 'settings' | 'changePassword' | 'recommendations' | 'analytics' | 'reports' | 'securitylogs' | 'streaks' | 'bookclubs' | 'waitinglist' | 'moderation' | 'messages' | 'bulkbooks' | 'bulkusers' | 'bookreports';
 
 export function MainApp() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -70,6 +71,7 @@ export function MainApp() {
       { id: 'leaderboard' as Tab, label: 'Leaderboard', icon: Trophy, roles: ['librarian', 'staff', 'student'] },
       { id: 'streaks' as Tab, label: 'My Progress', icon: Flame, roles: ['student', 'staff'] },
       { id: 'reviews' as Tab, label: 'Reviews', icon: Star, roles: ['librarian', 'staff', 'student'] },
+      { id: 'bookreports' as Tab, label: 'Book Reports', icon: FileText, roles: ['librarian', 'staff'] },
       { id: 'moderation' as Tab, label: 'Review Moderation', icon: ThumbsUp, roles: ['librarian'] },
       { id: 'challenges' as Tab, label: 'Challenges', icon: Target, roles: ['librarian', 'staff', 'student'] },
       { id: 'changePassword' as Tab, label: 'Change Password', icon: UserCog, roles: ['staff', 'student'] },
@@ -168,6 +170,7 @@ export function MainApp() {
             {activeTab === 'leaderboard' && <Leaderboard />}
             {activeTab === 'streaks' && profile && <ReadingStreaks userId={profile.id} />}
             {activeTab === 'reviews' && <Reviews />}
+            {activeTab === 'bookreports' && <BookReportReview />}
             {activeTab === 'moderation' && profile && <ReviewModeration userId={profile.id} userRole={profile.role} />}
             {activeTab === 'challenges' && <ReadingChallenge />}
             {activeTab === 'changePassword' && <ChangePassword />}
