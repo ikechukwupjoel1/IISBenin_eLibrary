@@ -3,6 +3,7 @@ import { UserCog, Plus, Pencil, Trash2, Search, X, KeyRound, Printer } from 'luc
 import { supabase, type Staff } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { generateSecurePassword } from '../utils/validation';
+import { LoadingSkeleton } from './ui/LoadingSkeleton';
 
 type GeneratedCredentials = {
   enrollment_id: string;
@@ -13,6 +14,7 @@ type GeneratedCredentials = {
 
 export function StaffManagement() {
   const [staff, setStaff] = useState<Staff[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddingStaff, setIsAddingStaff] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
@@ -31,6 +33,7 @@ export function StaffManagement() {
   }, []);
 
   const loadStaff = async () => {
+    setLoading(true);
     console.log('Loading staff...');
     const { data, error } = await supabase
       .from('staff')
@@ -41,10 +44,13 @@ export function StaffManagement() {
 
     if (error) {
       console.error('Error loading staff:', error);
+      toast.error('Failed to load staff members');
+      setLoading(false);
       return;
     }
 
     setStaff(data || []);
+    setLoading(false);
   };
 
   const generateEnrollmentId = () => {
@@ -452,13 +458,22 @@ export function StaffManagement() {
     (s.enrollment_id && s.enrollment_id.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  if (loading) {
+    return <LoadingSkeleton type="list" />;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Staff Management</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Staff Management</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            {staff.length} staff member{staff.length !== 1 ? 's' : ''} registered
+          </p>
+        </div>
         <button
           onClick={() => setIsAddingStaff(true)}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 min-h-[44px]"
         >
           <Plus className="h-5 w-5" />
           Register Staff
@@ -466,10 +481,12 @@ export function StaffManagement() {
       </div>
 
       {isAddingStaff && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center gap-2 mb-6">
-            <UserCog className="h-6 w-6 text-blue-600" />
-            <h3 className="text-lg font-semibold text-gray-900">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30 rounded-lg">
+              <UserCog className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               {editingStaff ? 'Edit Staff Member' : 'Register New Staff Member'}
             </h3>
           </div>
@@ -477,47 +494,47 @@ export function StaffManagement() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Full Name
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-600 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-h-[44px]"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Email (Optional)
                 </label>
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-600 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-h-[44px]"
                   placeholder="email@example.com"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Phone Number (Optional)
                 </label>
                 <input
                   type="tel"
                   value={formData.phone_number}
                   onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-600 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-h-[44px]"
                   placeholder="+1234567890"
                 />
               </div>
             </div>
 
             {!editingStaff && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm text-blue-800 dark:text-blue-300">
                 <p className="font-medium">Auto-Generated Credentials</p>
                 <p className="text-xs mt-1">Enrollment ID and password will be generated automatically and displayed after registration.</p>
               </div>
@@ -526,14 +543,14 @@ export function StaffManagement() {
             <div className="flex gap-2">
               <button
                 type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 min-h-[44px] font-medium"
               >
                 {editingStaff ? 'Update Staff' : 'Register Staff'}
               </button>
               <button
                 type="button"
                 onClick={handleCancel}
-                className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+                className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 min-h-[44px] font-medium"
               >
                 Cancel
               </button>
@@ -542,7 +559,7 @@ export function StaffManagement() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-all duration-300">
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
@@ -550,65 +567,65 @@ export function StaffManagement() {
             placeholder="Search staff by name, email, or enrollment ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-600 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-h-[44px]"
           />
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Email
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Enrollment ID
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Phone Number
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {filteredStaff.map((staffMember) => (
-                <tr key={staffMember.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                <tr key={staffMember.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
                     {staffMember.name}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-700">
+                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
                     {staffMember.email || '-'}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-700 font-mono">
+                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 font-mono">
                     {staffMember.enrollment_id || '-'}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-700">
+                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
                     {staffMember.phone_number || '-'}
                   </td>
                   <td className="px-6 py-4 text-sm">
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleEdit(staffMember)}
-                        className="text-blue-600 hover:text-blue-800 transition-colors"
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center"
                         title="Edit staff member"
                       >
                         <Pencil className="h-5 w-5" />
                       </button>
                       <button
                         onClick={() => openResetPassword(staffMember)}
-                        className="text-amber-600 hover:text-amber-800 transition-colors"
+                        className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 transition-colors p-2 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center"
                         title="Reset password"
                       >
                         <KeyRound className="h-5 w-5" />
                       </button>
                       <button
                         onClick={() => handleDelete(staffMember.id)}
-                        className="text-red-600 hover:text-red-800 transition-colors"
+                        className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center"
                         title="Delete staff member"
                       >
                         <Trash2 className="h-5 w-5" />
@@ -620,7 +637,7 @@ export function StaffManagement() {
             </tbody>
           </table>
           {filteredStaff.length === 0 && (
-            <div className="text-center py-8 text-gray-600">
+            <div className="text-center py-12 text-gray-600 dark:text-gray-400">
               {searchQuery ? 'No staff members found matching your search.' : 'No staff members yet. Add one to get started.'}
             </div>
           )}
@@ -628,67 +645,67 @@ export function StaffManagement() {
       </div>
 
       {showCredentials && generatedCredentials && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-md w-full my-4 sm:my-8 shadow-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full my-4 sm:my-8 shadow-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col animate-scale-in">
             {/* Fixed Header */}
-            <div className="flex items-center justify-between p-4 sm:p-6 pb-3 border-b border-gray-200 flex-shrink-0">
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900">Staff Credentials</h3>
-              <button onClick={() => setShowCredentials(false)} className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 min-w-[44px] min-h-[44px] flex items-center justify-center">
+            <div className="flex items-center justify-between p-4 sm:p-6 pb-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Staff Credentials</h3>
+              <button onClick={() => setShowCredentials(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 min-w-[44px] min-h-[44px] flex items-center justify-center transition-all duration-300">
                 <X className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
             {/* Scrollable Content */}
             <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-4">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-green-800 font-medium mb-2">Staff member registered successfully!</p>
-                <p className="text-sm text-green-700">Please provide these credentials to the staff member:</p>
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <p className="text-green-800 dark:text-green-300 font-medium mb-2">Staff member registered successfully!</p>
+                <p className="text-sm text-green-700 dark:text-green-400">Please provide these credentials to the staff member:</p>
               </div>
 
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Enrollment ID</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Enrollment ID</label>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={generatedCredentials.enrollment_id}
                       readOnly
-                      className="flex-1 px-3 py-3 border border-gray-300 rounded-lg bg-gray-50 font-mono min-h-[44px]"
+                      className="flex-1 px-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white font-mono min-h-[44px]"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={generatedCredentials.password}
                       readOnly
-                      className="flex-1 px-3 py-3 border border-gray-300 rounded-lg bg-gray-50 font-mono min-h-[44px]"
+                      className="flex-1 px-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white font-mono min-h-[44px]"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 text-sm text-yellow-800 dark:text-yellow-300">
                 <p className="font-medium">Important:</p>
                 <p className="text-xs mt-1">Save these credentials now. They cannot be retrieved later.</p>
               </div>
             </div>
 
             {/* Fixed Footer */}
-            <div className="flex gap-3 p-4 sm:p-6 pt-3 border-t border-gray-200 flex-shrink-0 bg-gray-50">
+            <div className="flex gap-3 p-4 sm:p-6 pt-3 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 bg-gray-50 dark:bg-gray-900">
               <button
                 onClick={handlePrintCredentials}
-                className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 min-h-[44px] font-medium"
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 flex items-center justify-center gap-2 min-h-[44px] font-medium"
               >
                 <Printer className="h-5 w-5" />
                 <span className="hidden xs:inline">Print</span>
               </button>
               <button
                 onClick={() => setShowCredentials(false)}
-                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] font-medium"
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 min-h-[44px] font-medium"
               >
                 Done
               </button>
@@ -698,32 +715,32 @@ export function StaffManagement() {
       )}
 
       {showResetPassword && resetPasswordStaff && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-md w-full my-4 sm:my-8 shadow-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full my-4 sm:my-8 shadow-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col animate-scale-in">
             {/* Fixed Header */}
-            <div className="flex items-center justify-between p-4 sm:p-6 pb-3 border-b border-gray-200 flex-shrink-0">
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2">
-                <KeyRound className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600" />
+            <div className="flex items-center justify-between p-4 sm:p-6 pb-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <KeyRound className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600 dark:text-amber-400" />
                 Reset Password
               </h3>
-              <button onClick={() => setShowResetPassword(false)} className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 min-w-[44px] min-h-[44px] flex items-center justify-center">
+              <button onClick={() => setShowResetPassword(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 min-w-[44px] min-h-[44px] flex items-center justify-center transition-all duration-300">
                 <X className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
             {/* Scrollable Content */}
             <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-4">
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <p className="text-amber-800 font-medium mb-2">Confirm Password Reset</p>
-                <p className="text-sm text-amber-700">
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                <p className="text-amber-800 dark:text-amber-300 font-medium mb-2">Confirm Password Reset</p>
+                <p className="text-sm text-amber-700 dark:text-amber-400">
                   You are about to reset the password for:
                 </p>
-                <p className="text-sm font-mono mt-2 text-amber-900">
+                <p className="text-sm font-mono mt-2 text-amber-900 dark:text-amber-200">
                   {resetPasswordStaff.name} ({resetPasswordStaff.enrollment_id})
                 </p>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm text-blue-800 dark:text-blue-300">
                 <p className="font-medium">What happens next:</p>
                 <ul className="list-disc list-inside text-xs mt-2 space-y-1">
                   <li>A new random password will be generated</li>
@@ -734,17 +751,17 @@ export function StaffManagement() {
             </div>
 
             {/* Fixed Footer */}
-            <div className="flex gap-3 p-4 sm:p-6 pt-3 border-t border-gray-200 flex-shrink-0 bg-gray-50">
+            <div className="flex gap-3 p-4 sm:p-6 pt-3 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 bg-gray-50 dark:bg-gray-900">
               <button
                 type="button"
                 onClick={() => setShowResetPassword(false)}
-                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px] font-medium"
+                className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 min-h-[44px] font-medium"
               >
                 Cancel
               </button>
               <button
                 onClick={handleResetPassword}
-                className="flex-1 px-4 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors min-h-[44px] font-medium"
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-amber-600 to-amber-700 text-white rounded-lg hover:from-amber-700 hover:to-amber-800 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 min-h-[44px] font-medium"
               >
                 Reset Password
               </button>
