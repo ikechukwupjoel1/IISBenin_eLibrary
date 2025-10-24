@@ -2,6 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  /* Prevent horizontal overflow on all elements */
+  * {
+    @apply max-w-full;
+  }
+  
+  html {
+    @apply overflow-x-hidden;
+  }
+  
+  body {
+    @apply overflow-x-hidden;
+  }
+}
+
+@layer utilities {
+  /* Mobile-friendly touch targets */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  /* Responsive text sizing */
+  .text-responsive-sm {
+    @apply text-xs sm:text-sm;
+  }
+  
+  .text-responsive-base {
+    @apply text-sm sm:text-base;
+  }
+  
+  .text-responsive-lg {
+    @apply text-base sm:text-lg;
+  }
+  
+  .text-responsive-xl {
+    @apply text-lg sm:text-xl md:text-2xl;
+  }
+  
+  /* Responsive padding */
+  .px-responsive {
+    @apply px-3 sm:px-4 lg:px-6;
+  }
+  
+  .py-responsive {
+    @apply py-3 sm:py-4 lg:py-6;
+  }
+  
+  /* Hide scrollbar but allow scrolling */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Mobile card spacing */
+  .card-mobile {
+    @apply p-4 sm:p-6;
+  }
+}
+
 @keyframes slide-up {
   from {
     transform: translateY(100%);
@@ -15,4 +78,25 @@
 
 .animate-slide-up {
   animation: slide-up 0.3s ease-out;
+}
+
+/* Table responsive wrapper */
+@layer components {
+  .table-container {
+    @apply w-full overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0;
+  }
+  
+  .table-container table {
+    @apply min-w-full;
+  }
+  
+  /* Ensure tables don't overflow */
+  table {
+    @apply table-auto;
+  }
+  
+  /* Mobile-friendly modals */
+  .modal-content {
+    @apply w-full max-w-full sm:max-w-md md:max-w-lg lg:max-w-xl;
+  }
 }

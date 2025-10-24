@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/Iisbenin%20logo.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
     
     <!-- PWA Configuration -->
     <link rel="manifest" href="/manifest.json" />
@@ -21,6 +21,19 @@
     <meta name="msapplication-TileImage" content="/Iisbenin%20logo.png" />
     
     <title>IISBenin Library Management System</title>
+    
+    <!-- Prevent automatic text sizing on mobile -->
+    <style>
+      html {
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+      }
+      body {
+        overflow-x: hidden;
+        position: relative;
+        width: 100%;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

@@ -3,6 +3,12 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('message-attachments', 'message-attachments', true)
 ON CONFLICT (id) DO NOTHING;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Allow authenticated users to upload message attachments" ON storage.objects;
+DROP POLICY IF EXISTS "Allow authenticated users to read message attachments" ON storage.objects;
+DROP POLICY IF EXISTS "Allow users to delete their own message attachments" ON storage.objects;
+DROP POLICY IF EXISTS "Allow users to update their own message attachments" ON storage.objects;
+
 -- Set up storage policies for message-attachments bucket
 
 -- Allow authenticated users to upload files

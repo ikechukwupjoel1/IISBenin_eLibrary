@@ -203,27 +203,27 @@ export function Dashboard() {
     return (
       <div className="relative min-h-screen">
         <BackgroundCarousel />
-        <div className="relative z-10 space-y-6 p-6">
-          <div className="flex items-center gap-4 mb-6 bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-lg">
-            <img src={schoolLogo} alt="IISBenin Logo" className="w-16 h-16 object-contain" />
-            <h2 className="text-3xl font-bold text-gray-900">Dashboard Overview</h2>
+        <div className="relative z-10 space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6">
+          <div className="flex items-center gap-2 sm:gap-4 mb-4 sm:mb-6 bg-white/90 backdrop-blur-sm rounded-xl p-3 sm:p-4 shadow-lg">
+            <img src={schoolLogo} alt="IISBenin Logo" className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 object-contain" />
+            <h2 className="text-lg sm:text-2xl md:text-3xl font-bold text-gray-900">Dashboard Overview</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-white/95 backdrop-blur-sm rounded-xl p-6 border border-gray-200 shadow-lg animate-pulse">
-                <div className="h-12 bg-gray-200 rounded-lg mb-4 w-12"></div>
-                <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
-                <div className="h-8 bg-gray-200 rounded w-16"></div>
+              <div key={i} className="bg-white/95 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-gray-200 shadow-lg animate-pulse">
+                <div className="h-10 sm:h-12 bg-gray-200 rounded-lg mb-3 sm:mb-4 w-10 sm:w-12"></div>
+                <div className="h-3 sm:h-4 bg-gray-200 rounded w-20 sm:w-24 mb-2"></div>
+                <div className="h-6 sm:h-8 bg-gray-200 rounded w-12 sm:w-16"></div>
               </div>
             ))}
           </div>
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-6">
-            <div className="h-6 bg-gray-200 rounded w-48 mb-6"></div>
-            <div className="space-y-4">
+          <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-4 sm:p-6">
+            <div className="h-5 sm:h-6 bg-gray-200 rounded w-40 sm:w-48 mb-4 sm:mb-6"></div>
+            <div className="space-y-3 sm:space-y-4">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="space-y-2 animate-pulse">
-                  <div className="h-8 bg-gray-200 rounded"></div>
-                  <div className="h-3 bg-gray-200 rounded"></div>
+                  <div className="h-6 sm:h-8 bg-gray-200 rounded"></div>
+                  <div className="h-2 sm:h-3 bg-gray-200 rounded"></div>
                 </div>
               ))}
             </div>
@@ -236,53 +236,56 @@ export function Dashboard() {
   return (
     <div className="relative min-h-screen">
       <BackgroundCarousel />
-      <div className="relative z-10 space-y-6 p-6">
-        <div className="flex items-center gap-4 mb-6 bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-lg">
-          <img src={schoolLogo} alt="IISBenin Logo" className="w-16 h-16 object-contain" />
-          <h2 className="text-3xl font-bold text-gray-900">Dashboard Overview</h2>
+      <div className="relative z-10 space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6">
+        {/* Header - Mobile Responsive */}
+        <div className="flex items-center gap-2 sm:gap-4 mb-4 sm:mb-6 bg-white/90 backdrop-blur-sm rounded-xl p-3 sm:p-4 shadow-lg">
+          <img src={schoolLogo} alt="IISBenin Logo" className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 object-contain flex-shrink-0" />
+          <h2 className="text-lg sm:text-2xl md:text-3xl font-bold text-gray-900">Dashboard Overview</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        {/* Stats Cards - Mobile Responsive Grid */}
+        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
           {statCards.map((card) => {
             const Icon = card.icon;
             return (
-              <div key={card.title} className="bg-white/95 backdrop-blur-sm rounded-xl p-6 border border-gray-200 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer active:scale-95">
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`bg-gradient-to-br ${card.gradient} p-3 rounded-lg shadow-md`}>
-                    <Icon className="h-6 w-6 text-white" />
+              <div key={card.title} className="bg-white/95 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-gray-200 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer active:scale-95">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <div className={`bg-gradient-to-br ${card.gradient} p-2 sm:p-3 rounded-lg shadow-md`}>
+                    <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                   </div>
                 </div>
-                <p className="text-gray-600 text-sm font-medium mb-1">{card.title}</p>
-                <p className="text-3xl font-bold text-gray-900">{card.value}</p>
+                <p className="text-gray-600 text-xs sm:text-sm font-medium mb-1">{card.title}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{card.value}</p>
               </div>
             );
           })}
         </div>
 
-        {/* Top Reading Students Chart - visible to all roles */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-6 transition-all duration-300 hover:shadow-2xl">
-          <div className="flex items-center gap-2 mb-6">
-            <BookMarked className="h-6 w-6 text-blue-600" />
-            <h3 className="text-xl font-bold text-gray-900">Top Reading Students</h3>
+        {/* Top Reading Students Chart - Mobile Responsive */}
+        <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-4 sm:p-6 transition-all duration-300 hover:shadow-2xl">
+          <div className="flex items-center gap-2 mb-4 sm:mb-6">
+            <BookMarked className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 flex-shrink-0" />
+            <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900">Top Reading Students</h3>
           </div>
 
           {studentReadingData.length > 0 ? (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {studentReadingData.map((student, index) => (
                 <div key={student.student_id} className="space-y-2 transition-all duration-200 hover:translate-x-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold text-sm shadow-md">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                      <span className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold text-xs sm:text-sm shadow-md flex-shrink-0">
                         {index + 1}
                       </span>
-                      <span className="font-medium text-gray-900">{student.student_name}</span>
+                      <span className="font-medium text-gray-900 text-sm sm:text-base truncate">{student.student_name}</span>
                     </div>
-                    <span className="text-sm font-semibold text-gray-700">
+                    <span className="text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
                       {student.books_read} {student.books_read === 1 ? 'book' : 'books'}
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div className="w-full bg-gray-200 rounded-full h-2 sm:h-3 overflow-hidden">
                     <div
-                      className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-500"
+                      className="bg-gradient-to-r from-blue-500 to-green-500 h-2 sm:h-3 rounded-full transition-all duration-500"
                       style={{ width: `${(student.books_read / maxBooksRead) * 100}%` }}
                     />
                   </div>
@@ -290,40 +293,40 @@ export function Dashboard() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-500">
-              <BookOpen className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg font-medium">No reading data yet</p>
-              <p className="text-sm mt-1">Students' reading activity will appear here once they complete borrowing books</p>
+            <div className="text-center py-8 sm:py-12 text-gray-500">
+              <BookOpen className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-3 sm:mb-4 text-gray-300" />
+              <p className="text-base sm:text-lg font-medium">No reading data yet</p>
+              <p className="text-xs sm:text-sm mt-1 px-4">Students' reading activity will appear here once they complete borrowing books</p>
             </div>
           )}
         </div>
 
-        {/* Top Reading Staff Chart - only visible to librarians and staff */}
+        {/* Top Reading Staff Chart - Mobile Responsive */}
         {profile?.role && (profile.role === 'librarian' || profile.role === 'staff') && (
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <UserCog className="h-6 w-6 text-teal-600" />
-              <h3 className="text-xl font-bold text-gray-900">Top Reading Staff</h3>
+          <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-4 sm:p-6">
+            <div className="flex items-center gap-2 mb-4 sm:mb-6">
+              <UserCog className="h-5 w-5 sm:h-6 sm:w-6 text-teal-600 flex-shrink-0" />
+              <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900">Top Reading Staff</h3>
             </div>
 
             {staffReadingData.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {staffReadingData.map((staff, index) => (
                   <div key={staff.staff_id} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-teal-100 text-teal-700 font-semibold text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                        <span className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-teal-100 text-teal-700 font-semibold text-xs sm:text-sm flex-shrink-0">
                           {index + 1}
                         </span>
-                        <span className="font-medium text-gray-900">{staff.staff_name}</span>
+                        <span className="font-medium text-gray-900 text-sm sm:text-base truncate">{staff.staff_name}</span>
                       </div>
-                      <span className="text-sm font-semibold text-gray-700">
+                      <span className="text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
                         {staff.books_read} {staff.books_read === 1 ? 'book' : 'books'}
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                    <div className="w-full bg-gray-200 rounded-full h-2 sm:h-3 overflow-hidden">
                       <div
-                        className="bg-gradient-to-r from-teal-500 to-blue-500 h-3 rounded-full transition-all duration-500"
+                        className="bg-gradient-to-r from-teal-500 to-blue-500 h-2 sm:h-3 rounded-full transition-all duration-500"
                         style={{ width: `${(staff.books_read / Math.max(...staffReadingData.map(s => s.books_read), 1)) * 100}%` }}
                       />
                     </div>
@@ -331,10 +334,10 @@ export function Dashboard() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12 text-gray-500">
-                <UserCog className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg font-medium">No reading data yet</p>
-                <p className="text-sm mt-1">Staff reading activity will appear here once they complete borrowing books</p>
+              <div className="text-center py-8 sm:py-12 text-gray-500">
+                <UserCog className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-3 sm:mb-4 text-gray-300" />
+                <p className="text-base sm:text-lg font-medium">No reading data yet</p>
+                <p className="text-xs sm:text-sm mt-1 px-4">Staff reading activity will appear here once they complete borrowing books</p>
               </div>
             )}
           </div>

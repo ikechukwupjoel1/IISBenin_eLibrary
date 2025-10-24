@@ -81,60 +81,66 @@ export function MainApp() {
   const tabs = getAvailableTabs();
 
   return (
-    <div className="min-h-screen bg-gray-50 relative">
+    <div className="min-h-screen bg-gray-50 relative overflow-x-hidden">
       <NetworkStatus />
       <BackgroundCarousel />
       <header className="bg-white/95 backdrop-blur-sm shadow-sm border-b border-gray-200 relative z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               <img
                 src={schoolLogo}
                 alt="IISBenin Logo"
-                className="h-12 w-12 mr-3 object-contain"
+                className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0 object-contain"
               />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">IISBenin Library Management System</h1>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-sm sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-900 truncate">
+                  IISBenin Library
+                </h1>
                 {profile && (
-                  <p className="text-sm text-gray-600">
-                    Welcome, {profile.full_name} ({profile.role})
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">
+                    {profile.full_name} ({profile.role})
                   </p>
                 )}
               </div>
             </div>
             <button
               onClick={handleSignOut}
-              className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors min-h-[44px] flex-shrink-0"
             >
-              <LogOut className="h-5 w-5" />
-              <span>Sign Out</span>
+              <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="hidden sm:inline text-sm">Sign Out</span>
+              <span className="sm:hidden text-xs">Out</span>
             </button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10">
-        <nav className="flex flex-wrap gap-2 mb-6 bg-white/95 backdrop-blur-sm rounded-lg p-2 shadow-sm border border-gray-200">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                  activeTab === tab.id
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <Icon className="h-5 w-5" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-3 sm:py-6 relative z-10">
+        {/* Mobile: Horizontal scrollable tabs */}
+        <nav className="mb-4 sm:mb-6 bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="flex sm:flex-wrap gap-1 sm:gap-2 p-2 overflow-x-auto scrollbar-hide">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap text-xs sm:text-sm flex-shrink-0 min-h-[44px] ${
+                    activeTab === tab.id
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="hidden xs:inline">{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </nav>
 
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 md:p-6 overflow-hidden">
           <Suspense fallback={
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
