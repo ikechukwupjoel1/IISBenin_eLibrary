@@ -80,6 +80,7 @@ export function ChatMessaging() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const presenceChannelRef = useRef<any>(null);
 
   useEffect(() => {
     if (profile) {
@@ -178,6 +179,9 @@ export function ChatMessaging() {
       },
     });
 
+    // Store channel reference for handleTyping to use
+    presenceChannelRef.current = channel;
+
     channel
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState<PresenceState>();
@@ -213,6 +217,7 @@ export function ChatMessaging() {
       });
 
     return () => {
+      presenceChannelRef.current = null;
       channel.unsubscribe();
     };
   }, [selectedConversation, profile]);
@@ -505,9 +510,10 @@ export function ChatMessaging() {
   };
 
   const handleTyping = () => {
-    if (!selectedConversation || !profile) return;
+    if (!selectedConversation || !profile || !presenceChannelRef.current) return;
 
-    const channel = supabase.channel(`presence-${selectedConversation}`);
+    const channel = presenceChannelRef.current;
+    
     channel.track({
       user_id: profile.id,
       online_at: new Date().toISOString(),
@@ -521,11 +527,13 @@ export function ChatMessaging() {
 
     // Stop typing after 3 seconds of no activity
     typingTimeoutRef.current = setTimeout(() => {
-      channel.track({
-        user_id: profile.id,
-        online_at: new Date().toISOString(),
-        typing: false,
-      });
+      if (presenceChannelRef.current) {
+        presenceChannelRef.current.track({
+          user_id: profile.id,
+          online_at: new Date().toISOString(),
+          typing: false,
+        });
+      }
     }, 3000);
   };
 
