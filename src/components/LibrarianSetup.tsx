@@ -87,8 +87,8 @@ export function LibrarianSetup() {
       <BackgroundCarousel />
       <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md p-8 relative z-10">
         <div className="text-center">
-          <img src="/Iisbenin logo.png" alt="IISBenin Logo" className="w-24 h-24 mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">IISBenin Library</h1>
+          <img src="/Iisbenin logo.png" alt="SmartLib Logo" className="w-24 h-24 mx-auto mb-4" />
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent mb-2">SmartLib</h1>
           <h2 className="text-xl text-gray-600 mb-6">Initial Setup</h2>
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6 text-left">
