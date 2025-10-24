@@ -1,6 +1,7 @@
 import { useState, lazy, Suspense } from 'react';
 import { BookOpen, Users, BookMarked, LayoutDashboard, LogOut, UserCog, Calendar, Trophy, Star, Target, Shield, Library, Monitor, Settings, TrendingUp, BarChart3, FileText, Flame, MessageCircle, Clock, ThumbsUp, Upload } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useReportNotifications } from '../hooks/useReportNotifications';
 import schoolLogo from '../assets/Iisbenin logo.png';
 import BackgroundCarousel from './BackgroundCarousel';
 import NetworkStatus from './NetworkStatus';
@@ -32,12 +33,16 @@ const ChatMessaging = lazy(() => import('./ChatMessaging').then(m => ({ default:
 const BulkBookUpload = lazy(() => import('./BulkBookUpload').then(m => ({ default: m.BulkBookUpload })));
 const BulkUserRegistration = lazy(() => import('./BulkUserRegistration').then(m => ({ default: m.BulkUserRegistration })));
 const BookReportReview = lazy(() => import('./BookReportReview').then(m => ({ default: m.BookReportReview })));
+const ReadingProgress = lazy(() => import('./ReadingProgress').then(m => ({ default: m.ReadingProgress })));
 
-type Tab = 'dashboard' | 'books' | 'mybooks' | 'digital' | 'students' | 'staff' | 'librarians' | 'borrowing' | 'reservations' | 'leaderboard' | 'reviews' | 'challenges' | 'loginlogs' | 'settings' | 'changePassword' | 'recommendations' | 'analytics' | 'reports' | 'securitylogs' | 'streaks' | 'bookclubs' | 'waitinglist' | 'moderation' | 'messages' | 'bulkbooks' | 'bulkusers' | 'bookreports';
+type Tab = 'dashboard' | 'books' | 'mybooks' | 'digital' | 'students' | 'staff' | 'librarians' | 'borrowing' | 'reservations' | 'leaderboard' | 'reviews' | 'challenges' | 'loginlogs' | 'settings' | 'changePassword' | 'recommendations' | 'analytics' | 'reports' | 'securitylogs' | 'streaks' | 'bookclubs' | 'waitinglist' | 'moderation' | 'messages' | 'bulkbooks' | 'bulkusers' | 'bookreports' | 'progress';
 
 export function MainApp() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const { signOut, profile } = useAuth();
+  
+  // Enable real-time notifications for report status changes
+  useReportNotifications();
 
   const handleSignOut = async () => {
     try {
@@ -70,6 +75,7 @@ export function MainApp() {
       { id: 'bookclubs' as Tab, label: 'Book Clubs', icon: Users, roles: ['librarian', 'staff', 'student'] },
       { id: 'leaderboard' as Tab, label: 'Leaderboard', icon: Trophy, roles: ['librarian', 'staff', 'student'] },
       { id: 'streaks' as Tab, label: 'My Progress', icon: Flame, roles: ['student', 'staff'] },
+      { id: 'progress' as Tab, label: 'Reading Progress', icon: TrendingUp, roles: ['student', 'staff'] },
       { id: 'reviews' as Tab, label: 'Reviews', icon: Star, roles: ['librarian', 'staff', 'student'] },
       { id: 'bookreports' as Tab, label: 'Book Reports', icon: FileText, roles: ['librarian', 'staff'] },
       { id: 'moderation' as Tab, label: 'Review Moderation', icon: ThumbsUp, roles: ['librarian'] },
@@ -169,6 +175,7 @@ export function MainApp() {
             {activeTab === 'bookclubs' && profile && <BookClubs userId={profile.id} />}
             {activeTab === 'leaderboard' && <Leaderboard />}
             {activeTab === 'streaks' && profile && <ReadingStreaks userId={profile.id} />}
+            {activeTab === 'progress' && <ReadingProgress />}
             {activeTab === 'reviews' && <Reviews />}
             {activeTab === 'bookreports' && <BookReportReview />}
             {activeTab === 'moderation' && profile && <ReviewModeration userId={profile.id} userRole={profile.role} />}

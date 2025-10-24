@@ -9,6 +9,7 @@ type LeaderboardEntry = {
   books_read: number;
   total_points: number;
   role: string;
+  badges?: Array<{ name: string; icon: string; tier: number }>;
 };
 
 export function Leaderboard() {
@@ -82,6 +83,28 @@ export function Leaderboard() {
       }
     });
 
+    // Get badges for top users
+    const userIds = Array.from(userPointsMap.keys());
+    const { data: badgesData } = await supabase
+      .from('user_badges')
+      .select(`
+        user_id,
+        badges (name, icon, tier)
+      `)
+      .in('user_id', userIds);
+
+    const userBadgesMap = new Map<string, Array<{ name: string; icon: string; tier: number }>>();
+    (badgesData as Array<{user_id: string; badges: Array<{name: string; icon: string; tier: number}> | null}>)?.forEach((ub) => {
+      if (!userBadgesMap.has(ub.user_id)) {
+        userBadgesMap.set(ub.user_id, []);
+      }
+      if (ub.badges && Array.isArray(ub.badges)) {
+        ub.badges.forEach(badge => {
+          userBadgesMap.get(ub.user_id)?.push(badge);
+        });
+      }
+    });
+
     const leaderboardData: LeaderboardEntry[] = Array.from(userPointsMap.entries())
       .map(([id, data]) => ({
         user_id: id,
@@ -89,6 +112,7 @@ export function Leaderboard() {
         books_read: data.count,
         total_points: data.points,
         role: data.role,
+        badges: userBadgesMap.get(id) || [],
       }))
       .sort((a, b) => b.total_points - a.total_points)
       .slice(0, 20);
@@ -211,7 +235,25 @@ export function Leaderboard() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900">{entry.user_name}</div>
+                      <div>
+                        <div className="font-medium text-gray-900">{entry.user_name}</div>
+                        {entry.badges && entry.badges.length > 0 && (
+                          <div className="flex items-center gap-1 mt-1">
+                            {entry.badges.slice(0, 3).map((badge, idx) => (
+                              <span
+                                key={idx}
+                                className="text-lg"
+                                title={badge.name}
+                              >
+                                {badge.icon}
+                              </span>
+                            ))}
+                            {entry.badges.length > 3 && (
+                              <span className="text-xs text-gray-500">+{entry.badges.length - 3}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getRoleColor(entry.role)}`}>
