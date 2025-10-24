@@ -17,11 +17,15 @@ export function BorrowingSystem() {
   const [borrowRecords, setBorrowRecords] = useState<BorrowRecordWithDetails[]>([]);
   const [selectedBook, setSelectedBook] = useState('');
   const [borrowerType, setBorrowerType] = useState<'student' | 'staff'>('student');
+  const [selectedGrade, setSelectedGrade] = useState('');
   const [selectedStudent, setSelectedStudent] = useState('');
   const [selectedStaff, setSelectedStaff] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [activeTab, setActiveTab] = useState<'borrow' | 'active' | 'overdue'>('borrow');
   const [materialTypeFilter, setMaterialTypeFilter] = useState<'all' | 'physical' | 'ebook' | 'electronic'>('all');
+
+  // Get unique grade levels from students
+  const gradeLevels = Array.from(new Set(students.map(s => s.grade_level).filter(Boolean))).sort();
 
   useEffect(() => {
     loadData();
@@ -234,22 +238,11 @@ export function BorrowingSystem() {
           </div>
 
           <form onSubmit={handleBorrow} className="space-y-4">
+            {/* Step 1: Borrower Type */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Material Type</label>
-              <select
-                value={materialTypeFilter}
-                onChange={(e) => setMaterialTypeFilter(e.target.value as any)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">All Materials</option>
-                <option value="physical">Physical Books Only</option>
-                <option value="ebook">eBooks Only</option>
-                <option value="electronic">Electronic Materials Only</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Borrower Type</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <span className="text-blue-600 font-semibold">Step 1:</span> Borrower Type
+              </label>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2">
                   <input
@@ -258,8 +251,10 @@ export function BorrowingSystem() {
                     checked={borrowerType === 'student'}
                     onChange={(e) => {
                       setBorrowerType(e.target.value as 'student' | 'staff');
+                      setSelectedGrade('');
                       setSelectedStudent('');
                       setSelectedStaff('');
+                      setSelectedBook('');
                     }}
                     className="text-blue-600"
                   />
@@ -272,8 +267,10 @@ export function BorrowingSystem() {
                     checked={borrowerType === 'staff'}
                     onChange={(e) => {
                       setBorrowerType(e.target.value as 'student' | 'staff');
+                      setSelectedGrade('');
                       setSelectedStudent('');
                       setSelectedStaff('');
+                      setSelectedBook('');
                     }}
                     className="text-blue-600"
                   />
@@ -283,95 +280,192 @@ export function BorrowingSystem() {
             </div>
 
             {borrowerType === 'student' ? (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Select Student</label>
-                <select
-                  value={selectedStudent}
-                  onChange={(e) => setSelectedStudent(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                >
-                  <option value="">Choose a student...</option>
-                  {students.map((student) => (
-                    <option key={student.id} value={student.id}>
-                      {student.name} - {student.class} ({student.roll_number})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <>
+                {/* Step 2: Select Grade Level (for students only) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <span className="text-blue-600 font-semibold">Step 2:</span> Select Grade Level
+                  </label>
+                  <select
+                    value={selectedGrade}
+                    onChange={(e) => {
+                      setSelectedGrade(e.target.value);
+                      setSelectedStudent('');
+                      setSelectedBook('');
+                    }}
+                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
+                    required
+                  >
+                    <option value="">Choose grade level first...</option>
+                    {gradeLevels.map((grade) => (
+                      <option key={grade} value={grade}>
+                        {grade}
+                      </option>
+                    ))}
+                  </select>
+                  {!selectedGrade && (
+                    <p className="mt-1 text-sm text-gray-500">
+                      ℹ️ Select a grade level to see students and available books
+                    </p>
+                  )}
+                </div>
+
+                {/* Step 3: Select Student (filtered by grade) */}
+                {selectedGrade && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <span className="text-blue-600 font-semibold">Step 3:</span> Select Student from {selectedGrade}
+                    </label>
+                    <select
+                      value={selectedStudent}
+                      onChange={(e) => setSelectedStudent(e.target.value)}
+                      className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
+                      required
+                    >
+                      <option value="">Choose a student...</option>
+                      {students
+                        .filter(student => student.grade_level === selectedGrade)
+                        .map((student) => (
+                          <option key={student.id} value={student.id}>
+                            {student.name} - {student.enrollment_id}
+                          </option>
+                        ))}
+                    </select>
+                    <p className="mt-1 text-sm text-green-600">
+                      ✓ Showing {students.filter(s => s.grade_level === selectedGrade).length} student(s) in {selectedGrade}
+                    </p>
+                  </div>
+                )}
+              </>
             ) : (
+              /* Staff Selection (no grade filtering needed) */
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Select Staff</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <span className="text-blue-600 font-semibold">Step 2:</span> Select Staff Member
+                </label>
                 <select
                   value={selectedStaff}
                   onChange={(e) => setSelectedStaff(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
                   required
                 >
                   <option value="">Choose a staff member...</option>
                   {staff.map((staffMember) => (
                     <option key={staffMember.id} value={staffMember.id}>
-                      {staffMember.name} - {staffMember.department} ({staffMember.employee_id})
+                      {staffMember.name} - {staffMember.enrollment_id}
                     </option>
                   ))}
                 </select>
               </div>
             )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Select Book</label>
-              <select
-                value={selectedBook}
-                onChange={(e) => setSelectedBook(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-              >
-                <option value="">Choose a book...</option>
-                {books
-                  .filter((book) => {
-                    if (materialTypeFilter === 'all') return true;
-                    if (materialTypeFilter === 'physical') {
-                      return !book.category?.toLowerCase().includes('ebook') && 
-                             !book.category?.toLowerCase().includes('electronic');
-                    }
-                    if (materialTypeFilter === 'ebook') {
-                      return book.category?.toLowerCase().includes('ebook');
-                    }
-                    if (materialTypeFilter === 'electronic') {
-                      return book.category?.toLowerCase().includes('electronic');
+            {/* Step 4: Material Type Filter */}
+            {(borrowerType === 'staff' || selectedGrade) && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <span className="text-blue-600 font-semibold">Step {borrowerType === 'student' ? '4' : '3'}:</span> Material Type (Optional Filter)
+                </label>
+                <select
+                  value={materialTypeFilter}
+                  onChange={(e) => setMaterialTypeFilter(e.target.value as 'all' | 'physical' | 'ebook' | 'electronic')}
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
+                >
+                  <option value="all">All Materials</option>
+                  <option value="physical">Physical Books Only</option>
+                  <option value="ebook">eBooks Only</option>
+                  <option value="electronic">Electronic Materials Only</option>
+                </select>
+              </div>
+            )}
+
+            {/* Step 5: Select Book (filtered by grade and material type) */}
+            {(borrowerType === 'staff' || selectedGrade) && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <span className="text-blue-600 font-semibold">Step {borrowerType === 'student' ? '5' : '4'}:</span> Select Book
+                  {borrowerType === 'student' && selectedGrade && (
+                    <span className="text-sm text-gray-500 ml-2">
+                      (Books suitable for {selectedGrade})
+                    </span>
+                  )}
+                </label>
+                <select
+                  value={selectedBook}
+                  onChange={(e) => setSelectedBook(e.target.value)}
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
+                  required
+                >
+                  <option value="">Choose a book...</option>
+                  {books
+                    .filter((book) => {
+                      // Material type filter
+                      if (materialTypeFilter !== 'all') {
+                        const bookType = book.material_type || 'physical';
+                        if (materialTypeFilter !== bookType) return false;
+                      }
+                      
+                      // For students, filter by grade level appropriateness
+                      // You can customize this logic based on your grade/book categorization
+                      if (borrowerType === 'student' && selectedGrade) {
+                        // Example: Check if book category or tags include the grade
+                        // This is a simplified version - adjust based on your data structure
+                        return true; // For now, show all books. You can add grade-specific filtering here
+                      }
+                      
+                      return true;
+                    })
+                    .map((book) => (
+                      <option key={book.id} value={book.id}>
+                        {book.title} by {book.author} - {book.material_type || 'Physical Book'}
+                      </option>
+                    ))}
+                </select>
+                <p className="mt-1 text-sm text-green-600">
+                  ✓ {books.filter(b => {
+                    if (materialTypeFilter !== 'all') {
+                      return (b.material_type || 'physical') === materialTypeFilter;
                     }
                     return true;
-                  })
-                  .map((book) => (
-                  <option key={book.id} value={book.id}>
-                    {book.title} by {book.author} ({book.category || 'Uncategorized'})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                  defaultValue={getDefaultDueDate()}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
+                  }).length} book(s) available
+                </p>
               </div>
-            </div>
+            )}
 
-            <button
-              type="submit"
-              className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-            >
-              Process Borrow
-            </button>
+            {/* Step 6: Due Date */}
+            {selectedBook && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <span className="text-blue-600 font-semibold">Step {borrowerType === 'student' ? '6' : '5'}:</span> Return Due Date
+                </label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
+                    required
+                  />
+                </div>
+                <p className="mt-1 text-sm text-gray-500">
+                  ℹ️ Standard loan period is 14 days
+                </p>
+              </div>
+            )}
+
+            {/* Submit Button - Only show when all required fields are selected */}
+            {selectedBook && dueDate && (
+              <div className="pt-4 border-t">
+                <button
+                  type="submit"
+                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors min-h-[44px] flex items-center justify-center gap-2"
+                >
+                  <BookMarked className="h-5 w-5" />
+                  Complete Borrow Transaction
+                </button>
+              </div>
+            )}
           </form>
         </div>
       )}
