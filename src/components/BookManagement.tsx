@@ -35,8 +35,8 @@ export function BookManagement() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  // Predefined category options
-  const categoryOptions = [
+  // Category options based on material type
+  const physicalBookCategories = [
     'Fiction',
     'Non-Fiction',
     'Science',
@@ -64,15 +64,52 @@ export function BookManagement() {
     'Reference',
     'Dictionary',
     'Encyclopedia',
+    'Other',
+  ];
+
+  const ebookCategories = [
     'Science eBook',
     'Mathematics eBook',
     'History eBook',
     'Literature eBook',
+    'English Language eBook',
+    'Biology eBook',
+    'Chemistry eBook',
+    'Physics eBook',
+    'Computer Science eBook',
+    'Geography eBook',
+    'Fiction eBook',
+    'Non-Fiction eBook',
+    'Other eBook',
+  ];
+
+  const electronicMaterialCategories = [
     'Science Electronic Material',
     'Mathematics Electronic Material',
     'History Electronic Material',
-    'Other',
+    'Computer Science Electronic Material',
+    'English Language Electronic Material',
+    'Biology Electronic Material',
+    'Chemistry Electronic Material',
+    'Physics Electronic Material',
+    'Educational Video',
+    'Interactive Learning Module',
+    'Audio Book',
+    'Other Electronic Material',
   ];
+
+  // Get categories based on current material type
+  const getCategoryOptions = () => {
+    switch (formData.material_type) {
+      case 'ebook':
+        return ebookCategories;
+      case 'electronic_material':
+        return electronicMaterialCategories;
+      case 'book':
+      default:
+        return physicalBookCategories;
+    }
+  };
 
   useEffect(() => {
     loadBooks();
@@ -485,60 +522,28 @@ export function BookManagement() {
               </div>
             </div>
 
-            {/* Category & Material Type Section */}
+            {/* Material Type & Category Section */}
             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
               <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                🏷️ Category & Type
+                🏷️ Material Type & Category
               </h4>
               
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => {
-                      const newCategory = e.target.value;
-                      const lowerCategory = newCategory.toLowerCase();
-                      
-                      // Auto-detect material type based on category
-                      let materialType = 'book'; // default
-                      if (lowerCategory.includes('ebook') || lowerCategory.includes('e-book')) {
-                        materialType = 'ebook';
-                      } else if (lowerCategory.includes('electronic')) {
-                        materialType = 'electronic_material';
-                      } else if (lowerCategory.includes('digital') || lowerCategory.includes('online')) {
-                        materialType = 'ebook';
-                      }
-                      
-                      setFormData({ ...formData, category: newCategory, material_type: materialType });
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                    required
-                  >
-                    <option value="">Select a category</option>
-                    {categoryOptions.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
+                {/* Material Type - First */}
                 <div className={`p-4 rounded-lg border-2 transition-all ${
                   formData.material_type === 'ebook' ? 'border-blue-500 bg-blue-50' : 
                   formData.material_type === 'electronic_material' ? 'border-purple-500 bg-purple-50' : 
                   'border-gray-300 bg-white'
                 }`}>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Material Type * ⚠️ IMPORTANT
-                    {formData.category && (formData.category.toLowerCase().includes('ebook') || 
-                     formData.category.toLowerCase().includes('electronic')) && (
-                      <span className="ml-2 text-xs text-green-600 font-bold">✓ Auto-detected</span>
-                    )}
+                    Material Type * (Select First)
                   </label>
                   <select
                     value={formData.material_type}
-                    onChange={(e) => setFormData({ ...formData, material_type: e.target.value })}
+                    onChange={(e) => {
+                      // Clear category when material type changes
+                      setFormData({ ...formData, material_type: e.target.value, category: '' });
+                    }}
                     className="w-full px-3 py-2 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-semibold bg-white"
                     required
                   >
@@ -552,6 +557,31 @@ export function BookManagement() {
                       formData.material_type === 'ebook' ? '📱 eBook (needs URL/File)' :
                       '💻 Electronic Material (needs URL/File)'
                     }
+                  </p>
+                </div>
+
+                {/* Category - Second (filtered by material type) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Category * (Based on Material Type)
+                  </label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    required
+                  >
+                    <option value="">Select a category</option>
+                    {getCategoryOptions().map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-2 text-xs text-gray-500">
+                    {formData.material_type === 'book' && 'Categories for physical books'}
+                    {formData.material_type === 'ebook' && 'Categories for eBooks'}
+                    {formData.material_type === 'electronic_material' && 'Categories for electronic materials'}
                   </p>
                 </div>
 
