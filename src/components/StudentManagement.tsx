@@ -3,6 +3,7 @@ import { Plus, Search, Edit2, Trash2, X, History, KeyRound, Printer, UserPlus } 
 import { supabase, type Student, type BorrowRecord, type Book } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { generateSecurePassword } from '../utils/validation';
+import { LoadingSkeleton } from './ui/LoadingSkeleton';
 
 type StudentWithHistory = Student & {
   borrow_records?: (BorrowRecord & { books?: Book })[];
@@ -15,6 +16,7 @@ type GeneratedCredentials = {
 
 export function StudentManagement() {
   const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddingStudent, setIsAddingStudent] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -35,14 +37,18 @@ export function StudentManagement() {
   }, []);
 
   const loadStudents = async () => {
+    setLoading(true);
     const { data, error } = await supabase
       .from('students')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (!error && data) {
+    if (error) {
+      toast.error('Failed to load students');
+    } else if (data) {
       setStudents(data);
     }
+    setLoading(false);
   };
 
   const filteredStudents = students.filter((student) =>
@@ -412,13 +418,22 @@ export function StudentManagement() {
     printWindow.document.close();
   };
 
+  if (loading) {
+    return <LoadingSkeleton type="list" />;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Student Management</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Student Management</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            {students.length} student{students.length !== 1 ? 's' : ''} registered
+          </p>
+        </div>
         <button
           onClick={() => openModal()}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 min-h-[44px]"
         >
           <Plus className="h-5 w-5" />
           Register Student
@@ -432,15 +447,17 @@ export function StudentManagement() {
           placeholder="Search by name, grade, or enrollment ID..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-600 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-h-[44px]"
         />
       </div>
 
       {isAddingStudent && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center gap-2 mb-6">
-            <UserPlus className="h-6 w-6 text-blue-600" />
-            <h3 className="text-lg font-semibold text-gray-900">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30 rounded-lg">
+              <UserPlus className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               {editingStudent ? 'Edit Student' : 'Register New Student'}
             </h3>
           </div>
@@ -448,48 +465,48 @@ export function StudentManagement() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Full Name *
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-600 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-h-[44px]"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Grade Level *
                 </label>
                 <input
                   type="text"
                   value={formData.grade_level}
                   onChange={(e) => setFormData({ ...formData, grade_level: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-600 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-h-[44px]"
                   placeholder="e.g., JSS1, SS2"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Parent Email (Optional)
                 </label>
                 <input
                   type="email"
                   value={formData.parent_email}
                   onChange={(e) => setFormData({ ...formData, parent_email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-600 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-h-[44px]"
                   placeholder="parent@example.com"
                 />
               </div>
             </div>
 
             {!editingStudent && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm text-blue-800 dark:text-blue-300">
                 <p className="font-medium">Auto-Generated Credentials</p>
                 <p className="text-xs mt-1">Enrollment ID and password will be generated automatically and displayed after registration.</p>
               </div>
@@ -498,14 +515,14 @@ export function StudentManagement() {
             <div className="flex gap-2">
               <button
                 type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 min-h-[44px] font-medium"
               >
                 {editingStudent ? 'Update Student' : 'Register Student'}
               </button>
               <button
                 type="button"
                 onClick={closeModal}
-                className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+                className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 min-h-[44px] font-medium"
               >
                 Cancel
               </button>
@@ -514,49 +531,49 @@ export function StudentManagement() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Enrollment ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Grade</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Enrollment ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {filteredStudents.map((student) => (
-                <tr key={student.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{student.name}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{student.grade_level}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700 font-mono">{student.enrollment_id || '-'}</td>
-                  <td className="px-6 py-4 text-sm">
+                <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{student.name}</td>
+                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{student.grade_level}</td>
+                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 font-mono">{student.enrollment_id || '-'}</td>
+                                    <td className="px-6 py-4 text-sm">
                     <div className="flex gap-2">
                       <button
                         onClick={() => viewHistory(student)}
-                        className="text-slate-600 hover:text-slate-800"
+                        className="text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-300 transition-colors p-2 hover:bg-slate-50 dark:hover:bg-slate-900/20 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center"
                         title="View History"
                       >
                         <History className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => openResetPassword(student)}
-                        className="text-amber-600 hover:text-amber-800"
+                        className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 transition-colors p-2 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center"
                         title="Reset Password"
                       >
                         <KeyRound className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => openModal(student)}
-                        className="text-blue-600 hover:text-blue-800"
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center"
                         title="Edit"
                       >
                         <Edit2 className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(student.id)}
-                        className="text-red-600 hover:text-red-800"
+                        className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center"
                         title="Delete"
                       >
                         <Trash2 className="h-4 w-4" />
