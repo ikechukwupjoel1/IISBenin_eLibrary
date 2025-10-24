@@ -1,12 +1,14 @@
-const CACHE_NAME = 'iisbenin-library-v1';
-const STATIC_CACHE = 'iisbenin-library-static-v1';
-const DYNAMIC_CACHE = 'iisbenin-library-dynamic-v1';
+const CACHE_NAME = 'iisbenin-library-v2';
+const STATIC_CACHE = 'iisbenin-library-static-v2';
+const DYNAMIC_CACHE = 'iisbenin-library-dynamic-v2';
 
 // Static assets to cache immediately
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/Iisbenin%20logo.png',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/apple-touch-icon.png',
   '/manifest.json'
 ];
 
@@ -90,8 +92,8 @@ self.addEventListener('push', (event) => {
   
   const options = {
     body: event.data?.text() || 'New notification from IISBenin Library',
-    icon: '/Iisbenin%20logo.png',
-    badge: '/Iisbenin%20logo.png',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
     vibrate: [200, 100, 200],
     data: {
       dateOfArrival: Date.now(),

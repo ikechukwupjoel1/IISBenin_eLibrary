@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/Iisbenin%20logo.png" />
+    <link rel="icon" type="image/png" href="/icon-192.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
     
     <!-- PWA Configuration -->
@@ -11,14 +11,16 @@
     <meta name="description" content="Digital library management system for IISBenin" />
     
     <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon" href="/Iisbenin%20logo.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="IISBenin Library" />
     
     <!-- Microsoft Tiles -->
     <meta name="msapplication-TileColor" content="#2563eb" />
-    <meta name="msapplication-TileImage" content="/Iisbenin%20logo.png" />
+    <meta name="msapplication-TileImage" content="/icon-512.png" />
+    <meta name="msapplication-config" content="none" />
     
     <title>IISBenin Library Management System</title>
     
@@ -41,17 +43,62 @@
     
     <!-- Register Service Worker -->
     <script>
+      // Register service worker
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker
             .register('/service-worker.js')
             .then((registration) => {
-              console.log('SW registered:', registration);
+              console.log('✅ Service Worker registered successfully:', registration.scope);
+              
+              // Check for updates
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                console.log('🔄 Service Worker update found');
+                
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('🎉 New Service Worker installed, page will refresh');
+                    // Optional: Show update notification to user
+                    if (confirm('New version available! Click OK to update.')) {
+                      window.location.reload();
+                    }
+                  }
+                });
+              });
             })
             .catch((error) => {
-              console.log('SW registration failed:', error);
+              console.error('❌ Service Worker registration failed:', error);
             });
         });
+
+        // Listen for controller change (when new SW takes over)
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          console.log('🔄 Service Worker controller changed');
+        });
+      } else {
+        console.warn('⚠️ Service Workers are not supported in this browser');
+      }
+
+      // Handle beforeinstallprompt for PWA install prompt
+      let deferredPrompt;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        console.log('💾 PWA Install prompt available');
+        e.preventDefault();
+        deferredPrompt = e;
+        // The PWAInstallPrompt component will handle showing the install UI
+        window.dispatchEvent(new CustomEvent('pwa-installable', { detail: e }));
+      });
+
+      // Track PWA installation
+      window.addEventListener('appinstalled', () => {
+        console.log('✅ PWA installed successfully');
+        deferredPrompt = null;
+      });
+
+      // Log if app is running in standalone mode (installed as PWA)
+      if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+        console.log('📱 Running as installed PWA');
       }
     </script>
   </body>
