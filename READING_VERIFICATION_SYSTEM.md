@@ -101,7 +101,38 @@ Students must provide:
 
 ---
 
-## 👨‍🏫 Librarian Workflow
+## 👨‍🏫 Librarian & Staff Review Workflow
+
+### Who Can Review Reports?
+
+**By Default:**
+- ✅ Librarians (full access to all reports)
+- ✅ Administrators (full access)
+
+**Configurable Access:**
+- ✅ **Authorized Staff** - Librarians can grant review permissions to specific staff members
+- Examples:
+  - English teachers review literature reports
+  - Science teachers review science book reports
+  - Subject coordinators review reports in their department
+  - Senior staff assist with high report volume
+
+### Granting Review Access:
+
+Librarians can add staff reviewers through the dashboard:
+1. Go to **Settings → Report Reviewers**
+2. Click **Add Reviewer**
+3. Select staff member
+4. Choose review scope:
+   - **All Reports** - Can review any book report
+   - **Subject-Specific** - Only reports for specific subjects/categories
+5. (Optional) Add subject areas: e.g., Science, Mathematics, History
+6. Save
+
+**Staff will then see:**
+- "Review Reports" option in their dashboard
+- Pending reports matching their scope
+- Same approval workflow as librarians
 
 ### 1. Review Submitted Reports
 
@@ -119,6 +150,10 @@ Students must provide:
 - Approve / Request Revision / Reject
 
 ### 2. Quality Assessment Guide
+
+**Who Assesses Quality:**
+- Librarians and authorized staff members
+- Subject teachers can provide specialized feedback for their area
 
 **100-90% (Excellent):**
 - Detailed summary showing deep understanding
@@ -376,12 +411,53 @@ Students must provide:
 ## 📋 Configuration Settings
 
 Librarians can configure:
+- **Staff Reviewers**: Grant/revoke review permissions for specific staff
+- **Review Scope**: Assign staff to review all reports or subject-specific only
 - Minimum word count for reports (default: 100)
 - Point values for each component
 - Auto-approve threshold (e.g., quality score >90%)
 - Report expiry (how long after returning)
 - Revision limits (max resubmissions)
-- Enable/disable optional features
+- Enable/disable optional features (quizzes, progress tracking)
+- Book type requirements (physical vs digital - see below)
+
+---
+
+## 📚 Physical vs Digital Books
+
+### Book Report Applies To:
+
+**✅ Physical Books:**
+- Traditional checkout process
+- Students read at home
+- Submit report before/during return
+- Same report requirements
+
+**✅ eBooks (Digital Books):**
+- Digital checkout from library
+- Read on devices
+- Can track reading progress automatically (pages viewed, time in reader)
+- Same report requirements
+- **Bonus:** System can verify completion% automatically from reading data
+
+**⚠️ Digital Materials (Videos, Interactive Modules):**
+- Different verification approach recommended
+- **Option 1:** Quiz-based only (no lengthy report for 15-min video)
+- **Option 2:** Short reflection (50 words vs 100)
+- **Option 3:** Activity completion certificate
+
+### Recommended Configuration:
+
+| Material Type | Report Required? | Verification Method |
+|---------------|------------------|---------------------|
+| Physical Book | ✅ Yes | Full book report |
+| eBook | ✅ Yes | Full book report + auto-tracked progress |
+| Audiobook | ✅ Yes | Full book report + listening time |
+| Educational Video | ⚠️ Optional | Quiz or short reflection (50 words) |
+| Interactive Module | ⚠️ Optional | Completion certificate + quiz |
+| Research Database | ❌ No | Access tracking only |
+
+**Implementation Note:** The `borrowing` table handles all material types. The report system can check the book's `material_type` field and apply different requirements accordingly.
 
 ---
 

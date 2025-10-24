@@ -86,6 +86,21 @@ CREATE TABLE IF NOT EXISTS reading_progress (
   UNIQUE(borrow_id, session_date)
 );
 
+-- Create report_reviewers table (track which staff can review reports)
+CREATE TABLE IF NOT EXISTS report_reviewers (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  staff_id uuid REFERENCES user_profiles(id) ON DELETE CASCADE,
+  assigned_by uuid REFERENCES user_profiles(id), -- Which librarian/admin granted permission
+  can_review boolean DEFAULT true,
+  review_scope text DEFAULT 'all' CHECK (review_scope IN ('all', 'subject_specific')), -- Can review all or just specific subjects
+  subject_areas text[], -- Array of subjects they can review (e.g., ['Science', 'Mathematics'])
+  notes text, -- Optional notes about why this staff has review access
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+  
+  UNIQUE(staff_id)
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_book_reports_user_id ON book_reports(user_id);
 CREATE INDEX IF NOT EXISTS idx_book_reports_book_id ON book_reports(book_id);
@@ -95,12 +110,14 @@ CREATE INDEX IF NOT EXISTS idx_reading_questions_book_id ON reading_questions(bo
 CREATE INDEX IF NOT EXISTS idx_reading_answers_report_id ON reading_answers(report_id);
 CREATE INDEX IF NOT EXISTS idx_reading_progress_user_id ON reading_progress(user_id);
 CREATE INDEX IF NOT EXISTS idx_reading_progress_borrow_id ON reading_progress(borrow_id);
+CREATE INDEX IF NOT EXISTS idx_report_reviewers_staff_id ON report_reviewers(staff_id);
 
 -- Enable RLS
 ALTER TABLE book_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reading_questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reading_answers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reading_progress ENABLE ROW LEVEL SECURITY;
+ALTER TABLE report_reviewers ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for book_reports
 
@@ -117,6 +134,17 @@ CREATE POLICY "Librarians can view all reports"
       SELECT 1 FROM user_profiles
       WHERE id = auth.uid()
       AND role IN ('librarian', 'admin')
+    )
+  );
+
+-- Authorized staff can view reports (configurable by librarians)
+CREATE POLICY "Authorized staff can view reports"
+  ON book_reports FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM report_reviewers
+      WHERE staff_id = auth.uid()
+      AND can_review = true
     )
   );
 
@@ -141,6 +169,17 @@ CREATE POLICY "Librarians can update reports"
       SELECT 1 FROM user_profiles
       WHERE id = auth.uid()
       AND role IN ('librarian', 'admin')
+    )
+  );
+
+-- Authorized staff can update reports (for approval/rejection)
+CREATE POLICY "Authorized staff can update reports"
+  ON book_reports FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM report_reviewers
+      WHERE staff_id = auth.uid()
+      AND can_review = true
     )
   );
 
@@ -232,6 +271,42 @@ CREATE POLICY "Students can track own progress"
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+-- RLS Policies for report_reviewers
+
+-- Librarians and admins can view all reviewers
+CREATE POLICY "Librarians can view all reviewers"
+  ON report_reviewers FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM user_profiles
+      WHERE id = auth.uid()
+      AND role IN ('librarian', 'admin')
+    )
+  );
+
+-- Staff can view their own reviewer status
+CREATE POLICY "Staff can view own reviewer status"
+  ON report_reviewers FOR SELECT
+  USING (auth.uid() = staff_id);
+
+-- Only librarians and admins can manage reviewers
+CREATE POLICY "Librarians can manage reviewers"
+  ON report_reviewers FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM user_profiles
+      WHERE id = auth.uid()
+      AND role IN ('librarian', 'admin')
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM user_profiles
+      WHERE id = auth.uid()
+      AND role IN ('librarian', 'admin')
+    )
+  );
+
 -- Function to calculate reading points based on report quality
 CREATE OR REPLACE FUNCTION calculate_reading_points(
   report_id uuid
@@ -318,5 +393,6 @@ COMMENT ON TABLE book_reports IS 'Students submit book reports after reading to 
 COMMENT ON TABLE reading_questions IS 'Optional comprehension questions librarians can add to books for additional verification';
 COMMENT ON TABLE reading_answers IS 'Student answers to reading comprehension questions';
 COMMENT ON TABLE reading_progress IS 'Track daily reading progress and sessions';
+COMMENT ON TABLE report_reviewers IS 'Configurable list of staff who can review and approve book reports (managed by librarians)';
 COMMENT ON FUNCTION calculate_reading_points IS 'Calculate points awarded based on report quality and completion';
 COMMENT ON FUNCTION approve_book_report IS 'Approve a book report, assign quality score, and award points to student';
