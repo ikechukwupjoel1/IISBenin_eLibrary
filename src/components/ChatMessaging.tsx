@@ -73,6 +73,7 @@ export function ChatMessaging() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
+  const [showMessageEmojiPicker, setShowMessageEmojiPicker] = useState(false);
   const [reactions, setReactions] = useState<Record<string, Reaction[]>>({});
   const [translations, setTranslations] = useState<Record<string, string>>({});
   const [translatingMessage, setTranslatingMessage] = useState<string | null>(null);
@@ -902,6 +903,26 @@ export function ChatMessaging() {
                 >
                   <Paperclip className="h-5 w-5" />
                 </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowMessageEmojiPicker(!showMessageEmojiPicker)}
+                    className="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                    title="Add emoji"
+                  >
+                    <Smile className="h-5 w-5" />
+                  </button>
+                  {showMessageEmojiPicker && (
+                    <div className="absolute bottom-full mb-2 left-0 z-50">
+                      <EmojiPicker
+                        onEmojiClick={(emojiData: EmojiClickData) => {
+                          setNewMessage(prev => prev + emojiData.emoji);
+                          setShowMessageEmojiPicker(false);
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
                 <input
                   type="text"
                   value={newMessage}
