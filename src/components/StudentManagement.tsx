@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Search, Edit2, Trash2, X, History, KeyRound, Printer } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, History, KeyRound, Printer, UserPlus } from 'lucide-react';
 import { supabase, type Student, type BorrowRecord, type Book } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { generateSecurePassword } from '../utils/validation';
@@ -16,7 +16,7 @@ type GeneratedCredentials = {
 export function StudentManagement() {
   const [students, setStudents] = useState<Student[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showModal, setShowModal] = useState(false);
+  const [isAddingStudent, setIsAddingStudent] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showCredentials, setShowCredentials] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
@@ -183,11 +183,11 @@ export function StudentManagement() {
         parent_email: '', // Always reset parent_email for edit
       });
     }
-    setShowModal(true);
+    setIsAddingStudent(true);
   };
 
   const closeModal = () => {
-    setShowModal(false);
+    setIsAddingStudent(false);
     setEditingStudent(null);
     setFormData({
       name: '',
@@ -436,6 +436,84 @@ export function StudentManagement() {
         />
       </div>
 
+      {isAddingStudent && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center gap-2 mb-6">
+            <UserPlus className="h-6 w-6 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">
+              {editingStudent ? 'Edit Student' : 'Register New Student'}
+            </h3>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Grade Level *
+                </label>
+                <input
+                  type="text"
+                  value={formData.grade_level}
+                  onChange={(e) => setFormData({ ...formData, grade_level: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., JSS1, SS2"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Parent Email (Optional)
+                </label>
+                <input
+                  type="email"
+                  value={formData.parent_email}
+                  onChange={(e) => setFormData({ ...formData, parent_email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="parent@example.com"
+                />
+              </div>
+            </div>
+
+            {!editingStudent && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                <p className="font-medium">Auto-Generated Credentials</p>
+                <p className="text-xs mt-1">Enrollment ID and password will be generated automatically and displayed after registration.</p>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                {editingStudent ? 'Update Student' : 'Register Student'}
+              </button>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -491,87 +569,6 @@ export function StudentManagement() {
           </table>
         </div>
       </div>
-
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-md w-full my-4 sm:my-8 shadow-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
-            {/* Fixed Header */}
-            <div className="flex items-center justify-between p-4 sm:p-6 pb-3 border-b border-gray-200 flex-shrink-0">
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900">
-                {editingStudent ? 'Edit Student' : 'Register New Student'}
-              </h3>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 min-w-[44px] min-h-[44px] flex items-center justify-center">
-                <X className="h-5 w-5 sm:h-6 sm:w-6" />
-              </button>
-            </div>
-
-            {/* Scrollable Content */}
-            <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4">
-              <form onSubmit={handleSubmit} className="space-y-4" id="student-form">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Grade Level</label>
-                  <input
-                    type="text"
-                    value={formData.grade_level}
-                    onChange={(e) => setFormData({ ...formData, grade_level: e.target.value })}
-                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
-                    placeholder="e.g., Grade 5A"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Parent Email</label>
-                  <input
-                    type="email"
-                    value={formData.parent_email}
-                    onChange={(e) => setFormData({ ...formData, parent_email: e.target.value })}
-                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
-                    placeholder="Enter parent's email address"
-                    required={!editingStudent}
-                  />
-                </div>
-
-                {!editingStudent && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-                    <p className="font-medium">Auto-Generated Credentials</p>
-                    <p className="text-xs mt-1">Enrollment ID and password will be generated automatically and displayed after registration.</p>
-                  </div>
-                )}
-              </form>
-            </div>
-
-            {/* Fixed Footer */}
-            <div className="flex gap-3 p-4 sm:p-6 pt-3 border-t border-gray-200 flex-shrink-0 bg-gray-50">
-              <button
-                type="button"
-                onClick={closeModal}
-                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px] font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                form="student-form"
-                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] font-medium"
-              >
-                {editingStudent ? 'Update' : 'Register'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {showCredentials && generatedCredentials && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">

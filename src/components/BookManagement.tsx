@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Search, CreditCard as Edit2, Trash2, X, Filter, Upload, Link } from 'lucide-react';
+import { Plus, Search, CreditCard as Edit2, Trash2, Upload, Link, BookPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase, type Book } from '../lib/supabase';
 import { ConfirmDialog } from './ui/ConfirmDialog';
@@ -9,7 +9,7 @@ export function BookManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [showModal, setShowModal] = useState(false);
+  const [isAddingBook, setIsAddingBook] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
@@ -302,11 +302,11 @@ export function BookManagement() {
         page_number: book.page_number || '',
       });
     }
-    setShowModal(true);
+    setIsAddingBook(true);
   };
 
   const closeModal = () => {
-    setShowModal(false);
+    setIsAddingBook(false);
     setEditingBook(null);
     setSelectedFile(null);
     setUploadMethod('url');
@@ -431,357 +431,337 @@ export function BookManagement() {
         </div>
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-2xl w-full my-4 sm:my-8 shadow-2xl transform transition-all duration-300 scale-100 animate-in max-h-[95vh] sm:max-h-[90vh] flex flex-col">
-            {/* Fixed Header */}
-            <div className="flex items-center justify-between p-4 sm:p-6 pb-4 border-b border-gray-200 flex-shrink-0 bg-gradient-to-r from-blue-50 to-blue-100">
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900">
-                {editingBook ? '✏️ Edit Book' : '➕ Add New Book'}
-              </h3>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-white transition-all duration-200 min-w-[44px] min-h-[44px] flex items-center justify-center active:scale-90">
-                <X className="h-5 w-5 sm:h-6 sm:w-6" />
-              </button>
+      {isAddingBook && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="flex items-center gap-2 mb-6">
+            <BookPlus className="h-6 w-6 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">
+              {editingBook ? 'Edit Book' : 'Add New Book'}
+            </h3>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Basic Information Section */}
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                📖 Basic Information
+              </h4>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Title *</label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    placeholder="Enter book title"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Author/Publisher *</label>
+                  <input
+                    type="text"
+                    value={formData.author}
+                    onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    placeholder="Enter author or publisher name"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">ISBN / URL</label>
+                  <input
+                    type="text"
+                    value={formData.isbn}
+                    onChange={(e) => setFormData({ ...formData, isbn: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    placeholder="Enter ISBN or URL for digital materials"
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* Scrollable Content */}
-            <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-6 overscroll-contain bg-gray-50">
-                            <form onSubmit={handleSubmit} className="space-y-5" id="book-form">
-                {/* Basic Information Section */}
-                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                  <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    📖 Basic Information
-                  </h4>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Title *</label>
-                      <input
-                        type="text"
-                        value={formData.title}
-                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 min-h-[44px] bg-white"
-                        placeholder="Enter book title"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Author/Publisher *</label>
-                      <input
-                        type="text"
-                        value={formData.author}
-                        onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 min-h-[44px] bg-white"
-                        placeholder="Enter author or publisher name"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">ISBN / URL</label>
-                      <input
-                        type="text"
-                        value={formData.isbn}
-                        onChange={(e) => setFormData({ ...formData, isbn: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 min-h-[44px] bg-white"
-                        placeholder="Enter ISBN or URL for digital materials"
-                      />
-                    </div>
-                  </div>
+            {/* Category & Material Type Section */}
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                🏷️ Category & Type
+              </h4>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => {
+                      const newCategory = e.target.value;
+                      const lowerCategory = newCategory.toLowerCase();
+                      
+                      // Auto-detect material type based on category
+                      let materialType = 'book'; // default
+                      if (lowerCategory.includes('ebook') || lowerCategory.includes('e-book')) {
+                        materialType = 'ebook';
+                      } else if (lowerCategory.includes('electronic')) {
+                        materialType = 'electronic_material';
+                      } else if (lowerCategory.includes('digital') || lowerCategory.includes('online')) {
+                        materialType = 'ebook';
+                      }
+                      
+                      setFormData({ ...formData, category: newCategory, material_type: materialType });
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    required
+                  >
+                    <option value="">Select a category</option>
+                    {categoryOptions.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
-                {/* Category & Material Type Section */}
-                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                  <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    🏷️ Category & Type
-                  </h4>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
-                      <select
-                        value={formData.category}
-                        onChange={(e) => {
-                          const newCategory = e.target.value;
-                          const lowerCategory = newCategory.toLowerCase();
-                          
-                          // Auto-detect material type based on category
-                          let materialType = 'book'; // default
-                          if (lowerCategory.includes('ebook') || lowerCategory.includes('e-book')) {
-                            materialType = 'ebook';
-                            console.log('🔄 Auto-detected: eBook from category:', newCategory);
-                          } else if (lowerCategory.includes('electronic')) {
-                            materialType = 'electronic_material';
-                            console.log('🔄 Auto-detected: Electronic Material from category:', newCategory);
-                          } else if (lowerCategory.includes('digital') || lowerCategory.includes('online')) {
-                            materialType = 'ebook';
-                            console.log('🔄 Auto-detected: eBook (digital) from category:', newCategory);
-                          } else {
-                            console.log('📚 Physical Book selected - category:', newCategory);
-                          }
-                          
-                          console.log('✅ Setting material_type to:', materialType);
-                          setFormData({ ...formData, category: newCategory, material_type: materialType });
-                        }}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[44px] bg-white"
-                        required
-                      >
-                        <option value="">Select a category</option>
-                        {categoryOptions.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {cat}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className={`p-4 rounded-lg border-2 transition-all ${
-                      formData.material_type === 'ebook' ? 'border-blue-500 bg-blue-50' : 
-                      formData.material_type === 'electronic_material' ? 'border-purple-500 bg-purple-50' : 
-                      'border-gray-300 bg-white'
-                    }`}>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Material Type * ⚠️ IMPORTANT
-                        {formData.category && (formData.category.toLowerCase().includes('ebook') || 
-                         formData.category.toLowerCase().includes('electronic')) && (
-                          <span className="ml-2 text-xs text-green-600 font-bold">✓ Auto-detected</span>
-                        )}
-                      </label>
-                      <select
-                        value={formData.material_type}
-                        onChange={(e) => {
-                          console.log('🎯 Manual material type change:', e.target.value);
-                          setFormData({ ...formData, material_type: e.target.value });
-                        }}
-                        className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-semibold text-base min-h-[44px] bg-white"
-                        required
-                      >
-                        <option value="book">📚 Physical Book</option>
-                        <option value="ebook">📱 eBook</option>
-                        <option value="electronic_material">💻 Electronic Material</option>
-                      </select>
-                      <p className="mt-3 text-sm font-semibold px-3 py-2 rounded bg-gray-100 text-gray-700">
-                        Current: {
-                          formData.material_type === 'book' ? '📚 Physical Book (needs ISBN)' :
-                          formData.material_type === 'ebook' ? '📱 eBook (needs URL/File)' :
-                          '💻 Electronic Material (needs URL/File)'
-                        }
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Reading Level</label>
-                      <select
-                        value={formData.reading_level}
-                        onChange={(e) => setFormData({ ...formData, reading_level: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[44px] bg-white"
-                      >
-                        <option value="">Select Reading Level</option>
-                        <option value="Beginner">Beginner</option>
-                        <option value="Intermediate">Intermediate</option>
-                        <option value="Advanced">Advanced</option>
-                      </select>
-                      <p className="mt-2 text-xs text-gray-500">
-                        This helps students find books appropriate for their reading skill level
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-              {(formData.material_type === 'ebook' || formData.material_type === 'electronic_material') && (
-                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                  <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    📱 Digital Material Details
-                  </h4>
-                  
-                  <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Class Specific (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.class_specific}
-                      onChange={(e) => setFormData({ ...formData, class_specific: e.target.value })}
-                      placeholder="e.g., JSS1, JSS2, SS3"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[44px] bg-white"
-                    />
-                    <p className="mt-2 text-xs text-gray-500">
-                      Leave blank for all students, or specify a class (e.g., JSS1, SS2)
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Upload Method
-                    </label>
-                    <div className="flex gap-3 mb-4">
-                      <button
-                        type="button"
-                        onClick={() => setUploadMethod('url')}
-                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all min-h-[44px] ${
-                          uploadMethod === 'url'
-                            ? 'bg-blue-50 border-blue-500 text-blue-700 font-semibold'
-                            : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        <Link className="h-5 w-5" />
-                        URL/Link
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setUploadMethod('file')}
-                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all min-h-[44px] ${
-                          uploadMethod === 'file'
-                            ? 'bg-blue-50 border-blue-500 text-blue-700 font-semibold'
-                            : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        <Upload className="h-5 w-5" />
-                        Upload File
-                      </button>
-                    </div>
-
-                    {uploadMethod === 'url' ? (
-                      <>
-                        <input
-                          type="url"
-                          value={formData.isbn}
-                          onChange={(e) => setFormData({ ...formData, isbn: e.target.value })}
-                          placeholder="https://example.com/ebook.pdf"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[44px] bg-white"
-                        />
-                        <p className="mt-2 text-xs text-gray-500">
-                          Enter the URL to the digital material
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <input
-                          type="file"
-                          accept=".pdf,.epub,.doc,.docx,.txt"
-                          onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[44px] bg-white file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                        />
-                        {selectedFile && (
-                          <p className="mt-2 text-sm text-green-600 font-medium">
-                            ✓ Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-                          </p>
-                        )}
-                        <p className="mt-2 text-xs text-gray-500">
-                          Upload PDF, EPUB, DOC, DOCX or TXT files (max 50MB)
-                        </p>
-                      </>
+                <div className={`p-4 rounded-lg border-2 transition-all ${
+                  formData.material_type === 'ebook' ? 'border-blue-500 bg-blue-50' : 
+                  formData.material_type === 'electronic_material' ? 'border-purple-500 bg-purple-50' : 
+                  'border-gray-300 bg-white'
+                }`}>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Material Type * ⚠️ IMPORTANT
+                    {formData.category && (formData.category.toLowerCase().includes('ebook') || 
+                     formData.category.toLowerCase().includes('electronic')) && (
+                      <span className="ml-2 text-xs text-green-600 font-bold">✓ Auto-detected</span>
                     )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Page Number (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.page_number}
-                      onChange={(e) => setFormData({ ...formData, page_number: e.target.value })}
-                      placeholder="e.g., 245 pages"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[44px] bg-white"
-                    />
-                    <p className="mt-2 text-xs text-gray-500">
-                      Number of pages in the digital material
-                    </p>
-                  </div>
-                  </div>
+                  </label>
+                  <select
+                    value={formData.material_type}
+                    onChange={(e) => setFormData({ ...formData, material_type: e.target.value })}
+                    className="w-full px-3 py-2 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-semibold bg-white"
+                    required
+                  >
+                    <option value="book">📚 Physical Book</option>
+                    <option value="ebook">📱 eBook</option>
+                    <option value="electronic_material">💻 Electronic Material</option>
+                  </select>
+                  <p className="mt-3 text-sm font-semibold px-3 py-2 rounded bg-gray-100 text-gray-700">
+                    Current: {
+                      formData.material_type === 'book' ? '📚 Physical Book (needs ISBN)' :
+                      formData.material_type === 'ebook' ? '📱 eBook (needs URL/File)' :
+                      '💻 Electronic Material (needs URL/File)'
+                    }
+                  </p>
                 </div>
-              )}
 
-              {formData.material_type === 'book' && (
-                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                  <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    📚 Physical Book Details
-                  </h4>
-                  
-                  <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Total Copies *</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={formData.total_copies}
-                        onChange={(e) => setFormData({ ...formData, total_copies: parseInt(e.target.value) || 1 })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[44px] bg-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Available Copies *</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={formData.available_copies}
-                        onChange={(e) => setFormData({ ...formData, available_copies: parseInt(e.target.value) || 0 })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[44px] bg-white"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Condition *</label>
-                    <select
-                      value={formData.condition}
-                      onChange={(e) => setFormData({ ...formData, condition: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[44px] bg-white"
-                    >
-                      <option value="new">New</option>
-                      <option value="good">Good</option>
-                      <option value="fair">Fair</option>
-                      <option value="poor">Poor</option>
-                      <option value="damaged">Damaged</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Location (Shelf) *</label>
-                    <select
-                      value={formData.location}
-                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[44px] bg-white"
-                      required
-                    >
-                      <option value="">Select shelf location</option>
-                      {shelves.map((shelf) => (
-                        <option key={shelf} value={shelf}>
-                          {shelf}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Reading Level</label>
+                  <select
+                    value={formData.reading_level}
+                    onChange={(e) => setFormData({ ...formData, reading_level: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                  >
+                    <option value="">Select Reading Level</option>
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                  </select>
+                  <p className="mt-2 text-xs text-gray-500">
+                    This helps students find books appropriate for their reading skill level
+                  </p>
                 </div>
-              )}
-
-              </form>
+              </div>
             </div>
 
-            {/* Fixed Footer */}
-            <div className="flex gap-3 p-4 sm:p-6 pt-3 border-t border-gray-200 flex-shrink-0 bg-gray-50">
+          {(formData.material_type === 'ebook' || formData.material_type === 'electronic_material') && (
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                📱 Digital Material Details
+              </h4>
+              
+              <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Class Specific (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.class_specific}
+                  onChange={(e) => setFormData({ ...formData, class_specific: e.target.value })}
+                  placeholder="e.g., JSS1, JSS2, SS3"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                  Leave blank for all students, or specify a class (e.g., JSS1, SS2)
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Upload Method
+                </label>
+                <div className="flex gap-3 mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setUploadMethod('url')}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
+                      uploadMethod === 'url'
+                        ? 'bg-blue-50 border-blue-500 text-blue-700 font-semibold'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Link className="h-5 w-5" />
+                    URL/Link
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUploadMethod('file')}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
+                      uploadMethod === 'file'
+                        ? 'bg-blue-50 border-blue-500 text-blue-700 font-semibold'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Upload className="h-5 w-5" />
+                    Upload File
+                  </button>
+                </div>
+
+                {uploadMethod === 'url' ? (
+                  <>
+                    <input
+                      type="url"
+                      value={formData.isbn}
+                      onChange={(e) => setFormData({ ...formData, isbn: e.target.value })}
+                      placeholder="https://example.com/ebook.pdf"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    />
+                    <p className="mt-2 text-xs text-gray-500">
+                      Enter the URL to the digital material
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <input
+                      type="file"
+                      accept=".pdf,.epub,.doc,.docx,.txt"
+                      onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                    {selectedFile && (
+                      <p className="mt-2 text-sm text-green-600 font-medium">
+                        ✓ Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                      </p>
+                    )}
+                    <p className="mt-2 text-xs text-gray-500">
+                      Upload PDF, EPUB, DOC, DOCX or TXT files (max 50MB)
+                    </p>
+                  </>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Page Number (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.page_number}
+                  onChange={(e) => setFormData({ ...formData, page_number: e.target.value })}
+                  placeholder="e.g., 245 pages"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                  Number of pages in the digital material
+                </p>
+              </div>
+              </div>
+            </div>
+          )}
+
+          {formData.material_type === 'book' && (
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                📚 Physical Book Details
+              </h4>
+              
+              <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Total Copies *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.total_copies}
+                    onChange={(e) => setFormData({ ...formData, total_copies: parseInt(e.target.value) || 1 })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Available Copies *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.available_copies}
+                    onChange={(e) => setFormData({ ...formData, available_copies: parseInt(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Condition *</label>
+                <select
+                  value={formData.condition}
+                  onChange={(e) => setFormData({ ...formData, condition: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                >
+                  <option value="new">New</option>
+                  <option value="good">Good</option>
+                  <option value="fair">Fair</option>
+                  <option value="poor">Poor</option>
+                  <option value="damaged">Damaged</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Location (Shelf) *</label>
+                <select
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                  required
+                >
+                  <option value="">Select shelf location</option>
+                  {shelves.map((shelf) => (
+                    <option key={shelf} value={shelf}>
+                      {shelf}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              </div>
+            </div>
+          )}
+
+            <div className="flex gap-2 pt-2">
               <button
                 type="button"
                 onClick={closeModal}
-                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px] font-medium active:scale-95"
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                form="book-form"
                 disabled={uploading}
-                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed min-h-[44px] font-medium active:scale-95"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
               >
                 {uploading ? 'Uploading...' : (editingBook ? 'Update' : 'Add')}
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>
