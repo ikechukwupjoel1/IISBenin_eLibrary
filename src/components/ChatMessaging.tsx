@@ -406,57 +406,66 @@ export function ChatMessaging() {
     setTranslatingMessage(messageId);
 
     try {
-      // Try LibreTranslate API first (more reliable)
-      let response = await fetch('https://libretranslate.com/translate', {
-        method: 'POST',
-        body: JSON.stringify({
-          q: text,
-          source: 'auto',
-          target: targetLang,
-          format: 'text'
-        }),
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.translatedText) {
-          const translated = data.translatedText;
-          
-          // Cache the translation
-          setTranslations(prev => ({
-            ...prev,
-            [cacheKey]: translated
-          }));
-          
-          return translated;
+      // Use multiple free translation APIs with fallbacks
+      const apis = [
+        // API 1: Lingva Translate (Google Translate proxy)
+        async () => {
+          const response = await fetch(
+            `https://lingva.ml/api/v1/auto/${targetLang}/${encodeURIComponent(text)}`
+          );
+          const data = await response.json();
+          return data.translation;
+        },
+        // API 2: Translate.argosopentech.com
+        async () => {
+          const response = await fetch('https://translate.argosopentech.com/translate', {
+            method: 'POST',
+            body: JSON.stringify({
+              q: text,
+              source: 'auto',
+              target: targetLang
+            }),
+            headers: { 'Content-Type': 'application/json' }
+          });
+          const data = await response.json();
+          return data.translatedText;
+        },
+        // API 3: MyMemory
+        async () => {
+          const response = await fetch(
+            `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=auto|${targetLang}`
+          );
+          const data = await response.json();
+          if (data.responseStatus === 200) {
+            return data.responseData.translatedText;
+          }
+          throw new Error('Translation failed');
+        }
+      ];
+
+      // Try each API until one succeeds
+      for (const api of apis) {
+        try {
+          const translated = await api();
+          if (translated && translated !== text) {
+            // Cache the translation
+            setTranslations(prev => ({
+              ...prev,
+              [cacheKey]: translated
+            }));
+            return translated;
+          }
+        } catch (err) {
+          console.log('Translation API failed, trying next...');
+          continue;
         }
       }
 
-      // Fallback to MyMemory API
-      response = await fetch(
-        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=auto|${targetLang}`
-      );
-      
-      const data = await response.json();
-      
-      if (data.responseStatus === 200 && data.responseData?.translatedText) {
-        const translated = data.responseData.translatedText;
-        
-        // Cache the translation
-        setTranslations(prev => ({
-          ...prev,
-          [cacheKey]: translated
-        }));
-        
-        return translated;
-      } else {
-        toast.error('Translation failed. Try again later.');
-        return null;
-      }
+      toast.error('Translation service temporarily unavailable');
+      return null;
     } catch (error) {
       console.error('Translation error:', error);
-      toast.error('Translation service unavailable');
+      toast.error('Translation failed');
       return null;
     } finally {
       setTranslatingMessage(null);
