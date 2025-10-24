@@ -83,7 +83,7 @@ export default function PWAInstallPrompt() {
         </div>
         
         <div className="flex-1">
-          <h3 className="font-bold text-gray-900 mb-1">Install SmartLib</h3>
+          <h3 className="font-bold text-gray-900 mb-1">Install IISBenin Library</h3>
           <p className="text-sm text-gray-600 mb-3">
             Add this app to your home screen for quick access and offline support!
           </p>

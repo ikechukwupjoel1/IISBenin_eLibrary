@@ -300,7 +300,7 @@ export function StudentManagement() {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Student Credentials - SmartLib</title>
+        <title>Student Credentials - IISBenin Library</title>
         <style>
           body {
             font-family: Arial, sans-serif;
@@ -318,9 +318,6 @@ export function StudentManagement() {
             font-size: 24px;
             font-weight: bold;
             margin-bottom: 10px;
-            background: linear-gradient(135deg, #0066CC 0%, #00A86B 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
           }
           .subtitle {
             font-size: 14px;
@@ -371,7 +368,7 @@ export function StudentManagement() {
       </head>
       <body>
         <div class="header">
-          <div class="title">SmartLib - Intelligent Library Management</div>
+          <div class="title">IISBenin Library Management System</div>
           <div class="subtitle">Student Login Credentials</div>
         </div>
 
@@ -398,7 +395,7 @@ export function StudentManagement() {
 
         <div class="footer">
           <p>Printed on: ${new Date().toLocaleString()}</p>
-          <p>SmartLib - Intelligent Library Management for Modern Schools</p>
+          <p>IISBenin Library - Computer Science Department</p>
         </div>
 
         <script>

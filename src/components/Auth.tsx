@@ -81,11 +81,11 @@ export function Auth() {
         <div className="text-center mb-8">
           <img
             src={schoolLogo}
-            alt="SmartLib Logo"
+            alt="IISBenin Logo"
             className="w-24 h-24 mx-auto mb-4 object-contain transition-transform duration-300 hover:scale-110"
           />
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent mb-2">SmartLib</h1>
-          <p className="text-gray-600 text-sm">Intelligent Library Management</p>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent mb-2">IISBenin Library</h1>
+          <p className="text-gray-600">Sign in to access the library system</p>
         </div>
 
         <div className="flex border-b border-gray-200 mb-6">
