@@ -4,7 +4,7 @@
 -- Create book_reports table
 CREATE TABLE IF NOT EXISTS book_reports (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  borrow_id uuid REFERENCES borrowing(id) ON DELETE CASCADE,
+  borrow_id uuid REFERENCES borrow_records(id) ON DELETE CASCADE,
   book_id uuid REFERENCES books(id) ON DELETE CASCADE,
   user_id uuid REFERENCES user_profiles(id) ON DELETE CASCADE,
   
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS reading_answers (
 -- Create reading_progress table (track reading sessions)
 CREATE TABLE IF NOT EXISTS reading_progress (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  borrow_id uuid REFERENCES borrowing(id) ON DELETE CASCADE,
+  borrow_id uuid REFERENCES borrow_records(id) ON DELETE CASCADE,
   user_id uuid REFERENCES user_profiles(id) ON DELETE CASCADE,
   book_id uuid REFERENCES books(id) ON DELETE CASCADE,
   

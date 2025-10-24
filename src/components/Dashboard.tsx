@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { BookOpen, Users, BookMarked, AlertCircle, UserCog } from 'lucide-react';
+import { BookOpen, Users, BookMarked, AlertCircle, UserCog, FileText } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import BackgroundCarousel from './BackgroundCarousel';
 import schoolLogo from '../assets/Iisbenin logo.png';
@@ -12,6 +12,7 @@ type Stats = {
   totalStudents: number;
   totalStaff: number;
   overdueBooks: number;
+  pendingReports: number;
 };
 
 type StudentReadingData = {
@@ -35,6 +36,7 @@ export function Dashboard() {
     totalStudents: 0,
     totalStaff: 0,
     overdueBooks: 0,
+    pendingReports: 0,
   });
   const [studentReadingData, setStudentReadingData] = useState<StudentReadingData[]>([]);
   const [staffReadingData, setStaffReadingData] = useState<StaffReadingData[]>([]);
@@ -49,12 +51,18 @@ export function Dashboard() {
       overdueQuery = overdueQuery.eq('student_id', profile.student_id);
     }
 
-    const [booksResult, studentsResult, staffResult, borrowedResult, overdueResult] = await Promise.all([
+    // Get pending reports count for librarians/staff
+    const pendingReportsQuery = (profile?.role === 'librarian' || profile?.role === 'staff')
+      ? supabase.from('book_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending')
+      : Promise.resolve({ count: 0 });
+
+    const [booksResult, studentsResult, staffResult, borrowedResult, overdueResult, reportsResult] = await Promise.all([
       supabase.from('books').select('id', { count: 'exact', head: true }),
       supabase.from('students').select('id', { count: 'exact', head: true }),
       supabase.from('staff').select('id', { count: 'exact', head: true }),
       supabase.from('books').select('id', { count: 'exact', head: true }).eq('status', 'borrowed'),
       overdueQuery,
+      pendingReportsQuery,
     ]);
 
     // Debug logging to inspect raw query results and any errors
@@ -64,6 +72,7 @@ export function Dashboard() {
       staffResult,
       borrowedResult,
       overdueResult,
+      reportsResult,
     });
     console.log('staffResult details:', staffResult);
 
@@ -73,6 +82,7 @@ export function Dashboard() {
       totalStudents: studentsResult.count || 0,
       totalStaff: staffResult.count || 0,
       overdueBooks: overdueResult.count || 0,
+      pendingReports: reportsResult.count || 0,
     });
   }, [profile?.role, profile?.student_id]);
 
@@ -189,6 +199,15 @@ export function Dashboard() {
       color: 'bg-red-500',
       bgColor: 'bg-red-50',
       roles: ['librarian', 'staff', 'student'], // Students can see their own overdue books
+    },
+    {
+      title: 'Pending Reports',
+      value: stats.pendingReports,
+      icon: FileText,
+      gradient: 'from-indigo-500 to-indigo-600',
+      color: 'bg-indigo-500',
+      bgColor: 'bg-indigo-50',
+      roles: ['librarian', 'staff'],
     },
   ];
 

@@ -7,6 +7,7 @@ type LeaderboardEntry = {
   user_id: string;
   user_name: string;
   books_read: number;
+  total_points: number;
   role: string;
 };
 
@@ -33,16 +34,26 @@ export function Leaderboard() {
       dateFilter = weekAgo.toISOString();
     }
 
+    // Get all approved book reports
     let query = supabase
-      .from('borrow_records')
-      .select('student_id, staff_id')
-      .eq('status', 'completed');
+      .from('book_reports')
+      .select(`
+        user_id,
+        points_awarded,
+        created_at,
+        user_profiles!book_reports_user_id_fkey (
+          id,
+          full_name,
+          role
+        )
+      `)
+      .eq('status', 'approved');
 
     if (dateFilter) {
-      query = query.gte('return_date', dateFilter);
+      query = query.gte('created_at', dateFilter);
     }
 
-    const { data: records, error } = await query;
+    const { data: reports, error } = await query;
 
     if (error) {
       console.error('Error loading leaderboard:', error);
@@ -50,62 +61,36 @@ export function Leaderboard() {
       return;
     }
 
-    const allUserIds = new Set<string>();
-    records?.forEach((record) => {
-      const userId = record.student_id || record.staff_id;
-      if (userId) allUserIds.add(userId);
-    });
+    // Aggregate points by user
+    const userPointsMap = new Map<string, { name: string; count: number; points: number; role: string }>();
 
-    const { data: profiles } = await supabase
-      .from('user_profiles')
-      .select('id, full_name, role, student_id, staff_id')
-      .or(
-        Array.from(allUserIds)
-          .map((id) => `student_id.eq.${id},staff_id.eq.${id}`)
-          .join(',')
-      );
+    reports?.forEach((report) => {
+      const profiles = report.user_profiles as unknown as { id: string; full_name: string; role: string };
+      if (!profiles) return;
 
-    const userProfileMap = new Map<string, { id: string; name: string; role: string }>();
-    profiles?.forEach((profile) => {
-      const entityId = profile.student_id || profile.staff_id;
-      if (entityId) {
-        userProfileMap.set(entityId, {
-          id: profile.id,
-          name: profile.full_name,
-          role: profile.role,
-        });
-      }
-    });
-
-    const userCountMap = new Map<string, { name: string; count: number; role: string }>();
-
-    records?.forEach((record) => {
-      const entityId = record.student_id || record.staff_id;
-      if (!entityId) return;
-
-      const profile = userProfileMap.get(entityId);
-      if (!profile) return;
-
-      const existing = userCountMap.get(profile.id);
+      const existing = userPointsMap.get(profiles.id);
       if (existing) {
         existing.count++;
+        existing.points += report.points_awarded || 0;
       } else {
-        userCountMap.set(profile.id, {
-          name: profile.name,
+        userPointsMap.set(profiles.id, {
+          name: profiles.full_name,
           count: 1,
-          role: profile.role,
+          points: report.points_awarded || 0,
+          role: profiles.role,
         });
       }
     });
 
-    const leaderboardData: LeaderboardEntry[] = Array.from(userCountMap.entries())
+    const leaderboardData: LeaderboardEntry[] = Array.from(userPointsMap.entries())
       .map(([id, data]) => ({
         user_id: id,
         user_name: data.name,
         books_read: data.count,
+        total_points: data.points,
         role: data.role,
       }))
-      .sort((a, b) => b.books_read - a.books_read)
+      .sort((a, b) => b.total_points - a.total_points)
       .slice(0, 20);
 
     setLeaderboard(leaderboardData);
@@ -234,9 +219,15 @@ export function Leaderboard() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <span className="text-lg font-bold text-gray-900">{entry.books_read}</span>
-                        <BookOpen className="h-5 w-5 text-gray-400" />
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-2xl font-bold text-indigo-600">{entry.total_points}</span>
+                          <span className="text-sm text-gray-500">pts</span>
+                        </div>
+                        <div className="flex items-center justify-end gap-1 text-xs text-gray-500">
+                          <BookOpen className="h-3 w-3" />
+                          <span>{entry.books_read} book{entry.books_read !== 1 ? 's' : ''}</span>
+                        </div>
                       </div>
                     </td>
                   </tr>

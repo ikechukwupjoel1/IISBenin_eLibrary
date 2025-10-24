@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { BookOpen, Calendar, Clock, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
+import { BookOpen, Calendar, Clock, RefreshCw, CheckCircle, AlertCircle, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { LoadingSkeleton } from './ui/LoadingSkeleton';
+import { BookReportForm } from './BookReportForm';
 
 type BorrowedBook = {
   id: string;
@@ -20,6 +21,12 @@ type BorrowedBook = {
     category: string;
     isbn: string;
   };
+  book_reports?: Array<{
+    id: string;
+    status: string;
+    points_awarded: number;
+    created_at: string;
+  }>;
 };
 
 type ReservedBook = {
@@ -41,6 +48,8 @@ export function MyBooks() {
   const [reservations, setReservations] = useState<ReservedBook[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'current' | 'history' | 'reservations'>('current');
+  const [showReportForm, setShowReportForm] = useState(false);
+  const [selectedBorrow, setSelectedBorrow] = useState<{ id: string; bookId: string; title: string } | null>(null);
 
   useEffect(() => {
     if (profile) {
@@ -95,6 +104,12 @@ export function MyBooks() {
           author_publisher,
           category,
           isbn
+        ),
+        book_reports (
+          id,
+          status,
+          points_awarded,
+          created_at
         )
       `)
       .eq(column, id)
@@ -103,7 +118,7 @@ export function MyBooks() {
       .limit(20);
 
     if (!error && data) {
-      setHistory(data as any);
+      setHistory(data as BorrowedBook[]);
     }
   };
 
@@ -389,42 +404,104 @@ export function MyBooks() {
                   <p className="text-sm mt-1">Your past borrowed books will appear here</p>
                 </div>
               ) : (
-                history.map((record) => (
-                  <div
-                    key={record.id}
-                    className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-gray-50"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900">{record.books.title}</h3>
-                        <p className="text-sm text-gray-600 mt-1">{record.books.author_publisher}</p>
+                history.map((record) => {
+                  const hasReport = record.book_reports && record.book_reports.length > 0;
+                  const report = hasReport ? record.book_reports[0] : null;
 
-                        <div className="mt-3 space-y-1 text-sm text-gray-600">
-                          <div className="flex items-center gap-2">
-                            <span>Borrowed: {formatDate(record.borrow_date)}</span>
-                            <span>•</span>
-                            <span>Returned: {formatDate(record.return_date!)}</span>
+                  const getReportStatusBadge = () => {
+                    if (!report) return null;
+                    const styles = {
+                      pending: 'bg-yellow-100 text-yellow-800',
+                      approved: 'bg-green-100 text-green-800',
+                      rejected: 'bg-red-100 text-red-800',
+                      revision_needed: 'bg-orange-100 text-orange-800'
+                    };
+                    return (
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[report.status as keyof typeof styles]}`}>
+                        Report: {report.status.replace('_', ' ').toUpperCase()}
+                      </span>
+                    );
+                  };
+
+                  return (
+                    <div
+                      key={record.id}
+                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-gray-50"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-gray-900">{record.books.title}</h3>
+                            {getReportStatusBadge()}
+                            {report && report.status === 'approved' && (
+                              <span className="text-sm font-medium text-indigo-600">
+                                +{report.points_awarded} pts
+                              </span>
+                            )}
                           </div>
-                          {record.renewal_count > 0 && (
+                          <p className="text-sm text-gray-600 mt-1">{record.books.author_publisher}</p>
+
+                          <div className="mt-3 space-y-1 text-sm text-gray-600">
                             <div className="flex items-center gap-2">
-                              <RefreshCw className="h-3 w-3" />
-                              <span>Renewed {record.renewal_count} time{record.renewal_count > 1 ? 's' : ''}</span>
+                              <span>Borrowed: {formatDate(record.borrow_date)}</span>
+                              <span>•</span>
+                              <span>Returned: {formatDate(record.return_date!)}</span>
                             </div>
+                            {record.renewal_count > 0 && (
+                              <div className="flex items-center gap-2">
+                                <RefreshCw className="h-3 w-3" />
+                                <span>Renewed {record.renewal_count} time{record.renewal_count > 1 ? 's' : ''}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {!hasReport && profile?.role === 'student' && (
+                            <button
+                              onClick={() => {
+                                setSelectedBorrow({
+                                  id: record.id,
+                                  bookId: record.book_id,
+                                  title: record.books.title
+                                });
+                                setShowReportForm(true);
+                              }}
+                              className="mt-3 flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
+                            >
+                              <FileText className="w-4 h-4" />
+                              Submit Book Report
+                            </button>
                           )}
                         </div>
-                      </div>
 
-                      <div className="ml-4">
-                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        <div className="ml-4">
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           )}
         </div>
       </div>
+
+      {/* Book Report Form Modal */}
+      {showReportForm && selectedBorrow && profile && (
+        <BookReportForm
+          borrowId={selectedBorrow.id}
+          bookId={selectedBorrow.bookId}
+          bookTitle={selectedBorrow.title}
+          userId={profile.id}
+          onClose={() => {
+            setShowReportForm(false);
+            setSelectedBorrow(null);
+          }}
+          onSubmitted={() => {
+            loadHistory();
+          }}
+        />
+      )}
     </div>
   );
 }
