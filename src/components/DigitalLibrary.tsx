@@ -4,6 +4,7 @@ import { supabase, type Book } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { MaterialViewer } from './MaterialViewer';
 import { AdvancedBookSearch } from './AdvancedBookSearch';
+import { LoadingSkeleton } from './ui/LoadingSkeleton';
 import toast from 'react-hot-toast';
 
 type DigitalMaterial = {
@@ -118,11 +119,7 @@ export function DigitalLibrary() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <LoadingSkeleton type="cards" title="Digital Library" subtitle="Access eBooks and electronic materials" />;
   }
 
   return (

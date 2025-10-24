@@ -3,6 +3,7 @@ import { BookOpen, Calendar, Clock, RefreshCw, CheckCircle, AlertCircle } from '
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { LoadingSkeleton } from './ui/LoadingSkeleton';
 
 type BorrowedBook = {
   id: string;
@@ -190,11 +191,7 @@ export function MyBooks() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <LoadingSkeleton type="list" title="My Books" subtitle="Manage your borrowed books and reservations" />;
   }
 
   return (

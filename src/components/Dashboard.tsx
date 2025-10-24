@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import BackgroundCarousel from './BackgroundCarousel';
 import schoolLogo from '../assets/Iisbenin logo.png';
 import { useAuth } from '../contexts/AuthContext';
+import { LoadingSkeleton } from './ui/LoadingSkeleton';
 
 type Stats = {
   totalBooks: number;
@@ -203,31 +204,12 @@ export function Dashboard() {
     return (
       <div className="relative min-h-screen">
         <BackgroundCarousel />
-        <div className="relative z-10 space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6">
+        <div className="relative z-10 p-3 sm:p-4 md:p-6">
           <div className="flex items-center gap-2 sm:gap-4 mb-4 sm:mb-6 bg-white/90 backdrop-blur-sm rounded-xl p-3 sm:p-4 shadow-lg">
             <img src={schoolLogo} alt="IISBenin Logo" className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 object-contain" />
             <h2 className="text-lg sm:text-2xl md:text-3xl font-bold text-gray-900">Dashboard Overview</h2>
           </div>
-          <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-white/95 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-gray-200 shadow-lg animate-pulse">
-                <div className="h-10 sm:h-12 bg-gray-200 rounded-lg mb-3 sm:mb-4 w-10 sm:w-12"></div>
-                <div className="h-3 sm:h-4 bg-gray-200 rounded w-20 sm:w-24 mb-2"></div>
-                <div className="h-6 sm:h-8 bg-gray-200 rounded w-12 sm:w-16"></div>
-              </div>
-            ))}
-          </div>
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-4 sm:p-6">
-            <div className="h-5 sm:h-6 bg-gray-200 rounded w-40 sm:w-48 mb-4 sm:mb-6"></div>
-            <div className="space-y-3 sm:space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="space-y-2 animate-pulse">
-                  <div className="h-6 sm:h-8 bg-gray-200 rounded"></div>
-                  <div className="h-2 sm:h-3 bg-gray-200 rounded"></div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <LoadingSkeleton type="dashboard" />
         </div>
       </div>
     );

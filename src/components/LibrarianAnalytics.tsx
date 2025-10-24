@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { TrendingUp, BookOpen, Users, AlertCircle, Calendar, BarChart3, PieChart, Activity } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { LoadingSkeleton } from './ui/LoadingSkeleton';
 
 type AnalyticsPeriod = 'week' | 'month' | 'year';
 
@@ -272,51 +273,7 @@ export function LibrarianAnalytics() {
   }
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        {/* Header Skeleton */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-gray-200 p-3 rounded-xl animate-pulse h-14 w-14"></div>
-            <div>
-              <div className="h-8 w-48 bg-gray-200 rounded animate-pulse mb-2"></div>
-              <div className="h-4 w-64 bg-gray-200 rounded animate-pulse"></div>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <div className="h-10 w-24 bg-gray-200 rounded-lg animate-pulse"></div>
-            <div className="h-10 w-24 bg-gray-200 rounded-lg animate-pulse"></div>
-            <div className="h-10 w-24 bg-gray-200 rounded-lg animate-pulse"></div>
-          </div>
-        </div>
-
-        {/* Stats Grid Skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="h-6 w-32 bg-gray-200 rounded animate-pulse"></div>
-                <div className="h-10 w-10 bg-gray-200 rounded-lg animate-pulse"></div>
-              </div>
-              <div className="h-10 w-20 bg-gray-200 rounded animate-pulse mb-2"></div>
-              <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
-            </div>
-          ))}
-        </div>
-
-        {/* Charts Skeleton */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="h-6 w-40 bg-gray-200 rounded animate-pulse mb-4"></div>
-            <div className="h-64 bg-gray-100 rounded-lg animate-pulse"></div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="h-6 w-40 bg-gray-200 rounded animate-pulse mb-4"></div>
-            <div className="h-64 bg-gray-100 rounded-lg animate-pulse"></div>
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingSkeleton type="analytics" />;
   }
 
   return (

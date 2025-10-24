@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Trophy, Medal, Award, BookOpen, TrendingUp } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { LoadingSkeleton } from './ui/LoadingSkeleton';
 
 type LeaderboardEntry = {
   user_id: string;
@@ -139,7 +140,7 @@ export function Leaderboard() {
   };
 
   if (loading) {
-    return <div className="text-center py-12">Loading...</div>;
+    return <LoadingSkeleton type="list" title="Reading Leaderboard" subtitle="Top readers in the library" />;
   }
 
   return (

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Clock, Bell, Users, X, Check, AlertCircle, BookOpen, Calendar } from 'lucide-react';
+import { LoadingSkeleton } from './ui/LoadingSkeleton';
 
 interface WaitlistEntry {
   id: string;
@@ -255,11 +256,7 @@ export default function WaitingList({ userId, userRole }: { userId: string; user
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <LoadingSkeleton type="list" title="Book Waiting Lists" subtitle="Manage waiting lists and notify users" />;
   }
 
   return (

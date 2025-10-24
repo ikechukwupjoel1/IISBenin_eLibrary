@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Users, MessageCircle, BookOpen, Plus, Search, UserPlus, Send, Heart, ChevronRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { LoadingSkeleton } from './ui/LoadingSkeleton';
 
 interface BookClub {
   id: string;
@@ -382,11 +383,7 @@ export default function BookClubs({ userId }: { userId: string; userName?: strin
   const isMember = selectedClub && clubMembers.some(m => m.user_id === userId);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <LoadingSkeleton type="cards" title="Book Clubs" subtitle="Join reading groups and connect with fellow readers" />;
   }
 
   return (
