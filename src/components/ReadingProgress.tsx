@@ -11,8 +11,7 @@ type BorrowedBook = {
   due_date: string;
   books: {
     title: string;
-    author: string;
-    total_pages?: number;
+    author_publisher: string;
   } | null;
 };
 
@@ -59,7 +58,7 @@ export function ReadingProgress() {
           id,
           book_id,
           due_date,
-          books (title, author, total_pages)
+          books (title, author_publisher)
         `)
         .eq('status', 'active');
 
@@ -72,7 +71,14 @@ export function ReadingProgress() {
       const { data: borrowsData, error: borrowsError } = await borrowQuery;
 
       if (borrowsError) throw borrowsError;
-      setActiveBorrows((borrowsData as BorrowedBook[]) || []);
+      
+      // Type assertion to handle Supabase join result
+      const typedBorrows = (borrowsData || []).map(borrow => ({
+        ...borrow,
+        books: Array.isArray(borrow.books) ? borrow.books[0] : borrow.books
+      })) as BorrowedBook[];
+      
+      setActiveBorrows(typedBorrows);
 
       // Load recent progress sessions
       const { data: progressData, error: progressError } = await supabase
@@ -89,7 +95,7 @@ export function ReadingProgress() {
         const borrow = (borrowsData || []).find((b) => b.id === session.borrow_record_id);
         return {
           ...session,
-          book_title: borrow?.books ? borrow.books.title : 'Unknown Book',
+          book_title: borrow?.books?.title || 'Unknown Book',
         };
       });
 
@@ -138,8 +144,8 @@ export function ReadingProgress() {
     const borrow = activeBorrows.find((b) => b.id === selectedBorrow);
     if (!borrow || !borrow.books) return;
 
-    const totalPages = borrow.books.total_pages || 0;
-    const percentageComplete = totalPages > 0 ? Math.min(Math.round((formData.current_page / totalPages) * 100), 100) : 0;
+    // Since books table doesn't have total_pages, calculate percentage based on current_page only
+    const percentageComplete = Math.min(Math.round((formData.current_page / 100) * 100), 100);
 
     setSubmitting(true);
     try {
@@ -148,7 +154,6 @@ export function ReadingProgress() {
         user_id: profile.id,
         book_id: borrow.book_id,
         current_page: formData.current_page,
-        total_pages: totalPages,
         percentage_complete: percentageComplete,
         session_date: new Date().toISOString().split('T')[0],
         pages_read_today: formData.pages_read_today,
@@ -217,7 +222,7 @@ export function ReadingProgress() {
                     {borrow.books!.title}
                   </h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    by {borrow.books!.author}
+                    by {borrow.books!.author_publisher}
                   </p>
 
                   {/* Progress Bar */}
@@ -225,7 +230,7 @@ export function ReadingProgress() {
                     <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
                       <span>{percentage}% complete</span>
                       <span>
-                        {latestProgress?.current_page || 0} / {borrow.books!.total_pages || '?'} pages
+                        Page {latestProgress?.current_page || 0}
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
