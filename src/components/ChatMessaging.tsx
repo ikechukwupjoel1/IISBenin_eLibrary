@@ -406,66 +406,79 @@ export function ChatMessaging() {
     setTranslatingMessage(messageId);
 
     try {
-      // Use multiple free translation APIs with fallbacks
-      const apis = [
-        // API 1: Lingva Translate (Google Translate proxy)
+      // Try multiple translation services
+      const translationServices = [
+        // Service 1: MyMemory (most reliable free API)
         async () => {
           const response = await fetch(
-            `https://lingva.ml/api/v1/auto/${targetLang}/${encodeURIComponent(text)}`
+            `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=auto|${targetLang}`,
+            { signal: AbortSignal.timeout(5000) }
           );
+          if (!response.ok) throw new Error('API error');
           const data = await response.json();
-          return data.translation;
+          if (data.responseStatus === 200 && data.responseData?.translatedText) {
+            return data.responseData.translatedText;
+          }
+          throw new Error('No translation');
         },
-        // API 2: Translate.argosopentech.com
+        // Service 2: LibreTranslate
         async () => {
-          const response = await fetch('https://translate.argosopentech.com/translate', {
+          const response = await fetch('https://libretranslate.de/translate', {
             method: 'POST',
             body: JSON.stringify({
               q: text,
               source: 'auto',
-              target: targetLang
+              target: targetLang,
+              format: 'text'
             }),
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(5000)
           });
+          if (!response.ok) throw new Error('API error');
           const data = await response.json();
-          return data.translatedText;
+          if (data.translatedText) return data.translatedText;
+          throw new Error('No translation');
         },
-        // API 3: MyMemory
+        // Service 3: Lingva (Google Translate mirror)
         async () => {
           const response = await fetch(
-            `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=auto|${targetLang}`
+            `https://lingva.ml/api/v1/auto/${targetLang}/${encodeURIComponent(text)}`,
+            { signal: AbortSignal.timeout(5000) }
           );
+          if (!response.ok) throw new Error('API error');
           const data = await response.json();
-          if (data.responseStatus === 200) {
-            return data.responseData.translatedText;
-          }
-          throw new Error('Translation failed');
+          if (data.translation) return data.translation;
+          throw new Error('No translation');
         }
       ];
 
-      // Try each API until one succeeds
-      for (const api of apis) {
+      // Try each service
+      for (let i = 0; i < translationServices.length; i++) {
         try {
-          const translated = await api();
-          if (translated && translated !== text) {
+          const translated = await translationServices[i]();
+          if (translated && translated.trim() && translated !== text) {
             // Cache the translation
             setTranslations(prev => ({
               ...prev,
               [cacheKey]: translated
             }));
+            toast.success('Translated!');
             return translated;
           }
         } catch (err) {
-          console.log('Translation API failed, trying next...');
+          console.log(`Translation service ${i + 1} failed, trying next...`);
+          if (i === translationServices.length - 1) {
+            // All services failed
+            toast.error('Translation currently unavailable. Please try again later.');
+          }
           continue;
         }
       }
 
-      toast.error('Translation service temporarily unavailable');
       return null;
     } catch (error) {
       console.error('Translation error:', error);
-      toast.error('Translation failed');
+      toast.error('Unable to translate at this time');
       return null;
     } finally {
       setTranslatingMessage(null);
