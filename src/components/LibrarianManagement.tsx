@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Shield, Plus, Edit2, Trash2, Search, X, KeyRound, AlertTriangle, CheckCircle, Clock, Printer } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Shield, Plus, Edit2, Trash2, Search, X, KeyRound, Printer } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { generateSecurePassword } from '../utils/validation';
