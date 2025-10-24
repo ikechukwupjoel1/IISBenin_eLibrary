@@ -73,17 +73,13 @@ export function LibrarianAnalytics() {
     const { start, end } = getDateRange();
 
     try {
-      // Load borrow statistics
-      await loadBorrowStats(start, end);
-      
-      // Load popular books
-      await loadPopularBooks(start, end);
-      
-      // Load category statistics
-      await loadCategoryStats(start, end);
-      
-      // Load user activity trends
-      await loadUserActivity(start, end);
+      // Load all analytics in parallel for better performance
+      await Promise.all([
+        loadBorrowStats(start, end),
+        loadPopularBooks(start, end),
+        loadCategoryStats(start, end),
+        loadUserActivity(start, end),
+      ]);
     } catch (error) {
       console.error('Error loading analytics:', error);
     } finally {
@@ -92,40 +88,43 @@ export function LibrarianAnalytics() {
   };
 
   const loadBorrowStats = async (start: string, end: string) => {
-    // Get all borrows in period
-    const { data: allBorrows } = await supabase
-      .from('borrow_records')
-      .select('*')
-      .gte('borrowed_at', start)
-      .lte('borrowed_at', end);
-
-    // Get active borrows
-    const { data: activeBorrows } = await supabase
-      .from('borrow_records')
-      .select('*')
-      .is('returned_at', null)
-      .gte('borrowed_at', start);
-
-    // Get returned
-    const { data: returned } = await supabase
-      .from('borrow_records')
-      .select('*')
-      .not('returned_at', 'is', null)
-      .gte('borrowed_at', start)
-      .lte('borrowed_at', end);
-
-    // Get overdue (due_date < now and not returned)
-    const { data: overdue } = await supabase
-      .from('borrow_records')
-      .select('*')
-      .is('returned_at', null)
-      .lt('due_date', new Date().toISOString());
+    // Use count queries for better performance - no need to fetch all data
+    const [allBorrowsResult, activeBorrowsResult, returnedResult, overdueResult] = await Promise.all([
+      // Total borrows in period
+      supabase
+        .from('borrow_records')
+        .select('*', { count: 'exact', head: true })
+        .gte('borrowed_at', start)
+        .lte('borrowed_at', end),
+      
+      // Active borrows (not returned, started in period)
+      supabase
+        .from('borrow_records')
+        .select('*', { count: 'exact', head: true })
+        .is('returned_at', null)
+        .gte('borrowed_at', start),
+      
+      // Returned in period
+      supabase
+        .from('borrow_records')
+        .select('*', { count: 'exact', head: true })
+        .not('returned_at', 'is', null)
+        .gte('borrowed_at', start)
+        .lte('borrowed_at', end),
+      
+      // Overdue (due date passed, not returned)
+      supabase
+        .from('borrow_records')
+        .select('*', { count: 'exact', head: true })
+        .is('returned_at', null)
+        .lt('due_date', new Date().toISOString()),
+    ]);
 
     setBorrowStats({
-      totalBorrows: allBorrows?.length || 0,
-      activeBorrows: activeBorrows?.length || 0,
-      returned: returned?.length || 0,
-      overdue: overdue?.length || 0,
+      totalBorrows: allBorrowsResult.count || 0,
+      activeBorrows: activeBorrowsResult.count || 0,
+      returned: returnedResult.count || 0,
+      overdue: overdueResult.count || 0,
     });
   };
 
@@ -274,8 +273,48 @@ export function LibrarianAnalytics() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="space-y-6">
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-gray-200 p-3 rounded-xl animate-pulse h-14 w-14"></div>
+            <div>
+              <div className="h-8 w-48 bg-gray-200 rounded animate-pulse mb-2"></div>
+              <div className="h-4 w-64 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <div className="h-10 w-24 bg-gray-200 rounded-lg animate-pulse"></div>
+            <div className="h-10 w-24 bg-gray-200 rounded-lg animate-pulse"></div>
+            <div className="h-10 w-24 bg-gray-200 rounded-lg animate-pulse"></div>
+          </div>
+        </div>
+
+        {/* Stats Grid Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-6 w-32 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-10 w-10 bg-gray-200 rounded-lg animate-pulse"></div>
+              </div>
+              <div className="h-10 w-20 bg-gray-200 rounded animate-pulse mb-2"></div>
+              <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          ))}
+        </div>
+
+        {/* Charts Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="h-6 w-40 bg-gray-200 rounded animate-pulse mb-4"></div>
+            <div className="h-64 bg-gray-100 rounded-lg animate-pulse"></div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="h-6 w-40 bg-gray-200 rounded animate-pulse mb-4"></div>
+            <div className="h-64 bg-gray-100 rounded-lg animate-pulse"></div>
+          </div>
+        </div>
       </div>
     );
   }

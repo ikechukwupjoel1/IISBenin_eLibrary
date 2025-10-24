@@ -433,7 +433,7 @@ export function BookManagement() {
 
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-md w-full my-4 sm:my-8 shadow-2xl transform transition-all duration-300 scale-100 animate-in max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-xl max-w-lg w-full my-4 sm:my-8 shadow-2xl transform transition-all duration-300 scale-100 animate-in max-h-[95vh] sm:max-h-[90vh] flex flex-col">
             {/* Fixed Header */}
             <div className="flex items-center justify-between p-4 sm:p-6 pb-3 border-b border-gray-200 flex-shrink-0">
               <h3 className="text-lg sm:text-xl font-bold text-gray-900">
@@ -445,7 +445,7 @@ export function BookManagement() {
             </div>
 
             {/* Scrollable Content */}
-            <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4">
+            <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 overscroll-contain">
               <form onSubmit={handleSubmit} className="space-y-4" id="book-form">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
