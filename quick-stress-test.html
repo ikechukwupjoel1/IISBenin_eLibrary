@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IIS Benin eLibrary - Quick Stress Test</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .header h1 {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+    
+    .controls {
+      padding: 30px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .control-group {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .control-item label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: #333;
+    }
+    
+    .control-item input {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+    
+    .btn-secondary {
+      background: #6b7280;
+      color: white;
+    }
+    
+    .btn-secondary:hover {
+      background: #4b5563;
+    }
+    
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .metrics {
+      padding: 30px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+    }
+    
+    .metric-card {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      padding: 20px;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+    
+    .metric-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: #6b7280;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+    
+    .metric-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1f2937;
+    }
+    
+    .metric-unit {
+      font-size: 14px;
+      color: #6b7280;
+      margin-left: 5px;
+    }
+    
+    .logs {
+      padding: 30px;
+      background: #1f2937;
+      color: #f9fafb;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .log-entry {
+      padding: 5px 0;
+      border-bottom: 1px solid #374151;
+    }
+    
+    .log-success { color: #10b981; }
+    .log-error { color: #ef4444; }
+    .log-warning { color: #f59e0b; }
+    .log-info { color: #3b82f6; }
+    
+    .progress-bar {
+      height: 4px;
+      background: #e5e7eb;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      width: 0%;
+      transition: width 0.3s;
+    }
+    
+    .status {
+      text-align: center;
+      padding: 20px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    
+    .status.running { color: #3b82f6; }
+    .status.completed { color: #10b981; }
+    .status.error { color: #ef4444; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🚀 Quick Stress Test</h1>
+      <p>Test your eLibrary system performance</p>
+    </div>
+    
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress"></div>
+    </div>
+    
+    <div class="controls">
+      <div class="control-group">
+        <div class="control-item">
+          <label>Concurrent Requests</label>
+          <input type="number" id="concurrent" value="50" min="1" max="200">
+        </div>
+        <div class="control-item">
+          <label>Total Requests</label>
+          <input type="number" id="totalRequests" value="100" min="1" max="1000">
+        </div>
+        <div class="control-item">
+          <label>Delay Between (ms)</label>
+          <input type="number" id="delay" value="100" min="0" max="5000">
+        </div>
+      </div>
+      
+      <div class="button-group">
+        <button class="btn-primary" onclick="startTest()" id="startBtn">Start Test</button>
+        <button class="btn-danger" onclick="stopTest()" id="stopBtn" disabled>Stop Test</button>
+        <button class="btn-secondary" onclick="clearLogs()">Clear Logs</button>
+      </div>
+    </div>
+    
+    <div class="status" id="status">Ready to start</div>
+    
+    <div class="metrics">
+      <div class="metric-card">
+        <div class="metric-label">Total Requests</div>
+        <div class="metric-value" id="totalReq">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Successful</div>
+        <div class="metric-value" style="color: #10b981;" id="successReq">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Failed</div>
+        <div class="metric-value" style="color: #ef4444;" id="failedReq">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Success Rate</div>
+        <div class="metric-value" id="successRate">0<span class="metric-unit">%</span></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Avg Response Time</div>
+        <div class="metric-value" id="avgTime">0<span class="metric-unit">ms</span></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Requests/Second</div>
+        <div class="metric-value" id="reqPerSec">0</div>
+      </div>
+    </div>
+    
+    <div class="logs" id="logs">
+      <div class="log-entry log-info">Waiting to start test...</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    
+    // Initialize Supabase (use your actual URL and key)
+    const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL || 'YOUR_SUPABASE_URL';
+    const supabaseKey = import.meta.env?.VITE_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_KEY';
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // Test state
+    let testRunning = false;
+    let metrics = {
+      total: 0,
+      success: 0,
+      failed: 0,
+      totalTime: 0,
+      startTime: null,
+    };
+    
+    // Test operations
+    const operations = [
+      () => supabase.from('books').select('*').limit(20),
+      () => supabase.from('students').select('*').limit(15),
+      () => supabase.from('borrow_records').select('*').limit(10),
+      () => supabase.from('book_reports').select('*').eq('status', 'approved').limit(10),
+      () => supabase.from('user_profiles').select('id, full_name, role').limit(20),
+      () => supabase.from('badges').select('*'),
+      () => supabase.from('books').select('*').eq('available', true).limit(25),
+      () => supabase.from('students').select('*, borrow_records(*)').limit(5),
+    ];
+    
+    window.startTest = async function() {
+      testRunning = true;
+      metrics = { total: 0, success: 0, failed: 0, totalTime: 0, startTime: Date.now() };
+      
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('stopBtn').disabled = false;
+      document.getElementById('status').textContent = 'Test Running...';
+      document.getElementById('status').className = 'status running';
+      
+      const concurrent = parseInt(document.getElementById('concurrent').value);
+      const totalRequests = parseInt(document.getElementById('totalRequests').value);
+      const delay = parseInt(document.getElementById('delay').value);
+      
+      log('info', `Starting stress test: ${totalRequests} requests, ${concurrent} concurrent`);
+      
+      const batchSize = concurrent;
+      for (let i = 0; i < totalRequests && testRunning; i += batchSize) {
+        const batch = [];
+        const remainingRequests = Math.min(batchSize, totalRequests - i);
+        
+        for (let j = 0; j < remainingRequests; j++) {
+          const operation = operations[(i + j) % operations.length];
+          batch.push(executeRequest(operation, i + j + 1));
+        }
+        
+        await Promise.all(batch);
+        updateMetrics();
+        
+        if (delay > 0 && i + batchSize < totalRequests) {
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        
+        const progress = ((i + remainingRequests) / totalRequests) * 100;
+        document.getElementById('progress').style.width = progress + '%';
+      }
+      
+      finishTest();
+    };
+    
+    async function executeRequest(operation, requestNum) {
+      const start = Date.now();
+      metrics.total++;
+      
+      try {
+        const { data, error } = await operation();
+        const duration = Date.now() - start;
+        metrics.totalTime += duration;
+        
+        if (error) {
+          metrics.failed++;
+          log('error', `Request #${requestNum} failed: ${error.message} (${duration}ms)`);
+        } else {
+          metrics.success++;
+          log('success', `Request #${requestNum} completed in ${duration}ms (${data?.length || 0} records)`);
+        }
+      } catch (error) {
+        const duration = Date.now() - start;
+        metrics.failed++;
+        metrics.totalTime += duration;
+        log('error', `Request #${requestNum} error: ${error.message} (${duration}ms)`);
+      }
+    }
+    
+    function updateMetrics() {
+      document.getElementById('totalReq').textContent = metrics.total;
+      document.getElementById('successReq').textContent = metrics.success;
+      document.getElementById('failedReq').textContent = metrics.failed;
+      
+      const successRate = metrics.total > 0 ? (metrics.success / metrics.total * 100).toFixed(2) : 0;
+      document.getElementById('successRate').textContent = successRate;
+      
+      const avgTime = metrics.success > 0 ? (metrics.totalTime / metrics.success).toFixed(2) : 0;
+      document.getElementById('avgTime').textContent = avgTime;
+      
+      const duration = (Date.now() - metrics.startTime) / 1000;
+      const reqPerSec = duration > 0 ? (metrics.total / duration).toFixed(2) : 0;
+      document.getElementById('reqPerSec').textContent = reqPerSec;
+    }
+    
+    function finishTest() {
+      testRunning = false;
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('stopBtn').disabled = true;
+      document.getElementById('status').textContent = 'Test Completed!';
+      document.getElementById('status').className = 'status completed';
+      document.getElementById('progress').style.width = '100%';
+      
+      const duration = (Date.now() - metrics.startTime) / 1000;
+      log('info', `Test completed in ${duration.toFixed(2)}s`);
+      log('info', `Final stats: ${metrics.success}/${metrics.total} successful (${(metrics.success/metrics.total*100).toFixed(2)}%)`);
+    }
+    
+    window.stopTest = function() {
+      testRunning = false;
+      document.getElementById('stopBtn').disabled = true;
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('status').textContent = 'Test Stopped';
+      document.getElementById('status').className = 'status error';
+      log('warning', 'Test stopped by user');
+    };
+    
+    window.clearLogs = function() {
+      document.getElementById('logs').innerHTML = '<div class="log-entry log-info">Logs cleared</div>';
+    };
+    
+    function log(type, message) {
+      const logsDiv = document.getElementById('logs');
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logsDiv.appendChild(entry);
+      logsDiv.scrollTop = logsDiv.scrollHeight;
+      
+      // Keep only last 100 entries
+      while (logsDiv.children.length > 100) {
+        logsDiv.removeChild(logsDiv.firstChild);
+      }
+    }
+  </script>
+</body>
+</html>
