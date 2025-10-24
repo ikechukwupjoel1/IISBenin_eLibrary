@@ -3,6 +3,7 @@ import { useAuth } from './contexts/AuthContext';
 import { Auth } from './components/Auth';
 import { MainApp } from './components/MainApp';
 import { LibrarianSetup } from './components/LibrarianSetup';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
 
@@ -73,6 +74,7 @@ function App() {
           },
         }}
       />
+      <PWAInstallPrompt />
       {user ? <MainApp /> : <Auth />}
     </>
   );
