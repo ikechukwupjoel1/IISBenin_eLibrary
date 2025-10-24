@@ -493,91 +493,99 @@ export function StudentManagement() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-md w-full my-4 sm:my-8 shadow-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+            {/* Fixed Header */}
+            <div className="flex items-center justify-between p-4 sm:p-6 pb-3 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">
                 {editingStudent ? 'Edit Student' : 'Register New Student'}
               </h3>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
-                <X className="h-6 w-6" />
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 min-w-[44px] min-h-[44px] flex items-center justify-center">
+                <X className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Grade Level</label>
-                <input
-                  type="text"
-                  value={formData.grade_level}
-                  onChange={(e) => setFormData({ ...formData, grade_level: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., Grade 5A"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Parent Email</label>
-                <input
-                  type="email"
-                  value={formData.parent_email}
-                  onChange={(e) => setFormData({ ...formData, parent_email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter parent's email address"
-                  required={!editingStudent}
-                />
-              </div>
-
-              {!editingStudent && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-                  <p className="font-medium">Auto-Generated Credentials</p>
-                  <p className="text-xs mt-1">Enrollment ID and password will be generated automatically and displayed after registration.</p>
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4">
+              <form onSubmit={handleSubmit} className="space-y-4" id="student-form">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
+                    required
+                  />
                 </div>
-              )}
 
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  {editingStudent ? 'Update' : 'Register'}
-                </button>
-              </div>
-            </form>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Grade Level</label>
+                  <input
+                    type="text"
+                    value={formData.grade_level}
+                    onChange={(e) => setFormData({ ...formData, grade_level: e.target.value })}
+                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
+                    placeholder="e.g., Grade 5A"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Parent Email</label>
+                  <input
+                    type="email"
+                    value={formData.parent_email}
+                    onChange={(e) => setFormData({ ...formData, parent_email: e.target.value })}
+                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
+                    placeholder="Enter parent's email address"
+                    required={!editingStudent}
+                  />
+                </div>
+
+                {!editingStudent && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                    <p className="font-medium">Auto-Generated Credentials</p>
+                    <p className="text-xs mt-1">Enrollment ID and password will be generated automatically and displayed after registration.</p>
+                  </div>
+                )}
+              </form>
+            </div>
+
+            {/* Fixed Footer */}
+            <div className="flex gap-3 p-4 sm:p-6 pt-3 border-t border-gray-200 flex-shrink-0 bg-gray-50">
+              <button
+                type="button"
+                onClick={closeModal}
+                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px] font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="student-form"
+                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] font-medium"
+              >
+                {editingStudent ? 'Update' : 'Register'}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {showCredentials && generatedCredentials && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">Student Credentials</h3>
-              <button onClick={() => setShowCredentials(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="h-6 w-6" />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-md w-full my-4 sm:my-8 shadow-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+            {/* Fixed Header */}
+            <div className="flex items-center justify-between p-4 sm:p-6 pb-3 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">Student Credentials</h3>
+              <button onClick={() => setShowCredentials(false)} className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 min-w-[44px] min-h-[44px] flex items-center justify-center">
+                <X className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
-            <div className="space-y-4">
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-4">
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <p className="text-green-800 font-medium mb-2">Student registered successfully!</p>
                 <p className="text-sm text-green-700">Please provide these credentials to the student:</p>
@@ -591,7 +599,7 @@ export function StudentManagement() {
                       type="text"
                       value={generatedCredentials.enrollment_id}
                       readOnly
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono"
+                      className="flex-1 px-3 py-3 border border-gray-300 rounded-lg bg-gray-50 font-mono min-h-[44px]"
                     />
                   </div>
                 </div>
@@ -603,7 +611,7 @@ export function StudentManagement() {
                       type="text"
                       value={generatedCredentials.password}
                       readOnly
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono"
+                      className="flex-1 px-3 py-3 border border-gray-300 rounded-lg bg-gray-50 font-mono min-h-[44px]"
                     />
                   </div>
                 </div>
@@ -613,82 +621,103 @@ export function StudentManagement() {
                 <p className="font-medium">Important:</p>
                 <p className="text-xs mt-1">Save these credentials now. They cannot be retrieved later.</p>
               </div>
+            </div>
 
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={printCredentials}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <Printer className="h-4 w-4" />
-                  Print
-                </button>
-                <button
-                  onClick={() => setShowCredentials(false)}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Done
-                </button>
-              </div>
+            {/* Fixed Footer */}
+            <div className="flex gap-3 p-4 sm:p-6 pt-3 border-t border-gray-200 flex-shrink-0 bg-gray-50">
+              <button
+                onClick={printCredentials}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px] font-medium"
+              >
+                <Printer className="h-4 w-4" />
+                Print
+              </button>
+              <button
+                onClick={() => setShowCredentials(false)}
+                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] font-medium"
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>
       )}
 
       {showHistory && selectedStudent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-2xl w-full my-4 sm:my-8 shadow-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+            {/* Fixed Header */}
+            <div className="flex items-center justify-between p-4 sm:p-6 pb-3 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 truncate pr-2">
                 Borrowing History - {selectedStudent.name}
               </h3>
-              <button onClick={() => setShowHistory(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="h-6 w-6" />
+              <button onClick={() => setShowHistory(false)} className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0">
+                <X className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
-            {selectedStudent.borrow_records && selectedStudent.borrow_records.length > 0 ? (
-              <div className="space-y-4">
-                {selectedStudent.borrow_records.map((record: BorrowRecord & { books?: Book }) => (
-                  <div key={record.id} className="border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-900">{record.books?.title || 'Unknown Book'}</h4>
-                    <p className="text-sm text-gray-600">by {record.books?.author_publisher || 'Unknown Author'}</p>
-                    <div className="mt-2 text-sm text-gray-700">
-                      <p>Borrowed: {new Date(record.borrow_date).toLocaleDateString()}</p>
-                      <p>Due: {new Date(record.due_date).toLocaleDateString()}</p>
-                      {record.return_date && (
-                        <p>Returned: {new Date(record.return_date).toLocaleDateString()}</p>
-                      )}
-                      <span className={`inline-flex mt-2 px-2 py-1 text-xs font-semibold rounded-full ${
-                        record.status === 'completed'
-                          ? 'bg-green-100 text-green-800'
-                          : record.status === 'overdue'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-blue-100 text-blue-800'
-                      }`}>
-                        {record.status}
-                      </span>
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4">
+              {selectedStudent.borrow_records && selectedStudent.borrow_records.length > 0 ? (
+                <div className="space-y-4">
+                  {selectedStudent.borrow_records.map((record, index) => (
+                    <div key={index} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">{record.books?.title || 'Unknown Book'}</p>
+                          <p className="text-sm text-gray-600">
+                            Borrowed: {new Date(record.borrow_date).toLocaleDateString()}
+                          </p>
+                          {record.return_date && (
+                            <p className="text-sm text-gray-600">
+                              Returned: {new Date(record.return_date).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                          record.return_date
+                            ? 'bg-green-100 text-green-800'
+                            : new Date(record.due_date) < new Date()
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {record.return_date ? 'Returned' : new Date(record.due_date) < new Date() ? 'Overdue' : 'Borrowed'}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-600 text-center py-8">No borrowing history found.</p>
-            )}
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-600 text-center py-8">No borrowing history found.</p>
+              )}
+            </div>
+
+            {/* Fixed Footer */}
+            <div className="p-4 sm:p-6 pt-3 border-t border-gray-200 flex-shrink-0 bg-gray-50">
+              <button
+                onClick={() => setShowHistory(false)}
+                className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] font-medium"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {showResetPassword && resetPasswordStudent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">Reset Password</h3>
-              <button onClick={() => setShowResetPassword(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="h-6 w-6" />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-md w-full my-4 sm:my-8 shadow-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+            {/* Fixed Header */}
+            <div className="flex items-center justify-between p-4 sm:p-6 pb-3 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">Reset Password</h3>
+              <button onClick={() => setShowResetPassword(false)} className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 min-w-[44px] min-h-[44px] flex items-center justify-center">
+                <X className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
-            <div className="space-y-4">
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-4">
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                 <p className="text-amber-800 font-medium mb-2">Confirm Password Reset</p>
                 <p className="text-sm text-amber-700">
@@ -707,22 +736,23 @@ export function StudentManagement() {
                   <li>You will receive the new credentials to share with the student</li>
                 </ul>
               </div>
+            </div>
 
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowResetPassword(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleResetPassword}
-                  className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
-                >
-                  Reset Password
-                </button>
-              </div>
+            {/* Fixed Footer */}
+            <div className="flex gap-3 p-4 sm:p-6 pt-3 border-t border-gray-200 flex-shrink-0 bg-gray-50">
+              <button
+                type="button"
+                onClick={() => setShowResetPassword(false)}
+                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px] font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleResetPassword}
+                className="flex-1 px-4 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors min-h-[44px] font-medium"
+              >
+                Reset Password
+              </button>
             </div>
           </div>
         </div>

@@ -628,16 +628,18 @@ export function StaffManagement() {
       </div>
 
       {showCredentials && generatedCredentials && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">Staff Credentials</h3>
-              <button onClick={() => setShowCredentials(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="h-6 w-6" />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-md w-full my-4 sm:my-8 shadow-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+            {/* Fixed Header */}
+            <div className="flex items-center justify-between p-4 sm:p-6 pb-3 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">Staff Credentials</h3>
+              <button onClick={() => setShowCredentials(false)} className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 min-w-[44px] min-h-[44px] flex items-center justify-center">
+                <X className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
-            <div className="space-y-4">
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-4">
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <p className="text-green-800 font-medium mb-2">Staff member registered successfully!</p>
                 <p className="text-sm text-green-700">Please provide these credentials to the staff member:</p>
@@ -651,7 +653,7 @@ export function StaffManagement() {
                       type="text"
                       value={generatedCredentials.enrollment_id}
                       readOnly
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono"
+                      className="flex-1 px-3 py-3 border border-gray-300 rounded-lg bg-gray-50 font-mono min-h-[44px]"
                     />
                   </div>
                 </div>
@@ -663,7 +665,7 @@ export function StaffManagement() {
                       type="text"
                       value={generatedCredentials.password}
                       readOnly
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono"
+                      className="flex-1 px-3 py-3 border border-gray-300 rounded-lg bg-gray-50 font-mono min-h-[44px]"
                     />
                   </div>
                 </div>
@@ -673,41 +675,44 @@ export function StaffManagement() {
                 <p className="font-medium">Important:</p>
                 <p className="text-xs mt-1">Save these credentials now. They cannot be retrieved later.</p>
               </div>
+            </div>
 
-              <div className="flex gap-2">
-                <button
-                  onClick={handlePrintCredentials}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-                >
-                  <Printer className="h-5 w-5" />
-                  Print Credentials
-                </button>
-                <button
-                  onClick={() => setShowCredentials(false)}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Done
-                </button>
-              </div>
+            {/* Fixed Footer */}
+            <div className="flex gap-3 p-4 sm:p-6 pt-3 border-t border-gray-200 flex-shrink-0 bg-gray-50">
+              <button
+                onClick={handlePrintCredentials}
+                className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 min-h-[44px] font-medium"
+              >
+                <Printer className="h-5 w-5" />
+                <span className="hidden xs:inline">Print</span>
+              </button>
+              <button
+                onClick={() => setShowCredentials(false)}
+                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] font-medium"
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>
       )}
 
       {showResetPassword && resetPasswordStaff && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <KeyRound className="h-6 w-6 text-amber-600" />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-md w-full my-4 sm:my-8 shadow-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+            {/* Fixed Header */}
+            <div className="flex items-center justify-between p-4 sm:p-6 pb-3 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2">
+                <KeyRound className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600" />
                 Reset Password
               </h3>
-              <button onClick={() => setShowResetPassword(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="h-6 w-6" />
+              <button onClick={() => setShowResetPassword(false)} className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 min-w-[44px] min-h-[44px] flex items-center justify-center">
+                <X className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
-            <div className="space-y-4">
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-4">
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                 <p className="text-amber-800 font-medium mb-2">Confirm Password Reset</p>
                 <p className="text-sm text-amber-700">
@@ -726,22 +731,23 @@ export function StaffManagement() {
                   <li>You will receive the new credentials to share with the staff member</li>
                 </ul>
               </div>
+            </div>
 
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowResetPassword(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleResetPassword}
-                  className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
-                >
-                  Reset Password
-                </button>
-              </div>
+            {/* Fixed Footer */}
+            <div className="flex gap-3 p-4 sm:p-6 pt-3 border-t border-gray-200 flex-shrink-0 bg-gray-50">
+              <button
+                type="button"
+                onClick={() => setShowResetPassword(false)}
+                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px] font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleResetPassword}
+                className="flex-1 px-4 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors min-h-[44px] font-medium"
+              >
+                Reset Password
+              </button>
             </div>
           </div>
         </div>

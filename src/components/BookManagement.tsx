@@ -432,28 +432,31 @@ export function BookManagement() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl transform transition-all duration-300 scale-100 animate-in">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-md w-full my-4 sm:my-8 shadow-2xl transform transition-all duration-300 scale-100 animate-in max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+            {/* Fixed Header */}
+            <div className="flex items-center justify-between p-4 sm:p-6 pb-3 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">
                 {editingBook ? 'Edit Book' : 'Add New Book'}
               </h3>
               <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 transition-all duration-200 min-w-[44px] min-h-[44px] flex items-center justify-center active:scale-90">
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-300 focus:outline-none transition-all duration-200 min-h-[44px]"
-                  required
-                />
-              </div>
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4">
+              <form onSubmit={handleSubmit} className="space-y-4" id="book-form">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-300 focus:outline-none transition-all duration-200 min-h-[44px]"
+                    required
+                  />
+                </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Author/Publisher</label>
@@ -724,23 +727,27 @@ export function BookManagement() {
                 </>
               )}
 
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={uploading}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  {uploading ? 'Uploading...' : (editingBook ? 'Update' : 'Add')}
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
+
+            {/* Fixed Footer */}
+            <div className="flex gap-3 p-4 sm:p-6 pt-3 border-t border-gray-200 flex-shrink-0 bg-gray-50">
+              <button
+                type="button"
+                onClick={closeModal}
+                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px] font-medium active:scale-95"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="book-form"
+                disabled={uploading}
+                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed min-h-[44px] font-medium active:scale-95"
+              >
+                {uploading ? 'Uploading...' : (editingBook ? 'Update' : 'Add')}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -405,19 +405,21 @@ export default function ReviewModeration({ userId, userRole }: { userId: string;
 
       {/* Detail Modal */}
       {showDetailModal && selectedReview && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-start justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">Review Details</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-2xl w-full my-4 sm:my-8 shadow-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+            {/* Fixed Header */}
+            <div className="flex items-center justify-between p-4 sm:p-6 pb-3 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">Review Details</h3>
               <button
                 onClick={() => setShowDetailModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
-                <XCircle className="w-6 h-6" />
+                <XCircle className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
 
-            <div className="space-y-4">
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Book</label>
                 <p className="text-gray-900 font-semibold">{selectedReview.book_title}</p>
@@ -448,7 +450,7 @@ export default function ReviewModeration({ userId, userRole }: { userId: string;
                 <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">{selectedReview.review_text}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                   <span
@@ -466,7 +468,7 @@ export default function ReviewModeration({ userId, userRole }: { userId: string;
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Created</label>
-                  <p className="text-gray-900">{new Date(selectedReview.created_at).toLocaleString()}</p>
+                  <p className="text-gray-900 text-sm">{new Date(selectedReview.created_at).toLocaleString()}</p>
                 </div>
               </div>
 
@@ -498,33 +500,34 @@ export default function ReviewModeration({ userId, userRole }: { userId: string;
                   </p>
                 </div>
               )}
+            </div>
 
-              <div className="flex gap-3 pt-4 border-t">
-                {selectedReview.status === 'pending' && (
-                  <>
-                    <button
-                      onClick={() => moderateReview(selectedReview.id, 'approve')}
-                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
-                    >
-                      <CheckCircle className="w-5 h-5" />
-                      Approve Review
-                    </button>
-                    <button
-                      onClick={() => moderateReview(selectedReview.id, 'reject')}
-                      className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2"
-                    >
-                      <XCircle className="w-5 h-5" />
-                      Reject Review
-                    </button>
-                  </>
-                )}
-                <button
-                  onClick={() => deleteReview(selectedReview.id)}
-                  className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800"
-                >
-                  Delete Review
-                </button>
-              </div>
+            {/* Fixed Footer */}
+            <div className="flex flex-col sm:flex-row gap-3 p-4 sm:p-6 pt-3 border-t border-gray-200 flex-shrink-0 bg-gray-50">
+              {selectedReview.status === 'pending' && (
+                <>
+                  <button
+                    onClick={() => moderateReview(selectedReview.id, 'approve')}
+                    className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2 min-h-[44px] font-medium"
+                  >
+                    <CheckCircle className="w-5 h-5" />
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => moderateReview(selectedReview.id, 'reject')}
+                    className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2 min-h-[44px] font-medium"
+                  >
+                    <XCircle className="w-5 h-5" />
+                    Reject
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => deleteReview(selectedReview.id)}
+                className="px-4 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800 min-h-[44px] font-medium"
+              >
+                Delete
+              </button>
             </div>
           </div>
         </div>
