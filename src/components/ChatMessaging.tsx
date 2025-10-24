@@ -406,8 +406,35 @@ export function ChatMessaging() {
     setTranslatingMessage(messageId);
 
     try {
-      // Using MyMemory Translation API (free, no key required)
-      const response = await fetch(
+      // Try LibreTranslate API first (more reliable)
+      let response = await fetch('https://libretranslate.com/translate', {
+        method: 'POST',
+        body: JSON.stringify({
+          q: text,
+          source: 'auto',
+          target: targetLang,
+          format: 'text'
+        }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.translatedText) {
+          const translated = data.translatedText;
+          
+          // Cache the translation
+          setTranslations(prev => ({
+            ...prev,
+            [cacheKey]: translated
+          }));
+          
+          return translated;
+        }
+      }
+
+      // Fallback to MyMemory API
+      response = await fetch(
         `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=auto|${targetLang}`
       );
       
@@ -424,10 +451,11 @@ export function ChatMessaging() {
         
         return translated;
       } else {
-        toast.error('Translation failed');
+        toast.error('Translation failed. Try again later.');
         return null;
       }
     } catch (error) {
+      console.error('Translation error:', error);
       toast.error('Translation service unavailable');
       return null;
     } finally {
