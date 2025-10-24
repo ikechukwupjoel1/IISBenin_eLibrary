@@ -3,6 +3,7 @@ import { Shield, Plus, Edit2, Trash2, Search, X, KeyRound, Printer } from 'lucid
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { generateSecurePassword } from '../utils/validation';
+import { LoadingSkeleton } from './ui/LoadingSkeleton';
 
 type Librarian = {
   id: string;
@@ -21,6 +22,7 @@ type GeneratedCredentials = {
 
 export function LibrarianManagement() {
   const [librarians, setLibrarians] = useState<Librarian[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddingLibrarian, setIsAddingLibrarian] = useState(false);
   const [showCredentials, setShowCredentials] = useState(false);
@@ -38,6 +40,7 @@ export function LibrarianManagement() {
   }, []);
 
   const loadLibrarians = async () => {
+    setLoading(true);
     const { data, error } = await supabase
       .from('user_profiles')
       .select('*')
@@ -46,10 +49,11 @@ export function LibrarianManagement() {
 
     if (error) {
       console.error('Error loading librarians:', error);
-      return;
+      toast.error('Failed to load librarians');
+    } else {
+      setLibrarians(data || []);
     }
-
-    setLibrarians(data || []);
+    setLoading(false);
   };
 
   const generatePassword = () => {
@@ -416,13 +420,22 @@ export function LibrarianManagement() {
     lib.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  if (loading) {
+    return <LoadingSkeleton type="list" />;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Librarian Management</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Librarian Management</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            {librarians.length} librarian{librarians.length !== 1 ? 's' : ''} registered
+          </p>
+        </div>
         <button
           onClick={() => setIsAddingLibrarian(true)}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 min-h-[44px]"
         >
           <Plus className="h-5 w-5" />
           Add Librarian
@@ -430,10 +443,12 @@ export function LibrarianManagement() {
       </div>
 
       {isAddingLibrarian && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center gap-2 mb-6">
-            <Shield className="h-6 w-6 text-blue-600" />
-            <h3 className="text-lg font-semibold text-gray-900">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30 rounded-lg">
+              <Shield className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               Add New Librarian
             </h3>
           </div>
@@ -441,34 +456,34 @@ export function LibrarianManagement() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Full Name
                 </label>
                 <input
                   type="text"
                   value={formData.full_name}
                   onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-600 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-h-[44px]"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Email Address
                 </label>
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-600 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-h-[44px]"
                   placeholder="librarian@iisbenin.edu"
                   required
                 />
               </div>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm text-blue-800 dark:text-blue-300">
               <p className="font-medium">Auto-Generated Password</p>
               <p className="text-xs mt-1">A secure password will be generated automatically and displayed after account creation.</p>
             </div>
@@ -476,14 +491,14 @@ export function LibrarianManagement() {
             <div className="flex gap-2">
               <button
                 type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 min-h-[44px] font-medium"
               >
                 Create Librarian Account
               </button>
               <button
                 type="button"
                 onClick={handleCancel}
-                className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+                className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 min-h-[44px] font-medium"
               >
                 Cancel
               </button>
@@ -492,7 +507,7 @@ export function LibrarianManagement() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-all duration-300">
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
@@ -500,56 +515,57 @@ export function LibrarianManagement() {
             placeholder="Search librarians by name or email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-600 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-h-[44px]"
           />
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Email
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Created At
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {filteredLibrarians.map((librarian) => (
-                <tr key={librarian.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                <tr key={librarian.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
                     {librarian.full_name}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-700">
+                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
                     {librarian.email}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-700">
+                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
                     {new Date(librarian.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 text-sm">
-                    <button
-                      onClick={() => handleDelete(librarian.id, librarian.email)}
-                      className="text-red-600 hover:text-red-800 transition-colors"
-                      title="Delete Librarian"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
-
-                    <button
-                      onClick={() => openResetPasswordModal(librarian)}
-                      className="text-blue-600 hover:text-blue-800 transition-colors"
-                      title="Reset Password"
-                    >
-                      <KeyRound className="h-5 w-5" />
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => openResetPasswordModal(librarian)}
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center"
+                        title="Reset Password"
+                      >
+                        <KeyRound className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(librarian.id, librarian.email)}
+                        className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center"
+                        title="Delete Librarian"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
