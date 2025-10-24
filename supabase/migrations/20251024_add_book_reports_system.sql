@@ -4,7 +4,7 @@
 -- Create book_reports table
 CREATE TABLE IF NOT EXISTS book_reports (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  borrow_id uuid REFERENCES borrow_records(id) ON DELETE CASCADE,
+  borrow_record_id uuid REFERENCES borrow_records(id) ON DELETE CASCADE,
   book_id uuid REFERENCES books(id) ON DELETE CASCADE,
   user_id uuid REFERENCES user_profiles(id) ON DELETE CASCADE,
   
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS book_reports (
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
   
   -- Ensure one report per borrow
-  UNIQUE(borrow_id)
+  UNIQUE(borrow_record_id)
 );
 
 -- Create reading_questions table (optional quiz/comprehension check)
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS reading_answers (
 -- Create reading_progress table (track reading sessions)
 CREATE TABLE IF NOT EXISTS reading_progress (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  borrow_id uuid REFERENCES borrow_records(id) ON DELETE CASCADE,
+  borrow_record_id uuid REFERENCES borrow_records(id) ON DELETE CASCADE,
   user_id uuid REFERENCES user_profiles(id) ON DELETE CASCADE,
   book_id uuid REFERENCES books(id) ON DELETE CASCADE,
   
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS reading_progress (
   -- Metadata
   last_updated timestamp with time zone DEFAULT timezone('utc'::text, now()),
   
-  UNIQUE(borrow_id, session_date)
+  UNIQUE(borrow_record_id, session_date)
 );
 
 -- Create report_reviewers table (track which staff can review reports)
@@ -105,11 +105,11 @@ CREATE TABLE IF NOT EXISTS report_reviewers (
 CREATE INDEX IF NOT EXISTS idx_book_reports_user_id ON book_reports(user_id);
 CREATE INDEX IF NOT EXISTS idx_book_reports_book_id ON book_reports(book_id);
 CREATE INDEX IF NOT EXISTS idx_book_reports_status ON book_reports(status);
-CREATE INDEX IF NOT EXISTS idx_book_reports_borrow_id ON book_reports(borrow_id);
+CREATE INDEX IF NOT EXISTS idx_book_reports_borrow_record_id ON book_reports(borrow_record_id);
 CREATE INDEX IF NOT EXISTS idx_reading_questions_book_id ON reading_questions(book_id);
 CREATE INDEX IF NOT EXISTS idx_reading_answers_report_id ON reading_answers(report_id);
 CREATE INDEX IF NOT EXISTS idx_reading_progress_user_id ON reading_progress(user_id);
-CREATE INDEX IF NOT EXISTS idx_reading_progress_borrow_id ON reading_progress(borrow_id);
+CREATE INDEX IF NOT EXISTS idx_reading_progress_borrow_record_id ON reading_progress(borrow_record_id);
 CREATE INDEX IF NOT EXISTS idx_report_reviewers_staff_id ON report_reviewers(staff_id);
 
 -- Enable RLS

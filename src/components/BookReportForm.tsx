@@ -50,7 +50,7 @@ export function BookReportForm({
     setSubmitting(true);
     try {
       const { error } = await supabase.from('book_reports').insert({
-        borrow_id: borrowId,
+        borrow_record_id: borrowId,
         book_id: bookId,
         user_id: userId,
         title: formData.title,

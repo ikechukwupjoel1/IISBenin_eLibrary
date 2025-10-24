@@ -7,7 +7,7 @@ import { LoadingSkeleton } from './ui/LoadingSkeleton';
 
 type BookReport = {
   id: string;
-  borrow_id: string;
+  borrow_record_id: string;
   book_id: string;
   user_id: string;
   title: string;
