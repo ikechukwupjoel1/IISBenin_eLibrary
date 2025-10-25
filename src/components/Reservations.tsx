@@ -223,20 +223,15 @@ export function Reservations() {
       )}
 
       {showReserveModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 animate-fade-in overflow-y-auto">
-          <div className="min-h-screen flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6 shadow-2xl animate-scale-in my-8 max-h-[calc(100vh-4rem)] overflow-y-auto relative">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Reserve a Book</h3>
-                <button
-                  onClick={() => setShowReserveModal(false)}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300 animate-scale-in">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30 rounded-lg">
+              <BookMarked className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Reserve a Book</h3>
+          </div>
 
-              <div className="space-y-4">
+          <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Material Type
@@ -292,25 +287,23 @@ export function Reservations() {
                 </p>
               )}
 
-              <div className="flex gap-3 mt-6 sticky bottom-0 bg-white dark:bg-gray-800 pt-4 border-t border-gray-200 dark:border-gray-700 -mx-6 px-6 -mb-6 pb-6">
-                <button
-                  onClick={() => setShowReserveModal(false)}
-                  className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 active:scale-95 min-h-[44px] font-medium"
-                >
-                  Cancel
-                </button>
+              <div className="flex gap-3 mt-6">
                 <button
                   onClick={handleReserveBook}
                   disabled={!selectedBook}
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-md active:scale-95 min-h-[44px] font-medium"
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-md active:scale-95 min-h-[44px] font-medium"
                 >
                   Reserve Book
+                </button>
+                <button
+                  onClick={() => setShowReserveModal(false)}
+                  className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 active:scale-95 min-h-[44px] font-medium"
+                >
+                  Cancel
                 </button>
               </div>
             </div>
           </div>
-          </div>
-        </div>
       )}
     </div>
   );
