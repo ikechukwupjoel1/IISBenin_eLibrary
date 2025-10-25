@@ -329,8 +329,9 @@ export function Reviews() {
       )}
 
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full p-6 shadow-2xl animate-scale-in my-8 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 animate-fade-in overflow-y-auto">
+          <div className="min-h-screen flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full p-6 shadow-2xl animate-scale-in my-8 max-h-[calc(100vh-4rem)] overflow-y-auto relative">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                 {editingReview ? 'Edit Review' : 'Write a Review'}
@@ -394,6 +395,7 @@ export function Reviews() {
                 </button>
               </div>
             </form>
+          </div>
           </div>
         </div>
       )}
