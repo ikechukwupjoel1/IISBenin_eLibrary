@@ -109,9 +109,6 @@ CREATE INDEX IF NOT EXISTS idx_user_badges_badge_id
 ON user_badges(badge_id) 
 WHERE badge_id IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_user_badges_awarded_at 
-ON user_badges(awarded_at DESC);
-
 -- =====================================================
 -- 8. NOTIFICATIONS TABLE INDEXES (Conservative)
 -- =====================================================
