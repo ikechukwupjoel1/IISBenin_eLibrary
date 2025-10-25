@@ -65,6 +65,30 @@ export default function BookClubs({ userId }: { userId: string; userName?: strin
   
   // Check if user can create clubs (staff or librarian only)
   const canCreateClub = profile?.role === 'staff' || profile?.role === 'librarian';
+  // Librarian can delete any club; staff can delete clubs they created
+  const isLibrarian = profile?.role === 'librarian';
+  const isStaff = profile?.role === 'staff';
+  const isClubCreator = selectedClub && selectedClub.created_by === userId;
+  const canDeleteClub = isLibrarian || (isStaff && isClubCreator);
+  // Delete club logic
+  const deleteClub = async (clubId: string) => {
+    if (!canDeleteClub) return;
+    if (!window.confirm('Are you sure you want to delete this club? This action cannot be undone.')) return;
+    try {
+      const { error } = await supabase
+        .from('book_clubs')
+        .delete()
+        .eq('id', clubId);
+      if (error) throw error;
+      setSelectedClub(null);
+      fetchClubs();
+      fetchMyClubs();
+      alert('Book club deleted successfully.');
+    } catch (error) {
+      console.error('Error deleting club:', error);
+      alert('Failed to delete club.');
+    }
+  };
 
   // Create Club Form
   const [newClub, setNewClub] = useState({
@@ -472,6 +496,14 @@ export default function BookClubs({ userId }: { userId: string; userName?: strin
                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                   >
                     Leave Club
+                  </button>
+                )}
+                {canDeleteClub && (
+                  <button
+                    onClick={() => deleteClub(selectedClub.id)}
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-red-600 hover:text-white font-medium"
+                  >
+                    Delete Club
                   </button>
                 )}
               </div>

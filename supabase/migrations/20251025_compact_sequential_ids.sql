@@ -67,26 +67,36 @@ BEGIN
 END;
 $$;
 
--- Step 4: Migrate existing student records to new format
--- Preserve registration order based on created_at timestamp
-UPDATE students 
-SET enrollment_id = 'S' || LPAD(
-  ROW_NUMBER() OVER (ORDER BY created_at, id)::TEXT, 
-  4, 
-  '0'
-)
-WHERE enrollment_id IS NOT NULL 
-  AND (enrollment_id LIKE 'STU%' OR LENGTH(enrollment_id) > 5);
+
+-- Use a temporary table to assign row numbers, then update
+CREATE TEMP TABLE tmp_numbered_students AS
+  SELECT id, 'S' || LPAD(ROW_NUMBER() OVER (ORDER BY created_at, id)::TEXT, 4, '0') AS new_enrollment_id
+  FROM students
+  WHERE enrollment_id IS NOT NULL 
+    AND (enrollment_id LIKE 'STU%' OR LENGTH(enrollment_id) > 5);
+
+UPDATE students s
+SET enrollment_id = tns.new_enrollment_id
+FROM tmp_numbered_students tns
+WHERE s.id = tns.id;
+
+DROP TABLE tmp_numbered_students;
 
 -- Step 5: Migrate existing staff records to new format
-UPDATE staff 
-SET enrollment_id = 'T' || LPAD(
-  ROW_NUMBER() OVER (ORDER BY created_at, id)::TEXT, 
-  3, 
-  '0'
-)
-WHERE enrollment_id IS NOT NULL 
-  AND (enrollment_id LIKE 'STAFF%' OR LENGTH(enrollment_id) > 4);
+
+-- Use a temporary table to assign row numbers, then update
+CREATE TEMP TABLE tmp_numbered_staff AS
+  SELECT id, 'T' || LPAD(ROW_NUMBER() OVER (ORDER BY created_at, id)::TEXT, 3, '0') AS new_enrollment_id
+  FROM staff
+  WHERE enrollment_id IS NOT NULL 
+    AND (enrollment_id LIKE 'STAFF%' OR LENGTH(enrollment_id) > 4);
+
+UPDATE staff s
+SET enrollment_id = tns.new_enrollment_id
+FROM tmp_numbered_staff tns
+WHERE s.id = tns.id;
+
+DROP TABLE tmp_numbered_staff;
 
 -- Step 6: Update counters to reflect migrated records
 UPDATE id_counters 

@@ -16,7 +16,7 @@ const BorrowingSystem = lazy(() => import('./BorrowingSystem').then(m => ({ defa
 const Reservations = lazy(() => import('./Reservations').then(m => ({ default: m.Reservations })));
 const Leaderboard = lazy(() => import('./Leaderboard').then(m => ({ default: m.Leaderboard })));
 const Reviews = lazy(() => import('./Reviews').then(m => ({ default: m.Reviews })));
-const ReadingChallenge = lazy(() => import('./ReadingChallenge').then(m => ({ default: m.ReadingChallenge })));
+const Challenges = lazy(() => import('./Challenges').then(m => ({ default: m.default })));
 const ChangePassword = lazy(() => import('./ChangePassword'));
 const MyBooks = lazy(() => import('./MyBooks').then(m => ({ default: m.MyBooks })));
 const DigitalLibrary = lazy(() => import('./DigitalLibrary').then(m => ({ default: m.DigitalLibrary })));
@@ -179,7 +179,7 @@ export function MainApp() {
             {activeTab === 'reviews' && <Reviews />}
             {activeTab === 'bookreports' && <BookReportReview />}
             {activeTab === 'moderation' && profile && <ReviewModeration userId={profile.id} userRole={profile.role} />}
-            {activeTab === 'challenges' && <ReadingChallenge />}
+            {activeTab === 'challenges' && <Challenges />}
             {activeTab === 'changePassword' && <ChangePassword />}
           </Suspense>
         </div>
