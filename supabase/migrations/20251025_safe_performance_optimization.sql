@@ -161,18 +161,6 @@ ANALYZE user_badges;
 ANALYZE notifications;
 
 -- =====================================================
--- 11. VACUUM TABLES
--- =====================================================
-VACUUM ANALYZE books;
-VACUUM ANALYZE students;
-VACUUM ANALYZE staff;
-VACUUM ANALYZE borrow_records;
-VACUUM ANALYZE reading_progress;
-VACUUM ANALYZE book_reports;
-VACUUM ANALYZE user_badges;
-VACUUM ANALYZE notifications;
-
--- =====================================================
 -- NOTES
 -- =====================================================
 -- This is a SAFE migration that only creates indexes for:
