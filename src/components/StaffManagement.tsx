@@ -53,8 +53,15 @@ export function StaffManagement() {
     setLoading(false);
   };
 
-  const generateEnrollmentId = () => {
-    return 'STAFF' + Date.now().toString().slice(-7);
+  const generateEnrollmentId = async () => {
+    const { data, error } = await supabase
+      .rpc('get_next_enrollment_id', { role_type: 'staff' });
+    
+    if (error) {
+      console.error('Error generating enrollment ID:', error);
+      throw new Error('Failed to generate enrollment ID');
+    }
+    return data;
   };
 
   const generatePassword = () => {
@@ -91,7 +98,7 @@ export function StaffManagement() {
       await loadStaff();
       handleCancel();
     } else {
-      const enrollmentId = generateEnrollmentId();
+      const enrollmentId = await generateEnrollmentId();
       const password = generatePassword();
       const email = formData.email || `${enrollmentId.toLowerCase()}@iisbenin.edu`;
 

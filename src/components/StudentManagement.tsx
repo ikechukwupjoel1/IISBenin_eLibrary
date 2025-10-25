@@ -57,8 +57,15 @@ export function StudentManagement() {
     (student.enrollment_id && student.enrollment_id.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const generateEnrollmentId = () => {
-    return 'STU' + Date.now().toString().slice(-8);
+  const generateEnrollmentId = async () => {
+    const { data, error } = await supabase
+      .rpc('get_next_enrollment_id', { role_type: 'student' });
+    
+    if (error) {
+      console.error('Error generating enrollment ID:', error);
+      throw new Error('Failed to generate enrollment ID');
+    }
+    return data;
   };
 
   const generatePassword = () => {
@@ -86,7 +93,7 @@ export function StudentManagement() {
         alert('Error updating student: ' + error.message);
       }
     } else {
-  const enrollmentId = generateEnrollmentId();
+  const enrollmentId = await generateEnrollmentId();
   const password = generatePassword();
   const email = formData.parent_email.trim().toLowerCase();
 
