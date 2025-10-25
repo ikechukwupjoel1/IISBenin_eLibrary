@@ -46,11 +46,6 @@ CREATE INDEX IF NOT EXISTS idx_students_grade_level
 ON students(grade_level) 
 WHERE grade_level IS NOT NULL;
 
--- Speed up admission number lookups
-CREATE INDEX IF NOT EXISTS idx_students_admission_number 
-ON students(admission_number) 
-WHERE admission_number IS NOT NULL;
-
 -- Full-text search on student names
 CREATE INDEX IF NOT EXISTS idx_students_name 
 ON students USING gin(to_tsvector('english', name));
