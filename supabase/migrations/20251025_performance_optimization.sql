@@ -130,10 +130,6 @@ ON book_reports(status);
 CREATE INDEX IF NOT EXISTS idx_book_reports_user_id 
 ON book_reports(user_id);
 
--- Speed up book report lookups
-CREATE INDEX IF NOT EXISTS idx_book_reports_book_id 
-ON book_reports(book_id);
-
 -- Composite index for pending reports
 CREATE INDEX IF NOT EXISTS idx_book_reports_status_created 
 ON book_reports(status, created_at DESC) 
