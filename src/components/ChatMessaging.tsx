@@ -56,7 +56,9 @@ type MessageWithReactions = Message & {
     users: string[];
     hasReacted: boolean;
   }>;
-};_TYPE_ = 'chat' | 'announcement';
+};
+
+type MessageType = 'chat' | 'announcement';
 
 export function ChatMessaging() {
   const { profile } = useAuth();
