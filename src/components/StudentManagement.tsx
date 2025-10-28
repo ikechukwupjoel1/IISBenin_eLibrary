@@ -18,6 +18,9 @@ export function StudentManagement() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [studentsPerPage] = useState(10); // Number of students to display per page
+  const [totalStudents, setTotalStudents] = useState(0);
   const [isAddingStudent, setIsAddingStudent] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showCredentials, setShowCredentials] = useState(false);
@@ -34,19 +37,29 @@ export function StudentManagement() {
 
   useEffect(() => {
     loadStudents();
-  }, []);
+  }, [currentPage, searchTerm]);
 
   const loadStudents = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    const startIndex = (currentPage - 1) * studentsPerPage;
+    const endIndex = startIndex + studentsPerPage - 1;
+
+    let query = supabase
       .from('students')
-      .select('*')
+      .select('*', { count: 'exact' })
       .order('created_at', { ascending: false });
+
+    if (searchTerm) {
+      query = query.or(`name.ilike.%${searchTerm}%,grade_level.ilike.%${searchTerm}%,enrollment_id.ilike.%${searchTerm}%`);
+    }
+
+    const { data, error, count } = await query.range(startIndex, endIndex);
 
     if (error) {
       toast.error('Failed to load students');
     } else if (data) {
       setStudents(data);
+      setTotalStudents(count || 0);
     }
     setLoading(false);
   };
@@ -550,7 +563,7 @@ export function StudentManagement() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredStudents.map((student) => (
+              {students.map((student) => (
                 <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                   <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{student.name}</td>
                   <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{student.grade_level}</td>
@@ -591,6 +604,26 @@ export function StudentManagement() {
               ))}
             </tbody>
           </table>
+        </div>
+        {/* Pagination Controls */}
+        <div className="flex items-center justify-between p-4 border-t border-gray-200 dark:border-gray-700">
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-gray-700 dark:text-gray-300">
+            Page {currentPage} of {Math.ceil(totalStudents / studentsPerPage)}
+          </span>
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(totalStudents / studentsPerPage)))}
+            disabled={currentPage === Math.ceil(totalStudents / studentsPerPage)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            Next
+          </button>
         </div>
       </div>
 

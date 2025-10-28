@@ -704,9 +704,9 @@ export function ChatMessaging() {
   }
 
   return (
-    <div className="h-[calc(100vh-200px)] flex gap-4">
+    <div className="h-[calc(100vh-200px)] flex flex-col sm:flex-row gap-4">
       {/* Conversations List */}
-      <div className="w-80 bg-white rounded-xl border border-gray-200 flex flex-col">
+      <div className="w-full sm:w-80 bg-white rounded-xl border border-gray-200 flex flex-col">
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
@@ -838,7 +838,7 @@ export function ChatMessaging() {
                           key={msg.id}
                           className={`flex ${msg.sender_id === profile?.id ? 'justify-end' : 'justify-start'}`}
                         >
-                          <div className="max-w-[70%]">
+                          <div className="max-w-[calc(100%-3rem)] sm:max-w-[70%]">
                             <div
                               className={`rounded-lg px-4 py-2 ${
                                 msg.sender_id === profile?.id
@@ -1109,7 +1109,7 @@ export function ChatMessaging() {
       {/* New Chat Modal */}
       {showNewChat && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
+          <div className="bg-white rounded-xl max-w-sm sm:max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                 <Users className="h-5 w-5" />

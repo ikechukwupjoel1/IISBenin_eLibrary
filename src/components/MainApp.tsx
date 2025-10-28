@@ -141,7 +141,7 @@ export function MainApp() {
                   }`}
                 >
                   <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span className="hidden xs:inline">{tab.label}</span>
+                  <span>{tab.label}</span>
                 </button>
               );
             })}
