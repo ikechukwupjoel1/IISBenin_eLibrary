@@ -105,20 +105,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        const userProfile = await loadUserProfile(session.user.id);
-        if (!userProfile) {
-          setAuthError('Failed to load user profile. Please contact admin.');
-        }
-        setProfile(userProfile);
-      }
+    const userProfileString = localStorage.getItem('userProfile');
+    if (userProfileString) {
+      const userProfile = JSON.parse(userProfileString);
+      setProfile(userProfile);
+      setUser({ id: userProfile.id } as any);
       setLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      (async () => {
+    } else {
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
         setUser(session?.user ?? null);
         if (session?.user) {
           const userProfile = await loadUserProfile(session.user.id);
@@ -126,8 +120,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setAuthError('Failed to load user profile. Please contact admin.');
           }
           setProfile(userProfile);
-        } else {
+        }
+        setLoading(false);
+      });
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      (async () => {
+        if (!session) {
+          localStorage.removeItem('userProfile');
           setProfile(null);
+          setUser(null);
+        } else {
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            const userProfile = await loadUserProfile(session.user.id);
+            if (!userProfile) {
+              setAuthError('Failed to load user profile. Please contact admin.');
+            }
+            setProfile(userProfile);
+          } else {
+            setProfile(null);
+          }
         }
       })();
     });
@@ -230,6 +244,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await logLogin(identifier, profileData.id, true, role, profileData.full_name);
         setProfile(profileData);
         setUser({ id: profileData.id } as any); // Fake user object
+        localStorage.setItem('userProfile', JSON.stringify(profileData));
       } catch (error) {
         console.error('Error calling verify-login edge function:', error);
         // Fallback to direct password check if edge function fails
@@ -310,6 +325,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     }
+    localStorage.removeItem('userProfile');
     setProfile(null);
     setUser(null);
   };

@@ -33,7 +33,8 @@ export function Announcements() {
         ),
         target_audience
       `)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(2);
 
     if (error) {
       console.error('Error fetching announcements:', error);
@@ -80,7 +81,7 @@ export function Announcements() {
                 <span>
                   - {announcement.created_by?.full_name || 'System'} | {new Date(announcement.created_at).toLocaleString()}
                 </span>
-                {profile?.id === announcement.created_by?.id && (
+                {(profile?.role === 'librarian' || profile?.id === announcement.created_by?.id) && (
                   <button onClick={() => handleDeleteAnnouncement(announcement.id)}>
                     <Trash2 className="h-4 w-4 text-red-500" />
                   </button>
