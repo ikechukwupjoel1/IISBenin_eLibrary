@@ -6,6 +6,7 @@ import schoolLogo from '../assets/Iisbenin logo.png';
 import { useAuth } from '../contexts/AuthContext';
 import { LoadingSkeleton } from './ui/LoadingSkeleton';
 import { Announcements } from './Announcements';
+import { QuoteOfTheDay } from './QuoteOfTheDay';
 
 type Stats = {
   totalBooks: number;
@@ -244,6 +245,8 @@ export function Dashboard() {
           <img src={schoolLogo} alt="IISBenin Logo" className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 object-contain flex-shrink-0" />
           <h2 className="text-lg sm:text-2xl md:text-3xl font-bold text-gray-900">Dashboard Overview</h2>
         </div>
+
+        <QuoteOfTheDay />
 
         <Announcements />
         
