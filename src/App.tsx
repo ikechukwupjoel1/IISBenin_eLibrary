@@ -3,34 +3,29 @@ import { useAuth } from './contexts/AuthContext';
 import { Auth } from './components/Auth';
 import { MainApp } from './components/MainApp';
 import { LibrarianSetup } from './components/LibrarianSetup';
+import { InstitutionSetup } from './components/InstitutionSetup'; // Import the new component
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
 
 function App() {
-  const { user, loading } = useAuth();
+  const { user, profile, institution, loading } = useAuth();
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
 
   useEffect(() => {
     const checkSetup = async () => {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('id')
-        .eq('role', 'librarian')
-        .maybeSingle();
+        .select('id', { count: 'exact', head: true })
+        .eq('role', 'librarian');
 
       if (error) {
-        console.error('Error checking setup:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        });
+        console.error('Error checking setup:', error);
         setNeedsSetup(false);
         return;
       }
 
-      setNeedsSetup(!data);
+      setNeedsSetup(data.length === 0 && count === 0);
     };
 
     checkSetup();
@@ -46,6 +41,11 @@ function App() {
 
   if (needsSetup) {
     return <LibrarianSetup />;
+  }
+
+  // New Onboarding Flow
+  if (user && profile?.role === 'librarian' && institution && !institution.is_setup_complete) {
+    return <InstitutionSetup />;
   }
 
   return (

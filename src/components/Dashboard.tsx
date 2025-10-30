@@ -44,9 +44,15 @@ export function Dashboard() {
   const [staffReadingData, setStaffReadingData] = useState<StaffReadingData[]>([]);
 
   const loadStats = useCallback(async () => {
+    if (!profile?.institution_id) {
+      setLoading(false);
+      return; // Do not load stats if no institution is found
+    }
+
     // For students, filter overdue books by their student_id
     let overdueQuery = supabase.from('borrow_records').select('id', { count: 'exact', head: true })
       .eq('status', 'active')
+      .eq('institution_id', profile.institution_id)
       .lt('due_date', new Date().toISOString());
 
     if (profile?.role === 'student' && profile?.student_id) {
@@ -55,14 +61,14 @@ export function Dashboard() {
 
     // Get pending reports count for librarians/staff
     const pendingReportsQuery = (profile?.role === 'librarian' || profile?.role === 'staff')
-      ? supabase.from('book_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending')
+      ? supabase.from('book_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending').eq('institution_id', profile.institution_id)
       : Promise.resolve({ count: 0 });
 
     const [booksResult, studentsResult, staffResult, borrowedResult, overdueResult, reportsResult] = await Promise.all([
-      supabase.from('books').select('id', { count: 'exact', head: true }),
-      supabase.from('students').select('id', { count: 'exact', head: true }),
-      supabase.from('staff').select('id', { count: 'exact', head: true }),
-      supabase.from('books').select('id', { count: 'exact', head: true }).eq('status', 'borrowed'),
+      supabase.from('books').select('id', { count: 'exact', head: true }).eq('institution_id', profile.institution_id),
+      supabase.from('students').select('id', { count: 'exact', head: true }).eq('institution_id', profile.institution_id),
+      supabase.from('staff').select('id', { count: 'exact', head: true }).eq('institution_id', profile.institution_id),
+      supabase.from('books').select('id', { count: 'exact', head: true }).eq('status', 'borrowed').eq('institution_id', profile.institution_id),
       overdueQuery,
       pendingReportsQuery,
     ]);

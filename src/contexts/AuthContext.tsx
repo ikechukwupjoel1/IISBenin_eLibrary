@@ -10,14 +10,23 @@ type UserProfile = {
   student_id?: string;
   staff_id?: string;
   enrollment_id?: string;
+  institution_id: string;
+};
+
+type Institution = {
+  id: string;
+  name: string;
+  is_setup_complete: boolean;
+  theme_settings?: { logo_url?: string; tagline?: string };
 };
 
 type AuthContextType = {
   user: User | null;
   profile: UserProfile | null;
+  institution: Institution | null;
   loading: boolean;
   signIn: (identifier: string, password: string, role?: 'librarian' | 'staff' | 'student') => Promise<void>;
-  signUp: (email: string, password: string, fullName: string, role: 'librarian' | 'staff' | 'student') => Promise<void>;
+  signUp: (email: string, password: string, fullName: string, role: 'librarian' | 'staff' | 'student', institutionId: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -26,6 +35,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [institution, setInstitution] = useState<Institution | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -38,6 +48,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (error) {
       console.error('Error loading user profile:', error);
+      return null;
+    }
+    return data;
+  };
+
+  const loadInstitution = async (institutionId: string) => {
+    const { data, error } = await supabase
+      .from('institutions')
+      .select('id, name, is_setup_complete, theme_settings')
+      .eq('id', institutionId)
+      .single();
+    
+    if (error) {
+      console.error('Error loading institution:', error);
       return null;
     }
     return data;
@@ -105,45 +129,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    const userProfileString = localStorage.getItem('userProfile');
-    if (userProfileString) {
-      const userProfile = JSON.parse(userProfileString);
+    const loadSessionData = async (sessionUser: User) => {
+      const userProfile = await loadUserProfile(sessionUser.id);
       setProfile(userProfile);
-      setUser({ id: userProfile.id } as any);
+
+      if (userProfile?.institution_id) {
+        const institutionData = await loadInstitution(userProfile.institution_id);
+        setInstitution(institutionData);
+      } else {
+        setInstitution(null);
+      }
+    };
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        await loadSessionData(session.user);
+      }
       setLoading(false);
-    } else {
-      supabase.auth.getSession().then(async ({ data: { session } }) => {
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          const userProfile = await loadUserProfile(session.user.id);
-          if (!userProfile) {
-            setAuthError('Failed to load user profile. Please contact admin.');
-          }
-          setProfile(userProfile);
-        }
-        setLoading(false);
-      });
-    }
+    });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      (async () => {
-        if (!session) {
-          localStorage.removeItem('userProfile');
-          setProfile(null);
-          setUser(null);
-        } else {
-          setUser(session?.user ?? null);
-          if (session?.user) {
-            const userProfile = await loadUserProfile(session.user.id);
-            if (!userProfile) {
-              setAuthError('Failed to load user profile. Please contact admin.');
-            }
-            setProfile(userProfile);
-          } else {
-            setProfile(null);
-          }
-        }
-      })();
+      if (session?.user) {
+        loadSessionData(session.user);
+      } else {
+        setUser(null);
+        setProfile(null);
+        setInstitution(null);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -331,7 +343,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, profile, institution, loading, signIn, signUp, signOut }}>
       {authError && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', background: '#fee', color: '#900', zIndex: 9999, padding: '1em', textAlign: 'center' }}>
           {authError}
