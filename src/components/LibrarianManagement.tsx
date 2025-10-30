@@ -3,6 +3,7 @@ import { Shield, Plus, Edit2, Trash2, Search, X, KeyRound, Printer } from 'lucid
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { generateSecurePassword } from '../utils/validation';
+import { useAuth } from '../contexts/AuthContext';
 import { LoadingSkeleton } from './ui/LoadingSkeleton';
 
 type Librarian = {
@@ -21,6 +22,7 @@ type GeneratedCredentials = {
 };
 
 export function LibrarianManagement() {
+  const { profile: currentLibrarianProfile } = useAuth(); // Get current user's profile
   const [librarians, setLibrarians] = useState<Librarian[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,10 +43,18 @@ export function LibrarianManagement() {
 
   const loadLibrarians = async () => {
     setLoading(true);
+
+    if (!currentLibrarianProfile?.institution_id) {
+      // Don't load data if the institution is unknown
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('user_profiles')
       .select('*')
       .eq('role', 'librarian')
+      .eq('institution_id', currentLibrarianProfile.institution_id)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -65,10 +75,17 @@ export function LibrarianManagement() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Ensure the logged-in user is a librarian with an institution ID
+    if (!currentLibrarianProfile?.institution_id) {
+      toast.error('Could not identify your institution. Please re-login.');
+      return;
+    }
+    const { institution_id } = currentLibrarianProfile;
+
     const password = generatePassword();
     const enrollmentId = `LIB${Math.floor(Math.random() * 100000000)}`;
 
-    console.log('Creating librarian account with:', { email: formData.email, full_name: formData.full_name, enrollmentId });
+    console.log('Creating librarian account for institution:', institution_id);
 
     try {
       // First, check if user profile already exists
@@ -90,6 +107,10 @@ export function LibrarianManagement() {
         email: formData.email,
         password,
         options: {
+          // Pass institution_id for RLS
+          data: {
+            institution_id: institution_id,
+          },
           emailRedirectTo: undefined, // Disable email confirmation
         },
       });
@@ -133,6 +154,7 @@ export function LibrarianManagement() {
             full_name: formData.full_name,
             role: 'librarian',
             enrollment_id: enrollmentId,
+            institution_id: institution_id, // Add institution_id
           })
           .eq('id', authData.user.id);
 
@@ -151,6 +173,7 @@ export function LibrarianManagement() {
             full_name: formData.full_name,
             role: 'librarian',
             enrollment_id: enrollmentId,
+            institution_id: institution_id, // Add institution_id
           });
 
         console.log('Profile insert result:', { profileError });

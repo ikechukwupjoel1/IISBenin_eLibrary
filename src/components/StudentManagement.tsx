@@ -3,6 +3,7 @@ import { Plus, Search, Edit2, Trash2, X, History, KeyRound, Printer, UserPlus } 
 import { supabase, type Student, type BorrowRecord, type Book } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { generateSecurePassword } from '../utils/validation';
+import { useAuth } from '../contexts/AuthContext';
 import { LoadingSkeleton } from './ui/LoadingSkeleton';
 
 type StudentWithHistory = Student & {
@@ -15,6 +16,7 @@ type GeneratedCredentials = {
 };
 
 export function StudentManagement() {
+  const { profile: currentLibrarianProfile } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -36,10 +38,17 @@ export function StudentManagement() {
   });
 
   useEffect(() => {
-    loadStudents();
-  }, [currentPage, searchTerm]);
+    if (currentLibrarianProfile) { // Only load if profile is available
+      loadStudents();
+    }
+  }, [currentPage, searchTerm, currentLibrarianProfile]);
 
   const loadStudents = async () => {
+    if (!currentLibrarianProfile?.institution_id) {
+      setLoading(false);
+      return; // Don't load if no institution
+    }
+
     setLoading(true);
     const startIndex = (currentPage - 1) * studentsPerPage;
     const endIndex = startIndex + studentsPerPage - 1;
@@ -47,6 +56,7 @@ export function StudentManagement() {
     let query = supabase
       .from('students')
       .select('*', { count: 'exact' })
+      .eq('institution_id', currentLibrarianProfile.institution_id) // Filter by institution
       .order('created_at', { ascending: false });
 
     if (searchTerm) {
@@ -90,6 +100,11 @@ export function StudentManagement() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!currentLibrarianProfile?.institution_id) {
+      toast.error('Could not identify your institution. Please re-login.');
+      return;
+    }
+
     if (editingStudent) {
       const { error } = await supabase
         .from('students')
@@ -106,9 +121,9 @@ export function StudentManagement() {
         alert('Error updating student: ' + error.message);
       }
     } else {
-  const enrollmentId = await generateEnrollmentId();
-  const password = generatePassword();
-  const email = formData.parent_email.trim().toLowerCase();
+      const enrollmentId = await generateEnrollmentId();
+      const password = generatePassword();
+      const email = formData.parent_email.trim().toLowerCase();
 
       // Use Edge Function to create user without affecting current session
       const { data: { session } } = await supabase.auth.getSession();
@@ -137,6 +152,7 @@ export function StudentManagement() {
             grade_level: formData.grade_level,
             parent_email: email, // store parent email if needed
             phone_number: null,
+            institution_id: currentLibrarianProfile.institution_id, // Pass institution_id
           }),
         });
 

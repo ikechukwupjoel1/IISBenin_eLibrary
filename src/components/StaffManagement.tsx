@@ -3,6 +3,7 @@ import { UserCog, Plus, Pencil, Trash2, Search, X, KeyRound, Printer } from 'luc
 import { supabase, type Staff } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { generateSecurePassword } from '../utils/validation';
+import { useAuth } from '../contexts/AuthContext';
 import { LoadingSkeleton } from './ui/LoadingSkeleton';
 
 type GeneratedCredentials = {
@@ -13,6 +14,7 @@ type GeneratedCredentials = {
 };
 
 export function StaffManagement() {
+  const { profile: currentLibrarianProfile } = useAuth();
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,18 +31,22 @@ export function StaffManagement() {
   });
 
   useEffect(() => {
-    loadStaff();
-  }, []);
+    if (currentLibrarianProfile) {
+      loadStaff();
+    }
+  }, [currentLibrarianProfile]);
 
   const loadStaff = async () => {
+    if (!currentLibrarianProfile?.institution_id) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    console.log('Loading staff...');
     const { data, error } = await supabase
       .from('staff')
       .select('*')
+      .eq('institution_id', currentLibrarianProfile.institution_id)
       .order('name');
-
-    console.log('Staff load result:', { data, error, count: data?.length });
 
     if (error) {
       console.error('Error loading staff:', error);
@@ -72,6 +78,11 @@ export function StaffManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!currentLibrarianProfile?.institution_id) {
+      toast.error('Could not identify your institution. Please re-login.');
+      return;
+    }
 
     if (editingStaff) {
       console.log('Updating staff:', editingStaff.id, formData);
@@ -112,14 +123,6 @@ export function StaffManagement() {
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user-account`;
 
-      console.log('Creating staff with:', {
-        email,
-        full_name: formData.name,
-        role: 'staff',
-        enrollment_id: enrollmentId,
-        phone_number: formData.phone_number || null,
-      });
-
       try {
         const response = await fetch(apiUrl, {
           method: 'POST',
@@ -135,16 +138,11 @@ export function StaffManagement() {
             role: 'staff',
             enrollment_id: enrollmentId,
             phone_number: formData.phone_number || null,
+            institution_id: currentLibrarianProfile.institution_id, // Pass institution_id
           }),
         });
 
         const result = await response.json();
-
-        console.log('Staff creation response:', { 
-          status: response.status, 
-          statusText: response.statusText,
-          result 
-        });
 
         if (!response.ok || result.error) {
           const errorMsg = result.error || `HTTP ${response.status}: ${response.statusText}`;
@@ -161,9 +159,7 @@ export function StaffManagement() {
         });
         setShowCredentials(true);
 
-        console.log('Staff created successfully, reloading staff list...');
         await loadStaff();
-        console.log('Staff list reloaded');
         handleCancel();
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
