@@ -67,19 +67,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return data;
   };
 
-  const logLogin = async (enrollmentId: string, userId: string | null, success: boolean, role?: string, fullName?: string) => {
+  const logLogin = async (enrollmentId: string, userId: string | null, success: boolean, role?: string, fullName?: string, institutionId?: string | null) => {
     try {
-      console.log('Logging login attempt:', { enrollmentId, userId, success, role, fullName });
+      console.log('Logging login attempt:', { enrollmentId, userId, success, role, fullName, institutionId });
       
-      // Capture user agent (browser/device info)
       const userAgent = navigator.userAgent || 'Unknown';
-      
-      // Try to get IP address (this will need a third-party service or edge function)
       let ipAddress = null;
       let location = null;
       
       try {
-        // Get IP and location from ipapi.co (free tier allows 1000 requests/day)
         const ipResponse = await fetch('https://ipapi.co/json/');
         if (ipResponse.ok) {
           const ipData = await ipResponse.json();
@@ -87,8 +83,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           location = ipData.city && ipData.country_name 
             ? `${ipData.city}, ${ipData.country_name}` 
             : null;
-          
-          console.log('📍 Captured location data:', ipData);
         }
       } catch (ipError) {
         console.warn('Could not fetch IP/location:', ipError);
@@ -102,26 +96,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user_agent: userAgent,
         ip_address: ipAddress,
         location: location,
+        institution_id: institutionId, // Add institution ID to the log
       };
       
-      // Add user_id if we have it
       if (userId) {
         logData.user_id = userId;
       }
       
-      // Add full_name if we have it
       if (fullName) {
         logData.full_name = fullName;
       }
       
-      console.log('📝 Login log data:', logData);
-      
-      const { data, error } = await supabase.from('login_logs').insert([logData]);
+      const { error } = await supabase.from('login_logs').insert([logData]);
       
       if (error) {
         console.error('Error inserting login log:', error);
       } else {
-        console.log('Login log created successfully:', data);
+        console.log('Login log created successfully');
       }
     } catch (error) {
       console.error('Error logging login:', error);
@@ -149,13 +140,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        loadSessionData(session.user);
-      } else {
-        setUser(null);
-        setProfile(null);
-        setInstitution(null);
-      }
+      // Use an async IIFE to handle the async operations safely
+      (async () => {
+        if (session?.user) {
+          try {
+            await loadSessionData(session.user);
+          } catch (e) {
+            console.error("Error in onAuthStateChange:", e);
+            // Sign out the user if session data is corrupt or fails to load
+            await supabase.auth.signOut();
+          }
+        } else {
+          setUser(null);
+          setProfile(null);
+          setInstitution(null);
+        }
+      })();
     });
 
     return () => subscription.unsubscribe();
@@ -163,7 +163,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (identifier: string, password: string, role?: 'librarian' | 'staff' | 'student') => {
     if (role === 'librarian') {
-      // Normalize email to lowercase and trim
       const email = identifier.toLowerCase().trim();
       if (!email) {
         setAuthError('Please enter your email');
@@ -177,9 +176,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (error) {
-          // Surface the exact error message from Supabase
           console.error('Supabase auth error:', error);
-          await logLogin(email, null, false);
+          await logLogin(email, null, false, role);
           const msg = (error as any).message || JSON.stringify(error);
           setAuthError(msg);
           throw new Error(msg);
@@ -189,39 +187,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const userProfile = await loadUserProfile(data.user.id);
           if (!userProfile || userProfile.role !== 'librarian') {
             await supabase.auth.signOut();
-            await logLogin(email, data.user.id, false, 'librarian');
+            await logLogin(email, data.user.id, false, role, userProfile?.full_name, userProfile?.institution_id);
             setAuthError('Access denied. Not a librarian account.');
             throw new Error('Access denied. Not a librarian account.');
           }
-          await logLogin(userProfile.enrollment_id || email, data.user.id, true, 'librarian', userProfile.full_name);
+          await logLogin(userProfile.enrollment_id || email, data.user.id, true, role, userProfile.full_name, userProfile.institution_id);
           setProfile(userProfile);
+          if (userProfile.institution_id) {
+            const institutionData = await loadInstitution(userProfile.institution_id);
+            setInstitution(institutionData);
+          }
           setAuthError(null);
         }
       } catch (err: any) {
-        // Re-throw after ensuring authError is set
         if (!authError) setAuthError(err?.message || 'Authentication failed');
         throw err;
       }
     } else if (role === 'staff' || role === 'student') {
       const tableName = role === 'staff' ? 'staff' : 'students';
-
-      console.log('Starting authentication for:', { role, identifier, tableName });
-
-      // First verify the enrollment_id exists in the staff/students table
       const { data: record, error: fetchError } = await supabase
         .from(tableName)
         .select('*')
         .eq('enrollment_id', identifier)
         .maybeSingle();
 
-      console.log('Record lookup result:', { record, fetchError });
-
       if (fetchError || !record) {
         await logLogin(identifier, null, false, role);
         throw new Error('Invalid enrollment ID');
       }
 
-      // Use edge function to verify password (supports both bcrypt and plain text)
       try {
         const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-login`;
         
@@ -241,70 +235,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await response.json();
 
         if (!response.ok || !data.valid) {
-          await logLogin(identifier, data.profile?.id || null, false, role, data.profile?.full_name);
+          await logLogin(identifier, data.profile?.id || null, false, role, data.profile?.full_name, data.profile?.institution_id);
           throw new Error(data.error || 'Invalid password');
         }
 
         const profileData = data.profile;
-        
-        console.log('Login verified via edge function:', {
-          profileId: profileData.id,
-          role: profileData.role
-        });
-
-        // Set profile directly
-        await logLogin(identifier, profileData.id, true, role, profileData.full_name);
+        await logLogin(identifier, profileData.id, true, role, profileData.full_name, profileData.institution_id);
         setProfile(profileData);
-        setUser({ id: profileData.id } as any); // Fake user object
+        if (profileData.institution_id) {
+          const institutionData = await loadInstitution(profileData.institution_id);
+          setInstitution(institutionData);
+        }
+        setUser({ id: profileData.id } as any);
         localStorage.setItem('userProfile', JSON.stringify(profileData));
       } catch (error) {
-        console.error('Error calling verify-login edge function:', error);
-        // Fallback to direct password check if edge function fails
-        console.log('Falling back to direct password verification');
-        
-        let { data: profileData, error: profileError } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .ilike('enrollment_id', identifier.trim())
-          .eq('role', role)
-          .maybeSingle();
-
-        if ((!profileData || profileError) && role === 'student') {
-          const { data: fallbackProfile, error: fallbackError } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('student_id', record.id)
-            .eq('role', 'student')
-            .maybeSingle();
-          profileData = fallbackProfile ?? profileData;
-          profileError = fallbackError ?? profileError;
-        }
-
-        if ((!profileData || profileError) && role === 'staff') {
-          const { data: fallbackProfile, error: fallbackError } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('staff_id', record.id)
-            .eq('role', 'staff')
-            .maybeSingle();
-          profileData = fallbackProfile ?? profileData;
-          profileError = fallbackError ?? profileError;
-        }
-
-        if (profileError || !profileData) {
-          await logLogin(identifier, null, false, role);
-          throw new Error('User profile not found');
-        }
-
-        // Direct password check (plain text only in fallback)
-        if (profileData.password_hash !== password) {
-          await logLogin(identifier, profileData.id, false, role, profileData.full_name);
-          throw new Error('Invalid password');
-        }
-        
-        await logLogin(identifier, profileData.id, true, role, profileData.full_name);
-        setProfile(profileData);
-        setUser({ id: profileData.id } as any);
+        console.error('Error during custom login:', error);
+        await logLogin(identifier, null, false, role);
+        throw error;
       }
     } else {
       throw new Error('Invalid role specified');
