@@ -14,18 +14,20 @@ function App() {
 
   useEffect(() => {
     const checkSetup = async () => {
-      const { data, error } = await supabase
+      // Check if any librarian accounts exist to determine if initial setup is needed.
+      const { count, error } = await supabase
         .from('user_profiles')
         .select('id', { count: 'exact', head: true })
         .eq('role', 'librarian');
 
       if (error) {
-        console.error('Error checking setup:', error);
-        setNeedsSetup(false);
+        console.error('Error checking for initial setup:', error);
+        setNeedsSetup(false); // Default to false on error to avoid blocking app
         return;
       }
 
-      setNeedsSetup(data.length === 0 && count === 0);
+      // If there are no librarians, setup is needed.
+      setNeedsSetup(count === 0);
     };
 
     checkSetup();
