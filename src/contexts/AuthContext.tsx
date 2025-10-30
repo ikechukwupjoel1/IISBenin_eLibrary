@@ -134,6 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
+        setUser(session.user);
         await loadSessionData(session.user);
       }
       setLoading(false);
@@ -144,6 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       (async () => {
         if (session?.user) {
           try {
+            setUser(session.user);
             await loadSessionData(session.user);
           } catch (e) {
             console.error("Error in onAuthStateChange:", e);
