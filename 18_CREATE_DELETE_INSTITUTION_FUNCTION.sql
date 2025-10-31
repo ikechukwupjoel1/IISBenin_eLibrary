@@ -1,9 +1,10 @@
--- Creates a function that can only be called by a super_admin to create a new institution.
+-- Creates a function that can only be called by a super_admin to delete an institution.
 
-CREATE OR REPLACE FUNCTION public.create_institution(new_name TEXT, new_feature_flags JSONB)
-RETURNS SETOF institutions AS $$
+CREATE OR REPLACE FUNCTION public.delete_institution(target_institution_id UUID)
+RETURNS UUID AS $$
 DECLARE
   current_user_role TEXT;
+  deleted_id UUID;
 BEGIN
   -- Get the role of the currently logged-in user
   SELECT role INTO current_user_role
@@ -15,11 +16,12 @@ BEGIN
     RAISE EXCEPTION 'Permission denied: You must be a super admin to perform this action.';
   END IF;
 
-  -- Insert the new institution with feature flags and return it
-  RETURN QUERY
-  INSERT INTO public.institutions (name, feature_flags)
-  VALUES (new_name, new_feature_flags)
-  RETURNING *;
+  -- Delete the institution and return its id
+  DELETE FROM public.institutions
+  WHERE id = target_institution_id
+  RETURNING id INTO deleted_id;
+
+  RETURN deleted_id;
 
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

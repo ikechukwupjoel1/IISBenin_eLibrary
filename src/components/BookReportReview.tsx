@@ -88,7 +88,7 @@ export function BookReportReview() {
 
     setReviewing(true);
     try {
-      const updates: {
+      let updates: {
         reviewed_by: string | undefined;
         reviewed_at: string;
         librarian_feedback: string | null;
