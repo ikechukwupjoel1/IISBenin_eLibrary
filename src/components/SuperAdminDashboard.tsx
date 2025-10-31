@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { Building, Plus, X, Edit, Trash2, Eye, EyeOff, LogIn, Users, Book, Library, CheckCircle, Clock, BookUp, FileText } from 'lucide-react';
+import { Building, Plus, X, Edit, Trash2, Eye, EyeOff, LogIn, Users, Book, Library, CheckCircle, Clock, BookUp, FileText, LogOut } from 'lucide-react';
 
 type Institution = {
   id: string;
@@ -27,6 +28,7 @@ const TOGGLEABLE_FEATURES = [
 ];
 
 export function SuperAdminDashboard() {
+  const { signOut } = useAuth();
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -222,7 +224,16 @@ export function SuperAdminDashboard() {
   return (
     <>
       <div className="space-y-6">
-        <div className="flex items-center justify-between"><h2 className="text-2xl font-bold text-gray-900">ArkosLIB Super Dashboard</h2></div>
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-900">ArkosLIB</h2>
+          <div className="flex items-center gap-4">
+            <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"><Plus className="h-5 w-5" /> New Institution</button>
+            <button onClick={signOut} className="flex items-center gap-2 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300">
+              <LogOut className="h-5 w-5" />
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
         
         {globalStats && (
           <div>

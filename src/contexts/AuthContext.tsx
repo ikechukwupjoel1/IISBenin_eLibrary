@@ -121,44 +121,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    const loadSessionData = async (sessionUser: User) => {
-      const userProfile = await loadUserProfile(sessionUser.id);
-      setProfile(userProfile);
-
-      if (userProfile?.institution_id) {
-        const institutionData = await loadInstitution(userProfile.institution_id);
-        setInstitution(institutionData);
-      } else {
-        setInstitution(null);
-      }
-    };
-
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    const initSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setUser(session.user);
-        await loadSessionData(session.user);
+        const userProfile = await loadUserProfile(session.user.id);
+        setProfile(userProfile);
+
+        if (userProfile?.institution_id) {
+          const institutionData = await loadInstitution(userProfile.institution_id);
+          setInstitution(institutionData);
+        }
       }
       setLoading(false);
-    });
+    };
+
+    initSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      // Use an async IIFE to handle the async operations safely
-      (async () => {
-        if (session?.user) {
-          try {
-            setUser(session.user);
-            await loadSessionData(session.user);
-          } catch (e) {
-            console.error("Error in onAuthStateChange:", e);
-            // Sign out the user if session data is corrupt or fails to load
-            await supabase.auth.signOut();
+      if (!session) {
+        setProfile(null);
+        setInstitution(null);
+        setUser(null);
+      } else if (session.user) {
+        setUser(session.user);
+        // Re-fetch profile and institution on auth change
+        loadUserProfile(session.user.id).then(userProfile => {
+          setProfile(userProfile);
+          if (userProfile?.institution_id) {
+            loadInstitution(userProfile.institution_id).then(setInstitution);
+          } else {
+            setInstitution(null);
           }
-        } else {
-          setUser(null);
-          setProfile(null);
-          setInstitution(null);
-        }
-      })();
+        });
+      }
     });
 
     return () => subscription.unsubscribe();
