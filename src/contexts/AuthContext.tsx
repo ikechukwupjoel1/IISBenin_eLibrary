@@ -6,7 +6,7 @@ type UserProfile = {
   id: string;
   email: string;
   full_name: string;
-  role: 'librarian' | 'staff' | 'student';
+  role: 'librarian' | 'staff' | 'student' | 'super_admin';
   student_id?: string;
   staff_id?: string;
   enrollment_id?: string;

@@ -19,7 +19,7 @@ function MainApp() {
   const [activeTab, setActiveTab] = useState('dashboard');
   // Dynamic tab logic: role and feature-flag filtering
   const allTabs = [
-    { id: 'dashboard', label: 'Dashboard', roles: ['librarian', 'staff', 'student'] },
+    { id: 'dashboard', label: 'Dashboard', roles: ['librarian', 'staff', 'student', 'super_admin'] },
     { id: 'books', label: 'Books', roles: ['librarian', 'staff'] },
     { id: 'students', label: 'Students', roles: ['librarian'] },
     { id: 'staff', label: 'Staff', roles: ['librarian'] },
