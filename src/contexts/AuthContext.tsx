@@ -17,6 +17,7 @@ type Institution = {
   id: string;
   name: string;
   is_setup_complete: boolean;
+  is_active?: boolean;
   feature_flags: Record<string, boolean>;
   theme_settings?: { logo_url?: string; tagline?: string };
 };
@@ -57,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadInstitution = async (institutionId: string) => {
     const { data, error } = await supabase
       .from('institutions')
-      .select('id, name, is_setup_complete, theme_settings, feature_flags')
+      .select('id, name, is_setup_complete, is_active, theme_settings, feature_flags')
       .eq('id', institutionId)
       .single();
     
@@ -192,15 +193,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           await logLogin(userProfile.enrollment_id || email, data.user.id, true, role, userProfile.full_name, userProfile.institution_id);
           setProfile(userProfile);
-          if (userProfile.institution_id) {
+          if (userProfile.role === 'super_admin') {
+            setInstitution(null);
+          } else if (userProfile.institution_id) {
             const institutionData = await loadInstitution(userProfile.institution_id);
-            if (userProfile.role !== 'super_admin' && !institutionData?.is_active) {
+            if (!institutionData?.is_active) {
               await supabase.auth.signOut();
               throw new Error('This institution account has been suspended.');
             }
             setInstitution(institutionData);
-          } else if (userProfile.role === 'super_admin') {
-            setInstitution(null);
           }
           setAuthError(null);
         }
