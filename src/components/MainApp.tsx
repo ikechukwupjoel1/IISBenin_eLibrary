@@ -39,7 +39,7 @@ type Tab = 'dashboard' | 'books' | 'mybooks' | 'digital' | 'students' | 'staff' 
 
 export function MainApp() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
-  const { signOut, profile } = useAuth();
+  const { signOut, profile, institution } = useAuth();
   
   // Enable real-time notifications for report status changes
   useReportNotifications();
@@ -97,13 +97,13 @@ export function MainApp() {
           <div className="flex items-center justify-between gap-2 sm:gap-4">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               <img
-                src={schoolLogo}
-                alt="IISBenin Logo"
+                src={institution?.theme_settings?.logo_url || schoolLogo}
+                alt={institution?.name || 'Logo'}
                 className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0 object-contain"
               />
               <div className="min-w-0 flex-1">
                 <h1 className="text-sm sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-900 truncate">
-                  IISBenin Library
+                  {institution?.name || 'eLibrary'}
                 </h1>
                 {profile && (
                   <p className="text-xs sm:text-sm text-gray-600 truncate">
