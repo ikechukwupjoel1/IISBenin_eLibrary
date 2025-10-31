@@ -41,6 +41,8 @@ export function SuperAdminDashboard() {
   const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
   const [selectedInstitution, setSelectedInstitution] = useState<Institution | null>(null);
+  const [selectedInstitutionStats, setSelectedInstitutionStats] = useState<any | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
   const [editFormData, setEditFormData] = useState({
     name: '',
     tagline: '',
@@ -103,8 +105,24 @@ export function SuperAdminDashboard() {
     setIsSubmitting(false);
   };
 
+  const fetchInstitutionStats = async (institutionId: string) => {
+    setStatsLoading(true);
+    setSelectedInstitutionStats(null);
+    try {
+      const { data, error } = await supabase.rpc('get_institution_stats', { target_institution_id: institutionId });
+      if (error) throw error;
+      setSelectedInstitutionStats(data);
+    } catch (error) {
+      toast.error('Failed to load institution stats.');
+      console.error('Error fetching institution stats:', error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
   const openDetailModal = (inst: Institution) => {
     setSelectedInstitution(inst);
+    fetchInstitutionStats(inst.id); // Fetch stats when modal opens
     setEditFormData({
       name: inst.name,
       tagline: inst.theme_settings?.tagline || '',
@@ -357,7 +375,6 @@ export function SuperAdminDashboard() {
           </div>
         )}
 
-        <div className="flex items-center justify-between"><h3 className="text-xl font-bold text-gray-900">Institutions</h3><button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"><Plus className="h-5 w-5" /> New Institution</button></div>
         <div className="bg-white rounded-lg shadow border overflow-hidden">
           <table className="w-full"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Setup Complete?</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created At</th></tr></thead>
             <tbody className="divide-y divide-gray-200">
@@ -378,7 +395,38 @@ export function SuperAdminDashboard() {
       {isDetailModalOpen && selectedInstitution && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-xl max-w-lg w-full p-6"><div className="flex items-center justify-between"><h3 className="text-xl font-bold text-gray-900">{modalMode === 'view' ? 'Institution Details' : 'Edit Institution'}</h3><button onClick={() => setIsDetailModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="h-6 w-6" /></button></div>
             
-            {modalMode === 'view' && (<div className="space-y-4"><div><p className="text-sm font-medium text-gray-500">Name</p><p>{selectedInstitution.name}</p></div><div><p className="text-sm font-medium text-gray-500">Status</p><p><span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${selectedInstitution.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{selectedInstitution.is_active ? 'Active' : 'Suspended'}</span></p></div><div><p className="text-sm font-medium text-gray-500">Tagline</p><p>{selectedInstitution.theme_settings?.tagline || '-'}</p></div><div><p className="text-sm font-medium text-gray-500">Logo</p><img src={selectedInstitution.theme_settings?.logo_url} alt="Logo" className="mt-1 max-h-24 rounded border p-2" /></div><div><p className="text-sm font-medium text-gray-500">Favicon</p><img src={selectedInstitution.theme_settings?.favicon_url} alt="Favicon" className="mt-1 h-8 w-8 rounded border p-1" /></div><div className="flex justify-end gap-2 pt-4 border-t"><button type="button" onClick={handleImpersonate} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700"><LogIn className="h-4 w-4"/>Impersonate</button><button type="button" onClick={() => setIsSuspendModalOpen(true)} className={`flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-lg ${selectedInstitution.is_active ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-green-600 hover:bg-green-700'}`}>{selectedInstitution.is_active ? <><EyeOff className="h-4 w-4"/>Suspend</> : <><Eye className="h-4 w-4"/>Reactivate</>}</button><button type="button" onClick={() => setIsDeleteModalOpen(true)} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"><Trash2 className="h-4 w-4"/>Delete</button><button type="button" onClick={() => setModalMode('edit')} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"><Edit className="h-4 w-4"/>Edit</button></div></div>)}
+            {modalMode === 'view' && (<div className="space-y-4"><div><p className="text-sm font-medium text-gray-500">Name</p><p>{selectedInstitution.name}</p></div><div><p className="text-sm font-medium text-gray-500">Status</p><p><span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${selectedInstitution.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{selectedInstitution.is_active ? 'Active' : 'Suspended'}</span></p></div><div><p className="text-sm font-medium text-gray-500">Tagline</p><p>{selectedInstitution.theme_settings?.tagline || '-'}</p></div><div><p className="text-sm font-medium text-gray-500">Logo</p><img src={selectedInstitution.theme_settings?.logo_url} alt="Logo" className="mt-1 max-h-24 rounded border p-2" /></div><div><p className="text-sm font-medium text-gray-500">Favicon</p><img src={selectedInstitution.theme_settings?.favicon_url} alt="Favicon" className="mt-1 h-8 w-8 rounded border p-1" /></div>
+
+            <div className="border-t pt-4">
+              <h4 className="text-md font-semibold text-gray-800 mb-2">Institution Stats</h4>
+              {statsLoading && <p>Loading stats...</p>}
+              {selectedInstitutionStats && !statsLoading && (
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="font-medium text-gray-900">{selectedInstitutionStats.students}</p>
+                    <p className="text-gray-500">Students</p>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="font-medium text-gray-900">{selectedInstitutionStats.staff}</p>
+                    <p className="text-gray-500">Staff</p>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="font-medium text-gray-900">{selectedInstitutionStats.books}</p>
+                    <p className="text-gray-500">Books</p>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="font-medium text-gray-900">{selectedInstitutionStats.borrows}</p>
+                    <p className="text-gray-500">Books Borrowed</p>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-lg col-span-2">
+                    <p className="font-medium text-gray-900">{selectedInstitutionStats.reports}</p>
+                    <p className="text-gray-500">Book Reports</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4 border-t"><button type="button" onClick={handleImpersonate} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700"><LogIn className="h-4 w-4"/>Impersonate</button><button type="button" onClick={() => setIsSuspendModalOpen(true)} className={`flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-lg ${selectedInstitution.is_active ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-green-600 hover:bg-green-700'}`}>{selectedInstitution.is_active ? <><EyeOff className="h-4 w-4"/>Suspend</> : <><Eye className="h-4 w-4"/>Reactivate</>}</button><button type="button" onClick={() => setIsDeleteModalOpen(true)} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"><Trash2 className="h-4 w-4"/>Delete</button><button type="button" onClick={() => setModalMode('edit')} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"><Edit className="h-4 w-4"/>Edit</button></div></div>)}
 
             {modalMode === 'edit' && (<form onSubmit={handleUpdateInstitution} className="space-y-4 mt-4"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-gray-700">Name</label><input type="text" value={editFormData.name} onChange={(e) => setEditFormData({...editFormData, name: e.target.value})} className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg" required /></div><div><label className="block text-sm font-medium text-gray-700">Tagline</label><input type="text" value={editFormData.tagline} onChange={(e) => setEditFormData({...editFormData, tagline: e.target.value})} className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg" /></div></div><div><label className="block text-sm font-medium text-gray-700">Logo</label><input type="file" onChange={(e) => e.target.files && setNewLogoFile(e.target.files[0])} className="w-full text-sm" accept="image/png, image/jpeg, image/webp" /></div><div><label className="block text-sm font-medium text-gray-700">Favicon</label><input type="file" onChange={(e) => e.target.files && setNewFaviconFile(e.target.files[0])} className="w-full text-sm" accept="image/x-icon, image/png, image/svg+xml" /></div><div className="border-t pt-4"><h4 className="text-md font-semibold text-gray-800 mb-2">Feature Toggles</h4><div className="grid grid-cols-2 gap-2">{TOGGLEABLE_FEATURES.map(feature => (<div key={feature.id} className="flex items-center"><input type="checkbox" id={`feature-${feature.id}`} checked={!!editFormData.feature_flags[feature.id]} onChange={(e) => setEditFormData(prev => ({ ...prev, feature_flags: { ...prev.feature_flags, [feature.id]: e.target.checked } }))} className="h-4 w-4 text-blue-600 border-gray-300 rounded" /><label htmlFor={`feature-${feature.id}`} className="ml-2 text-sm text-gray-700">{feature.label}</label></div>))}</div></div>
 <div className="flex justify-end gap-2 pt-4 border-t">
