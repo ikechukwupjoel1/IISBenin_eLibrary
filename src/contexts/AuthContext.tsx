@@ -198,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(userProfile);
           if (userProfile.institution_id) {
             const institutionData = await loadInstitution(userProfile.institution_id);
-            if (!institutionData?.is_active) {
+            if (userProfile.role !== 'super_admin' && !institutionData?.is_active) {
               await supabase.auth.signOut();
               throw new Error('This institution account has been suspended.');
             }
