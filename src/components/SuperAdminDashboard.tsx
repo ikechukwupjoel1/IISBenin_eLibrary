@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+// Types for impersonation
+type AdminUser = { id: string; full_name?: string; email: string; role: string; institution_id: string };
+type InstitutionStats = { students: number; staff: number; books: number; borrows: number; reports: number };
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { Building, Plus, X, Edit, Trash2, Eye, EyeOff, LogIn, Users, Book, Library, CheckCircle, Clock, BookUp, FileText, Search } from 'lucide-react';
+import { Plus, X, Edit, Trash2, Eye, EyeOff, LogIn, Search } from 'lucide-react';
 
 type Institution = {
   id: string;
@@ -28,6 +30,26 @@ const TOGGLEABLE_FEATURES = [
 ];
 
 export function SuperAdminDashboard() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Impersonation state
+  const [impersonateInstitutionId, setImpersonateInstitutionId] = useState<string | null>(null);
+  const [impersonateAdminId, setImpersonateAdminId] = useState<string | null>(null);
+  const [impersonating, setImpersonating] = useState(false);
+  const [adminsByInstitution, setAdminsByInstitution] = useState<Record<string, AdminUser[]>>({});
+  const [impersonationHistory, setImpersonationHistory] = useState<Array<{timestamp: string, adminName: string, adminEmail: string, institutionName: string}>>([]);
+
+
+  const [activeSection, setActiveSection] = useState('institutions');
+  const sectionRefs = {
+    institutions: React.useRef<HTMLDivElement>(null),
+    analytics: React.useRef<HTMLDivElement>(null),
+    features: React.useRef<HTMLDivElement>(null),
+    impersonation: React.useRef<HTMLDivElement>(null),
+  };
+  const scrollToSection = (section: keyof typeof sectionRefs) => {
+    setActiveSection(section);
+    sectionRefs[section].current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,7 +67,7 @@ export function SuperAdminDashboard() {
   const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
   const [selectedInstitution, setSelectedInstitution] = useState<Institution | null>(null);
-  const [selectedInstitutionStats, setSelectedInstitutionStats] = useState<any | null>(null);
+  const [selectedInstitutionStats, setSelectedInstitutionStats] = useState<InstitutionStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [editFormData, setEditFormData] = useState({
     name: '',
@@ -96,7 +118,7 @@ export function SuperAdminDashboard() {
     try {
       const { data, error } = await supabase.rpc('get_institution_stats', { target_institution_id: institutionId });
       if (error) throw error;
-      setSelectedInstitutionStats(data);
+      setSelectedInstitutionStats(data as InstitutionStats);
     } catch (error) {
       toast.error('Failed to load institution stats.');
       console.error('Error fetching institution stats:', error);
@@ -144,7 +166,7 @@ export function SuperAdminDashboard() {
         faviconUrl = supabase.storage.from('institution_logos').getPublicUrl(filePath).data.publicUrl;
       }
 
-      const { data, error: rpcError } = await supabase.rpc('super_admin_update_institution', {
+  const { error: rpcError } = await supabase.rpc('super_admin_update_institution', {
         target_institution_id: selectedInstitution.id,
         new_name: editFormData.name,
         new_tagline: editFormData.tagline,
@@ -168,26 +190,44 @@ export function SuperAdminDashboard() {
   };
 
   const handleImpersonate = async () => {
-    if (!selectedInstitution) return;
-    if (!window.confirm(`Are you sure you want to impersonate an admin of "${selectedInstitution.name}"? Your current session will be replaced.`)) return;
-
-    setIsSubmitting(true);
+    if (!impersonateInstitutionId || !impersonateAdminId) return;
+    const institution = institutions.find(i => i.id === impersonateInstitutionId);
+    const admin = adminsByInstitution[impersonateInstitutionId]?.find(a => a.id === impersonateAdminId);
+    if (!institution || !admin) return;
+    if (!window.confirm(`Are you sure you want to impersonate ${admin.full_name || admin.email} at "${institution.name}"? Your current session will be replaced.`)) return;
+    setImpersonating(true);
     try {
-      const { data, error } = await supabase.rpc('impersonate_institution_admin', { target_institution_id: selectedInstitution.id });
+      const { data, error } = await supabase.rpc('impersonate_institution_admin', { target_institution_id: institution.id, target_admin_id: admin.id });
       if (error) throw error;
-
       const { access_token, refresh_token } = data;
       await supabase.auth.setSession({ access_token, refresh_token });
-
-      toast.success(`Now impersonating ${selectedInstitution.name}. Redirecting...`);
+      setImpersonationHistory(prev => [
+        { timestamp: new Date().toLocaleString(), adminName: admin.full_name || '', adminEmail: admin.email, institutionName: institution.name },
+        ...prev
+      ]);
+      toast.success(`Now impersonating ${admin.full_name || admin.email} at ${institution.name}. Redirecting...`);
       window.location.href = '/';
-
     } catch (error) {
       toast.error(`Impersonation failed: ${(error as Error).message}`);
     } finally {
-      setIsSubmitting(false);
+      setImpersonating(false);
     }
   };
+  // Fetch institution admins when institution changes
+  useEffect(() => {
+    if (!impersonateInstitutionId) return;
+    const fetchAdmins = async () => {
+      const { data, error } = await supabase
+        .from('staff')
+        .select('id, full_name, email, role, institution_id')
+        .eq('institution_id', impersonateInstitutionId)
+        .eq('role', 'admin');
+      if (!error && data) {
+        setAdminsByInstitution(prev => ({ ...prev, [impersonateInstitutionId]: data }));
+      }
+    };
+    fetchAdmins();
+  }, [impersonateInstitutionId]);
 
   const handleDeleteInstitution = async () => {
     if (!selectedInstitution) return;
@@ -291,120 +331,327 @@ export function SuperAdminDashboard() {
       toast.success(`Bulk ${action} successful for ${selectedInstitutionIds.length} institutions!`);
       setSelectedInstitutionIds([]);
       fetchInstitutions(); // Refresh the list
-    } catch (err: any) {
-      toast.error(`Bulk action failed: ${err.message}`);
-      console.error('Bulk action error:', err);
+    } catch (err) {
+      if (err instanceof Error) {
+        toast.error(`Bulk action failed: ${err.message}`);
+        console.error('Bulk action error:', err);
+      } else {
+        toast.error('Bulk action failed.');
+      }
     } finally {
       setBulkActionLoading(false);
     }
   };
 
+
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   return (
-    <>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900">Institution Management</h2>
-          <div className="flex items-center gap-4">
-            <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"><Plus className="h-5 w-5" /> New Institution</button>
-          </div>
+    <div className="flex min-h-[80vh] relative">
+      {/* Hamburger for mobile */}
+      <button
+        className="sm:hidden fixed top-4 left-4 z-40 bg-white border border-gray-300 rounded-full p-2 shadow-lg"
+        aria-label="Open sidebar"
+        onClick={() => setSidebarOpen(true)}
+      >
+        <svg className="h-6 w-6 text-gray-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+      </button>
+      {/* Sidebar Navigation */}
+      <nav className={`fixed inset-0 z-50 sm:static sm:z-auto sm:w-56 bg-white border-r border-gray-200 py-8 px-4 space-y-2 h-full sm:h-fit transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} sm:translate-x-0`} style={{maxWidth:'16rem'}}>
+        {/* Overlay for mobile */}
+        <div className="sm:hidden fixed inset-0 bg-black bg-opacity-30 z-40" onClick={() => setSidebarOpen(false)} style={{display: sidebarOpen ? 'block' : 'none'}} />
+        <div className="relative z-50">
+          <button className="sm:hidden absolute top-2 right-2 p-2" aria-label="Close sidebar" onClick={() => setSidebarOpen(false)}>
+            <svg className="h-6 w-6 text-gray-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+          <h2 className="text-base sm:text-lg font-bold mb-6 text-blue-700">Super Admin Panel</h2>
+          <ul className="space-y-2">
+            <li>
+              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'institutions' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {scrollToSection('institutions'); setSidebarOpen(false);}}>Institution Management</button>
+            </li>
+            <li>
+              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'analytics' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {scrollToSection('analytics'); setSidebarOpen(false);}}>Analytics</button>
+            </li>
+            <li>
+              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'features' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {scrollToSection('features'); setSidebarOpen(false);}}>Feature Flags</button>
+            </li>
+            <li>
+              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'impersonation' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {scrollToSection('impersonation'); setSidebarOpen(false);}}>Impersonation</button>
+            </li>
+          </ul>
         </div>
-        
-        {/* Filter, Search, and Bulk Actions Controls */}
-        <div className="bg-white p-4 rounded-lg shadow flex flex-col sm:flex-row items-center gap-4">
-          <div className="relative flex-grow w-full sm:w-auto">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <Search className="h-5 w-5 text-gray-400" />
+      </nav>
+      {/* Main Content */}
+      <div className="flex-1 px-2 sm:px-6 py-8 space-y-12">
+        {/* Institution Management Section */}
+        <section ref={sectionRefs.institutions} className="scroll-mt-24">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base sm:text-lg md:text-2xl font-bold text-gray-900">Institution Management</h2>
+              <div className="flex items-center gap-4">
+                <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"><Plus className="h-5 w-5" /> New Institution</button>
+              </div>
             </div>
-            <input
-              type="text"
-              placeholder="Search by name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full rounded-md border-gray-300 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-            />
-          </div>
-          <div className="w-full sm:w-auto">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-            >
-              <option value="all">All Statuses</option>
-              <option value="active">Active</option>
-              <option value="suspended">Suspended</option>
-              <option value="pending_setup">Pending Setup</option>
-            </select>
-          </div>
-          {selectedInstitutionIds.length > 0 && (
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <select
-                onChange={(e) => handleBulkAction(e.target.value as 'suspend' | 'reactivate' | 'delete')}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                defaultValue=""
-                disabled={bulkActionLoading}
-              >
-                <option value="" disabled>Bulk Actions ({selectedInstitutionIds.length})</option>
-                <option value="reactivate">Reactivate Selected</option>
-                <option value="suspend">Suspend Selected</option>
-                <option value="delete">Delete Selected</option>
-              </select>
-              {bulkActionLoading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>}
-            </div>
-          )}
-        </div>
-
-        <div className="bg-white rounded-lg shadow border overflow-hidden">
-          <table className="w-full"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-12"><input type="checkbox" onChange={handleSelectAll} checked={selectedInstitutionIds.length === paginatedInstitutions.length && paginatedInstitutions.length > 0} className="rounded text-blue-600" /></th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Setup Complete?</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created At</th></tr></thead>
-            <tbody className="divide-y divide-gray-200">
-              {paginatedInstitutions.length > 0 ? (
-                paginatedInstitutions.map((inst) => (
-                  <tr key={inst.id} className="hover:bg-gray-50 cursor-pointer">
-                    <td className="px-6 py-4"><input type="checkbox" checked={selectedInstitutionIds.includes(inst.id)} onChange={() => handleSelectInstitution(inst.id)} onClick={(e) => e.stopPropagation()} className="rounded text-blue-600" /></td>
-                    <td className="px-6 py-4 font-medium text-gray-900" onClick={() => openDetailModal(inst)}>{inst.name}</td>
-                    <td className="px-6 py-4" onClick={() => openDetailModal(inst)}><span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${inst.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{inst.is_active ? 'Active' : 'Suspended'}</span></td>
-                    <td className="px-6 py-4" onClick={() => openDetailModal(inst)}><span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${inst.is_setup_complete ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{inst.is_setup_complete ? 'Yes' : 'No'}</span></td>
-                    <td className="px-6 py-4 text-sm text-gray-500" onClick={() => openDetailModal(inst)}>{new Date(inst.created_at).toLocaleDateString()}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={5} className="text-center py-12 text-gray-500">
-                    No institutions match the current filters.
-                  </td>
-                </tr>
+            {/* ...existing filter/search/bulk actions/table code... */}
+            {/* Filter, Search, and Bulk Actions Controls */}
+            <div className="bg-white p-4 rounded-lg shadow flex flex-col sm:flex-row items-center gap-4">
+              <div className="relative flex-grow w-full sm:w-auto">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <Search className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search by name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="block w-full rounded-md border-gray-300 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                />
+              </div>
+              <div className="w-full sm:w-auto">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="active">Active</option>
+                  <option value="suspended">Suspended</option>
+                  <option value="pending_setup">Pending Setup</option>
+                </select>
+              </div>
+              {selectedInstitutionIds.length > 0 && (
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <select
+                    onChange={(e) => handleBulkAction(e.target.value as 'suspend' | 'reactivate' | 'delete')}
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    defaultValue=""
+                    disabled={bulkActionLoading}
+                  >
+                    <option value="" disabled>Bulk Actions ({selectedInstitutionIds.length})</option>
+                    <option value="reactivate">Reactivate Selected</option>
+                    <option value="suspend">Suspend Selected</option>
+                    <option value="delete">Delete Selected</option>
+                  </select>
+                  {bulkActionLoading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>}
+                </div>
               )}
-            </tbody>
-          </table>
-          {/* Pagination Controls */}
-          <div className="p-4 border-t flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-700">
-                Showing <span className="font-medium">{Math.min(startIndex + 1, filteredInstitutions.length)}</span> to <span className="font-medium">{Math.min(startIndex + ITEMS_PER_PAGE, filteredInstitutions.length)}</span> of {' '}
-                <span className="font-medium">{filteredInstitutions.length}</span> results
-              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={() => goToPage(currentPage - 1)} 
-                disabled={currentPage === 1}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-lg hover:bg-gray-50 disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <span className="text-sm text-gray-600">Page {currentPage} of {totalPages > 0 ? totalPages : 1}</span>
-              <button 
-                onClick={() => goToPage(currentPage + 1)} 
-                disabled={currentPage === totalPages || totalPages === 0}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-lg hover:bg-gray-50 disabled:opacity-50"
-              >
-                Next
-              </button>
+            {/* ...existing table and pagination code... */}
+            <div className="bg-white rounded-lg shadow border overflow-hidden">
+              {/* Responsive Table: flex on mobile, table on sm+ */}
+              <div className="hidden sm:block">
+                <table className="w-full"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-12"><input type="checkbox" onChange={handleSelectAll} checked={selectedInstitutionIds.length === paginatedInstitutions.length && paginatedInstitutions.length > 0} className="rounded text-blue-600" /></th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Setup Complete?</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created At</th></tr></thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {paginatedInstitutions.length > 0 ? (
+                      paginatedInstitutions.map((inst) => (
+                        <tr key={inst.id} className="hover:bg-gray-50 cursor-pointer">
+                          <td className="px-6 py-4"><input type="checkbox" checked={selectedInstitutionIds.includes(inst.id)} onChange={() => handleSelectInstitution(inst.id)} onClick={(e) => e.stopPropagation()} className="rounded text-blue-600" /></td>
+                          <td className="px-6 py-4 font-medium text-gray-900" onClick={() => openDetailModal(inst)}>{inst.name}</td>
+                          <td className="px-6 py-4" onClick={() => openDetailModal(inst)}><span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${inst.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{inst.is_active ? 'Active' : 'Suspended'}</span></td>
+                          <td className="px-6 py-4" onClick={() => openDetailModal(inst)}><span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${inst.is_setup_complete ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{inst.is_setup_complete ? 'Yes' : 'No'}</span></td>
+                          <td className="px-6 py-4 text-sm text-gray-500" onClick={() => openDetailModal(inst)}>{new Date(inst.created_at).toLocaleDateString()}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="text-center py-12 text-gray-500">
+                          No institutions match the current filters.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {/* Mobile stacked layout */}
+              <div className="sm:hidden divide-y divide-gray-200">
+                {paginatedInstitutions.length > 0 ? (
+                  paginatedInstitutions.map((inst) => (
+                    <div key={inst.id} className="flex flex-col gap-2 px-4 py-4 hover:bg-gray-50 cursor-pointer">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-gray-900">{inst.name}</span>
+                        <input type="checkbox" checked={selectedInstitutionIds.includes(inst.id)} onChange={() => handleSelectInstitution(inst.id)} onClick={e => e.stopPropagation()} className="rounded text-blue-600 w-6 h-6" />
+                      </div>
+                      <div className="flex flex-wrap gap-2 text-xs">
+                        <span className={`px-2 inline-flex font-semibold rounded-full ${inst.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{inst.is_active ? 'Active' : 'Suspended'}</span>
+                        <span className={`px-2 inline-flex font-semibold rounded-full ${inst.is_setup_complete ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{inst.is_setup_complete ? 'Yes' : 'No'}</span>
+                        <span className="text-gray-500">{new Date(inst.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-12 text-gray-500">No institutions match the current filters.</div>
+                )}
+              </div>
+              {/* Pagination Controls */}
+              <div className="p-4 border-t flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Showing <span className="font-medium">{Math.min(startIndex + 1, filteredInstitutions.length)}</span> to <span className="font-medium">{Math.min(startIndex + ITEMS_PER_PAGE, filteredInstitutions.length)}</span> of {' '}
+                    <span className="font-medium">{filteredInstitutions.length}</span> results
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => goToPage(currentPage - 1)} 
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-sm text-gray-600">Page {currentPage} of {totalPages > 0 ? totalPages : 1}</span>
+                  <button 
+                    onClick={() => goToPage(currentPage + 1)} 
+                    disabled={currentPage === totalPages || totalPages === 0}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
+        {/* Analytics Section */}
+        <section ref={sectionRefs.analytics} className="scroll-mt-24">
+          <h2 className="text-base sm:text-lg md:text-2xl font-bold text-gray-900 mb-4">Analytics</h2>
+          <div className="bg-white rounded-lg shadow p-6 text-gray-700">
+            {analyticsLoading ? (
+              <div>Loading analytics...</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-700">{analytics.totalInstitutions}</div>
+                  <div className="text-gray-700">Total Institutions</div>
+                </div>
+                <div className="p-4 bg-green-50 rounded-lg">
+                  <div className="text-2xl font-bold text-green-700">{analytics.activeInstitutions}</div>
+                  <div className="text-gray-700">Active Institutions</div>
+                </div>
+                <div className="p-4 bg-red-50 rounded-lg">
+                  <div className="text-2xl font-bold text-red-700">{analytics.suspendedInstitutions}</div>
+                  <div className="text-gray-700">Suspended Institutions</div>
+                </div>
+                <div className="p-4 bg-purple-50 rounded-lg">
+                  <div className="text-2xl font-bold text-purple-700">{analytics.totalUsers}</div>
+                  <div className="text-gray-700">Total Users</div>
+                </div>
+                <div className="p-4 bg-yellow-50 rounded-lg">
+                  <div className="text-2xl font-bold text-yellow-700">{analytics.totalStaff}</div>
+                  <div className="text-gray-700">Total Staff</div>
+                </div>
+                <div className="p-4 bg-pink-50 rounded-lg">
+                  <div className="text-2xl font-bold text-pink-700">{analytics.totalStudents}</div>
+                  <div className="text-gray-700">Total Students</div>
+                </div>
+                <div className="p-4 bg-indigo-50 rounded-lg">
+                  <div className="text-2xl font-bold text-indigo-700">{analytics.totalBooks}</div>
+                  <div className="text-gray-700">Total Books</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+        {/* Feature Flags Section */}
+        <section ref={sectionRefs.features} className="scroll-mt-24">
+          <h2 className="text-base sm:text-lg md:text-2xl font-bold text-gray-900 mb-4">Feature Flags</h2>
+          <div className="bg-white rounded-lg shadow p-6 text-gray-700 overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead>
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Institution</th>
+                  {TOGGLEABLE_FEATURES.map(f => (
+                    <th key={f.id} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{f.label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {institutions.map(inst => (
+                  <tr key={inst.id}>
+                    <td className="px-4 py-2 font-medium text-gray-900 whitespace-nowrap">{inst.name}</td>
+                    {TOGGLEABLE_FEATURES.map(f => (
+                      <td key={f.id} className="px-4 py-2">
+                        <input
+                          type="checkbox"
+                          checked={!!inst.feature_flags?.[f.id]}
+                          onChange={async (e) => {
+                            const newFlags = { ...inst.feature_flags, [f.id]: e.target.checked };
+                            const { error } = await supabase
+                              .from('institutions')
+                              .update({ feature_flags: newFlags })
+                              .eq('id', inst.id);
+                            if (error) {
+                              toast.error('Failed to update feature flag');
+                            } else {
+                              setInstitutions(prev => prev.map(i => i.id === inst.id ? { ...i, feature_flags: newFlags } : i));
+                              toast.success('Feature flag updated');
+                            }
+                          }}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+        {/* Impersonation Section */}
+        <section ref={sectionRefs.impersonation} className="scroll-mt-24">
+          <h2 className="text-base sm:text-lg md:text-2xl font-bold text-gray-900 mb-4">Impersonation</h2>
+          <div className="bg-white rounded-lg shadow p-6 text-gray-700">
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Select Institution</label>
+              <select
+                className="border rounded px-2 py-1 w-full"
+                value={impersonateInstitutionId || ''}
+                onChange={e => setImpersonateInstitutionId(e.target.value)}
+              >
+                <option value="">-- Select Institution --</option>
+                {institutions.map(inst => (
+                  <option key={inst.id} value={inst.id}>{inst.name}</option>
+                ))}
+              </select>
+            </div>
+            {impersonateInstitutionId && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Select Admin</label>
+                <select
+                  className="border rounded px-2 py-1 w-full"
+                  value={impersonateAdminId || ''}
+                  onChange={e => setImpersonateAdminId(e.target.value)}
+                >
+                  <option value="">-- Select Admin --</option>
+                  {adminsByInstitution[impersonateInstitutionId]?.map(admin => (
+                    <option key={admin.id} value={admin.id}>{admin.full_name || admin.email}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <button
+              className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+              disabled={!impersonateInstitutionId || !impersonateAdminId || impersonating}
+              onClick={handleImpersonate}
+            >
+              {impersonating ? 'Impersonating...' : 'Impersonate'}
+            </button>
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold mb-2">Impersonation History</h3>
+              <ul className="list-disc pl-5 text-sm">
+                {impersonationHistory.length === 0 && <li>No impersonation actions yet.</li>}
+                {impersonationHistory.map((entry, idx) => (
+                  <li key={idx}>
+                    {entry.timestamp}: Impersonated {entry.adminName} ({entry.adminEmail}) at {entry.institutionName}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
       </div>
+      {/* ...existing modals remain unchanged... */}
 
-      {isCreateModalOpen && (<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4"><div className="flex items-center justify-between"><h3 className="text-xl font-bold text-gray-900">Create New Institution</h3><button onClick={() => setIsCreateModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="h-6 w-6" /></button></div><form onSubmit={handleCreateInstitution} className="space-y-4"><div><label htmlFor="inst-name" className="block text-sm font-medium text-gray-700">Institution Name</label><input id="inst-name" type="text" value={newName} onChange={(e) => setNewName(e.target.value)} className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg" required /></div><div><h4 class="text-md font-semibold text-gray-800 mb-2">Feature Toggles</h4><div class="grid grid-cols-2 gap-2">{TOGGLEABLE_FEATURES.map(feature => (<div key={feature.id} className="flex items-center"><input type="checkbox" id={`create-feature-${feature.id}`} checked={!!newInstitutionFeatureFlags[feature.id]} onChange={(e) => setNewInstitutionFeatureFlags(prev => ({ ...prev, [feature.id]: e.target.checked }))} className="h-4 w-4 text-blue-600 border-gray-300 rounded" /><label htmlFor={`create-feature-${feature.id}`} className="ml-2 text-sm text-gray-700">{feature.label}</label></div>))}</div></div><div class="flex justify-end gap-2 pt-4 border-t"><button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancel</button><button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">{isSubmitting ? 'Creating...' : 'Create'}</button></div></form></div></div>)}
+      {/* Modals - must be inside main div for valid JSX */}
+      {isCreateModalOpen && (<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4"><div className="flex items-center justify-between"><h3 className="text-xl font-bold text-gray-900">Create New Institution</h3><button onClick={() => setIsCreateModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="h-6 w-6" /></button></div><form onSubmit={handleCreateInstitution} className="space-y-4"><div><label htmlFor="inst-name" className="block text-sm font-medium text-gray-700">Institution Name</label><input id="inst-name" type="text" value={newName} onChange={(e) => setNewName(e.target.value)} className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg" required /></div><div><h4 className="text-md font-semibold text-gray-800 mb-2">Feature Toggles</h4><div className="grid grid-cols-2 gap-2">{TOGGLEABLE_FEATURES.map(feature => (<div key={feature.id} className="flex items-center"><input type="checkbox" id={`create-feature-${feature.id}`} checked={!!newInstitutionFeatureFlags[feature.id]} onChange={(e) => setNewInstitutionFeatureFlags(prev => ({ ...prev, [feature.id]: e.target.checked }))} className="h-4 w-4 text-blue-600 border-gray-300 rounded" /><label htmlFor={`create-feature-${feature.id}`} className="ml-2 text-sm text-gray-700">{feature.label}</label></div>))}</div></div><div className="flex justify-end gap-2 pt-4 border-t"><button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancel</button><button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">{isSubmitting ? 'Creating...' : 'Create'}</button></div></form></div></div>)}
 
       {isDetailModalOpen && selectedInstitution && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-xl max-w-lg w-full p-6"><div className="flex items-center justify-between"><h3 className="text-xl font-bold text-gray-900">{modalMode === 'view' ? 'Institution Details' : 'Edit Institution'}</h3><button onClick={() => setIsDetailModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="h-6 w-6" /></button></div>
@@ -448,41 +695,40 @@ export function SuperAdminDashboard() {
     <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">{isSubmitting ? 'Updating...' : 'Save Changes'}</button>
 </div>
 </form>)}
-</div>
-</div>
-)}
-
-{isDeleteModalOpen && selectedInstitution && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-    <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4">
-      <h3 className="text-xl font-bold text-gray-900">Confirm Deletion</h3>
-      <p>Are you sure you want to delete the institution "{selectedInstitution.name}"? This action cannot be undone.</p>
-      <div className="flex justify-end gap-2">
-        <button onClick={() => setIsDeleteModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancel</button>
-        <button onClick={handleDeleteInstitution} disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50">
-          {isSubmitting ? 'Deleting...' : 'Delete'}
-        </button>
+        </div>
       </div>
-    </div>
-  </div>
-)}
+    )}
 
-{isSuspendModalOpen && selectedInstitution && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-    <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4">
-      <h3 className="text-xl font-bold text-gray-900">Confirm Action</h3>
-      <p>Are you sure you want to {selectedInstitution.is_active ? 'suspend' : 'reactivate'} the institution "{selectedInstitution.name}"?</p>
-      <div className="flex justify-end gap-2">
-        <button onClick={() => setIsSuspendModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancel</button>
-        <button onClick={handleToggleStatus} disabled={isSubmitting} className={`px-4 py-2 text-sm font-medium text-white rounded-lg ${selectedInstitution.is_active ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-green-600 hover:bg-green-700'} disabled:opacity-50`}>
-          {isSubmitting ? 'Updating...' : (selectedInstitution.is_active ? 'Suspend' : 'Reactivate')}
-        </button>
+    {isDeleteModalOpen && selectedInstitution && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4">
+          <h3 className="text-xl font-bold text-gray-900">Confirm Deletion</h3>
+          <p>Are you sure you want to delete the institution "{selectedInstitution.name}"? This action cannot be undone.</p>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setIsDeleteModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancel</button>
+            <button onClick={handleDeleteInstitution} disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50">
+              {isSubmitting ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-)}
+    )}
 
-</>
+    {isSuspendModalOpen && selectedInstitution && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4">
+          <h3 className="text-xl font-bold text-gray-900">Confirm Action</h3>
+          <p>Are you sure you want to {selectedInstitution.is_active ? 'suspend' : 'reactivate'} the institution "{selectedInstitution.name}"?</p>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setIsSuspendModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancel</button>
+            <button onClick={handleToggleStatus} disabled={isSubmitting} className={`px-4 py-2 text-sm font-medium text-white rounded-lg ${selectedInstitution.is_active ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-green-600 hover:bg-green-700'} disabled:opacity-50`}>
+              {isSubmitting ? 'Updating...' : (selectedInstitution.is_active ? 'Suspend' : 'Reactivate')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
   );
 }
 
