@@ -26,8 +26,8 @@ type AuthContextType = {
   profile: UserProfile | null;
   institution: Institution | null;
   loading: boolean;
-  signIn: (identifier: string, password: string, role?: 'librarian' | 'staff' | 'student') => Promise<void>;
-  signUp: (email: string, password: string, fullName: string, role: 'librarian' | 'staff' | 'student', institutionId: string) => Promise<void>;
+  signIn: (identifier: string, password: string, role?: 'librarian' | 'staff' | 'student' | 'super_admin') => Promise<void>;
+  signUp: (email: string, password: string, fullName: string, role: 'librarian' | 'staff' | 'student' | 'super_admin', institutionId?: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -160,8 +160,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (identifier: string, password: string, role?: 'librarian' | 'staff' | 'student') => {
-    if (role === 'librarian') {
+  const signIn = async (identifier: string, password: string, role?: 'librarian' | 'staff' | 'student' | 'super_admin') => {
+  if (role === 'librarian' || role === 'super_admin') {
       const email = identifier.toLowerCase().trim();
       if (!email) {
         setAuthError('Please enter your email');
@@ -199,6 +199,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               throw new Error('This institution account has been suspended.');
             }
             setInstitution(institutionData);
+          } else if (userProfile.role === 'super_admin') {
+            setInstitution(null);
           }
           setAuthError(null);
         }
@@ -261,19 +263,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string, role: 'librarian' | 'staff' | 'student') => {
+  const signUp = async (email: string, password: string, fullName: string, role: 'librarian' | 'staff' | 'student' | 'super_admin', institutionId?: string) => {
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
 
     if (data.user) {
+      const profileInsert: any = {
+        id: data.user.id,
+        email,
+        full_name: fullName,
+        role,
+      };
+      if (institutionId) profileInsert.institution_id = institutionId;
       const { error: profileError } = await supabase
         .from('user_profiles')
-        .insert({
-          id: data.user.id,
-          email,
-          full_name: fullName,
-          role,
-        });
+        .insert(profileInsert);
 
       if (profileError) throw profileError;
 
