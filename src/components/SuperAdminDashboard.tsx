@@ -222,7 +222,6 @@ export function SuperAdminDashboard() {
     }
   };
 
-  const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
   if (loading) return <div>Loading institutions...</div>;
