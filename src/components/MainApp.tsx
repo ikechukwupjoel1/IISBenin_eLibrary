@@ -89,37 +89,47 @@ export function MainApp() {
 
   const getAvailableTabs = () => {
     const allTabs = [
-      { id: 'dashboard' as Tab, label: 'Dashboard', icon: LayoutDashboard, roles: ['librarian', 'staff', 'student'] },
-      { id: 'messages' as Tab, label: 'Messages', icon: MessageCircle, roles: ['librarian', 'staff', 'student'] },
-      { id: 'mybooks' as Tab, label: 'My Books', icon: Library, roles: ['student', 'staff'] },
-      { id: 'digital' as Tab, label: 'Digital Library', icon: Monitor, roles: ['librarian', 'staff', 'student'] },
-      { id: 'books' as Tab, label: 'Books', icon: BookOpen, roles: ['librarian', 'staff'] },
-      { id: 'bulkbooks' as Tab, label: 'Bulk Upload Books', icon: Upload, roles: ['librarian'] },
-      { id: 'recommendations' as Tab, label: 'Recommended', icon: TrendingUp, roles: ['librarian', 'staff', 'student'] },
-      { id: 'analytics' as Tab, label: 'Analytics', icon: BarChart3, roles: ['librarian'] },
-      { id: 'reports' as Tab, label: 'Reports', icon: FileText, roles: ['librarian'] },
-      { id: 'students' as Tab, label: 'Students', icon: Users, roles: ['librarian'] },
-      { id: 'bulkusers' as Tab, label: 'Bulk Register Users', icon: Users, roles: ['librarian'] },
-      { id: 'staff' as Tab, label: 'Staff', icon: UserCog, roles: ['librarian'] },
-      { id: 'librarians' as Tab, label: 'Librarians', icon: Shield, roles: ['librarian'] },
-      { id: 'securitylogs' as Tab, label: 'Security Logs', icon: Shield, roles: ['librarian'] },
-      { id: 'settings' as Tab, label: 'Settings', icon: Settings, roles: ['librarian'] },
-      { id: 'borrowing' as Tab, label: 'Borrowing', icon: BookMarked, roles: ['librarian', 'staff'] },
-      { id: 'reservations' as Tab, label: 'Reservations', icon: Calendar, roles: ['librarian', 'staff', 'student'] },
-      { id: 'waitinglist' as Tab, label: 'Waiting Lists', icon: Clock, roles: ['librarian', 'staff', 'student'] },
-      { id: 'bookclubs' as Tab, label: 'Book Clubs', icon: Users, roles: ['librarian', 'staff', 'student'] },
-      { id: 'leaderboard' as Tab, label: 'Leaderboard', icon: Trophy, roles: ['librarian', 'staff', 'student'] },
-      { id: 'streaks' as Tab, label: 'My Progress', icon: Flame, roles: ['student', 'staff'] },
-      { id: 'progress' as Tab, label: 'Reading Progress', icon: TrendingUp, roles: ['student', 'staff'] },
-      { id: 'reviews' as Tab, label: 'Reviews', icon: Star, roles: ['librarian', 'staff', 'student'] },
-      { id: 'bookreports' as Tab, label: 'Book Reports', icon: FileText, roles: ['librarian', 'staff'] },
-      { id: 'moderation' as Tab, label: 'Review Moderation', icon: ThumbsUp, roles: ['librarian'] },
-      { id: 'challenges' as Tab, label: 'Challenges', icon: Target, roles: ['librarian', 'staff', 'student'] },
-      { id: 'changePassword' as Tab, label: 'Change Password', icon: UserCog, roles: ['staff', 'student'] },
-      { id: 'super_admin' as Tab, label: 'Super Admin', icon: Shield, roles: ['super_admin'] }, // Add Super Admin tab
+      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['librarian', 'staff', 'student'] },
+      { id: 'messages', label: 'Messages', icon: MessageCircle, roles: ['librarian', 'staff', 'student'], featureFlag: 'messages' },
+      { id: 'mybooks', label: 'My Books', icon: Library, roles: ['student', 'staff'] },
+      { id: 'digital', label: 'Digital Library', icon: Monitor, roles: ['librarian', 'staff', 'student'] },
+      { id: 'books', label: 'Books', icon: BookOpen, roles: ['librarian', 'staff'] },
+      { id: 'bulkbooks', label: 'Bulk Upload Books', icon: Upload, roles: ['librarian'] },
+      { id: 'recommendations', label: 'Recommended', icon: TrendingUp, roles: ['librarian', 'staff', 'student'] },
+      { id: 'analytics', label: 'Analytics', icon: BarChart3, roles: ['librarian'] },
+      { id: 'reports', label: 'Reports', icon: FileText, roles: ['librarian'] },
+      { id: 'students', label: 'Students', icon: Users, roles: ['librarian'] },
+      { id: 'bulkusers', label: 'Bulk Register Users', icon: Users, roles: ['librarian'] },
+      { id: 'staff', label: 'Staff', icon: UserCog, roles: ['librarian'] },
+      { id: 'librarians', label: 'Librarians', icon: Shield, roles: ['librarian'] },
+      { id: 'securitylogs', label: 'Security Logs', icon: Shield, roles: ['librarian'] },
+      { id: 'settings', label: 'Settings', icon: Settings, roles: ['librarian'] },
+      { id: 'borrowing', label: 'Borrowing', icon: BookMarked, roles: ['librarian', 'staff'] },
+      { id: 'reservations', label: 'Reservations', icon: Calendar, roles: ['librarian', 'staff', 'student'], featureFlag: 'reservations' },
+      { id: 'waitinglist', label: 'Waiting Lists', icon: Clock, roles: ['librarian', 'staff', 'student'] },
+      { id: 'bookclubs', label: 'Book Clubs', icon: Users, roles: ['librarian', 'staff', 'student'], featureFlag: 'bookclubs' },
+      { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, roles: ['librarian', 'staff', 'student'], featureFlag: 'leaderboard' },
+      { id: 'streaks', label: 'My Progress', icon: Flame, roles: ['student', 'staff'] },
+      { id: 'progress', label: 'Reading Progress', icon: TrendingUp, roles: ['student', 'staff'] },
+      { id: 'reviews', label: 'Reviews', icon: Star, roles: ['librarian', 'staff', 'student'], featureFlag: 'reviews' },
+      { id: 'bookreports', label: 'Book Reports', icon: FileText, roles: ['librarian', 'staff'] },
+      { id: 'moderation', label: 'Review Moderation', icon: ThumbsUp, roles: ['librarian'] },
+      { id: 'challenges', label: 'Challenges', icon: Target, roles: ['librarian', 'staff', 'student'], featureFlag: 'challenges' },
+      { id: 'changePassword', label: 'Change Password', icon: UserCog, roles: ['staff', 'student'] },
     ];
 
-    return allTabs.filter(tab => profile?.role && tab.roles.includes(profile.role));
+    return allTabs.filter(tab => {
+      // Role check
+      if (!profile?.role || !tab.roles.includes(profile.role)) {
+        return false;
+      }
+      // Feature flag check
+      if (tab.featureFlag) {
+        return institution?.feature_flags?.[tab.featureFlag] === true;
+      }
+      // If no feature flag is defined for the tab, show it by default
+      return true;
+    });
   };
 
   const tabs = getAvailableTabs();

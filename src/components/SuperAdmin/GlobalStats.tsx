@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Building, Users, BookOpen, UserCog } from 'lucide-react';
+import toast from 'react-hot-toast';
 
-type GlobalStats = {
+type GlobalStatsData = {
   institutions: number;
   students: number;
   staff: number;
@@ -24,33 +25,23 @@ const StatCard = ({ title, value, icon: Icon, color }: { title: string, value: n
 );
 
 export function GlobalStats() {
-  const [stats, setStats] = useState<GlobalStats | null>(null);
+  const [stats, setStats] = useState<GlobalStatsData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       setLoading(true);
       try {
-        const [ 
-          { count: institutions },
-          { count: students },
-          { count: staff },
-          { count: books },
-        ] = await Promise.all([
-          supabase.from('institutions').select('id', { count: 'exact', head: true }),
-          supabase.from('students').select('id', { count: 'exact', head: true }),
-          supabase.from('staff').select('id', { count: 'exact', head: true }),
-          supabase.from('books').select('id', { count: 'exact', head: true }),
-        ]);
+        const { data, error } = await supabase.rpc('get_global_stats');
 
-        setStats({
-          institutions: institutions || 0,
-          students: students || 0,
-          staff: staff || 0,
-          books: books || 0,
-        });
+        if (error) throw error;
+
+        // The RPC returns a single JSON object with all the counts
+        setStats(data);
+
       } catch (error) {
         console.error("Error fetching global stats:", error);
+        toast.error("Could not load platform statistics.");
       }
       setLoading(false);
     };

@@ -41,6 +41,27 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Check if the institution is active
+    const { data: institution, error: instError } = await supabaseAdmin
+      .from('institutions')
+      .select('is_active')
+      .eq('id', profile.institution_id)
+      .single();
+
+    if (instError || !institution) {
+      return new Response(
+        JSON.stringify({ error: 'Could not verify institution status', valid: false }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!institution.is_active) {
+      return new Response(
+        JSON.stringify({ error: 'This institution account has been suspended.', valid: false }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Verify password
     if (profile.password_hash !== password) {
       return new Response(
