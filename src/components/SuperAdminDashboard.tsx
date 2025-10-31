@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { Building, Plus, X, Edit, Trash2, Eye, EyeOff, LogIn, Users, Book, Library, CheckCircle, Clock, BookUp, FileText, LogOut } from 'lucide-react';
+import { Building, Plus, X, Edit, Trash2, Eye, EyeOff, LogIn, Users, Book, Library, CheckCircle, Clock, BookUp, FileText, Search } from 'lucide-react';
 
 type Institution = {
   id: string;
@@ -28,9 +28,13 @@ const TOGGLEABLE_FEATURES = [
 ];
 
 export function SuperAdminDashboard() {
-  const { signOut } = useAuth();
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedInstitutionIds, setSelectedInstitutionIds] = useState<string[]>([]);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newName, setNewName] = useState('');
@@ -54,24 +58,6 @@ export function SuperAdminDashboard() {
   const [newFaviconFile, setNewFaviconFile] = useState<File | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [globalStats, setGlobalStats] = useState<{
-    institutions: number;
-    active_institutions: number;
-    suspended_institutions: number;
-    setup_complete_institutions: number;
-    setup_pending_institutions: number;
-    students: number;
-    staff: number;
-    books: number;
-    total_borrows: number;
-    total_book_reports: number;
-  } | null>(null);
-
-  const fetchGlobalStats = async () => {
-    const { data, error } = await supabase.rpc('get_global_stats');
-    if (error) toast.error('Failed to load global stats: ' + error.message);
-    else setGlobalStats(data);
-  };
 
   const fetchInstitutions = async () => {
     setLoading(true);
@@ -82,8 +68,7 @@ export function SuperAdminDashboard() {
   };
 
   useEffect(() => { 
-    fetchInstitutions(); 
-    fetchGlobalStats();
+    fetchInstitutions();
   }, []);
 
   const handleCreateInstitution = async (e: React.FormEvent) => {
@@ -237,156 +222,186 @@ export function SuperAdminDashboard() {
     }
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
   if (loading) return <div>Loading institutions...</div>;
+
+  const filteredInstitutions = institutions.filter(inst => {
+    const nameMatch = inst.name.toLowerCase().includes(searchTerm.toLowerCase());
+
+    let statusMatch = false;
+    if (statusFilter === 'all') {
+      statusMatch = true;
+    } else if (statusFilter === 'active') {
+      statusMatch = inst.is_active === true;
+    } else if (statusFilter === 'suspended') {
+      statusMatch = inst.is_active === false;
+    } else if (statusFilter === 'pending_setup') {
+      statusMatch = inst.is_setup_complete === false;
+    }
+
+    return nameMatch && statusMatch;
+  });
+
+  // Pagination Logic
+  const totalPages = Math.ceil(filteredInstitutions.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedInstitutions = filteredInstitutions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(totalPages, page)));
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedInstitutionIds(paginatedInstitutions.map(inst => inst.id));
+    } else {
+      setSelectedInstitutionIds([]);
+    }
+  };
+
+  const handleSelectInstitution = (id: string) => {
+    setSelectedInstitutionIds(prev => 
+      prev.includes(id) ? prev.filter(prevId => prevId !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkAction = async (action: 'suspend' | 'reactivate' | 'delete') => {
+    if (selectedInstitutionIds.length === 0) {
+      toast.error('No institutions selected for bulk action.');
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to ${action} ${selectedInstitutionIds.length} selected institutions?`)) {
+      return;
+    }
+
+    setBulkActionLoading(true);
+    try {
+      let error;
+      if (action === 'delete') {
+        ({ error } = await supabase.rpc('bulk_delete_institutions', { target_institution_ids: selectedInstitutionIds }));
+      } else {
+        const newStatus = action === 'reactivate';
+        ({ error } = await supabase.rpc('bulk_toggle_institution_status', { target_institution_ids: selectedInstitutionIds, new_status: newStatus }));
+      }
+
+      if (error) throw error;
+
+      toast.success(`Bulk ${action} successful for ${selectedInstitutionIds.length} institutions!`);
+      setSelectedInstitutionIds([]);
+      fetchInstitutions(); // Refresh the list
+    } catch (err: any) {
+      toast.error(`Bulk action failed: ${err.message}`);
+      console.error('Bulk action error:', err);
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
 
   return (
     <>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900">ArkosLIB</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Institution Management</h2>
           <div className="flex items-center gap-4">
             <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"><Plus className="h-5 w-5" /> New Institution</button>
-            <button onClick={signOut} className="flex items-center gap-2 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300">
-              <LogOut className="h-5 w-5" />
-              <span>Logout</span>
-            </button>
           </div>
         </div>
         
-        {globalStats && (
-          <div>
-            <h3 class="text-lg leading-6 font-medium text-gray-900">Platform Overview</h3>
-            <div className="mt-2 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {/* Total Institutions */}
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-5">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0"><Library className="h-6 w-6 text-gray-400" /></div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">Total Institutions</dt>
-                        <dd className="text-3xl font-bold text-gray-900">{globalStats.institutions}</dd>
-                      </dl>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {/* Active Institutions */}
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-5">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0"><CheckCircle className="h-6 w-6 text-green-500" /></div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">Active Institutions</dt>
-                        <dd className="text-3xl font-bold text-gray-900">{globalStats.active_institutions}</dd>
-                      </dl>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {/* Suspended Institutions */}
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-5">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0"><EyeOff className="h-6 w-6 text-red-500" /></div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">Suspended Institutions</dt>
-                        <dd className="text-3xl font-bold text-gray-900">{globalStats.suspended_institutions}</dd>
-                      </dl>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {/* Setup Complete */}
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-5">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0"><CheckCircle className="h-6 w-6 text-blue-500" /></div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">Setup Complete</dt>
-                        <dd className="text-3xl font-bold text-gray-900">{globalStats.setup_complete_institutions}</dd>
-                      </dl>
-                    </div>
-                  </div>
-                </div>
-              </div>
+        {/* Filter, Search, and Bulk Actions Controls */}
+        <div className="bg-white p-4 rounded-lg shadow flex flex-col sm:flex-row items-center gap-4">
+          <div className="relative flex-grow w-full sm:w-auto">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+              <Search className="h-5 w-5 text-gray-400" />
             </div>
-            <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {/* Total Users */}
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-5">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0"><Users className="h-6 w-6 text-gray-400" /></div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">Total Users (S+S)</dt>
-                        <dd className="text-3xl font-bold text-gray-900">{globalStats.students + globalStats.staff}</dd>
-                      </dl>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {/* Total Books */}
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-5">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0"><Book className="h-6 w-6 text-gray-400" /></div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">Total Books</dt>
-                        <dd className="text-3xl font-bold text-gray-900">{globalStats.books}</dd>
-                      </dl>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {/* Total Borrows */}
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-5">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0"><BookUp className="h-6 w-6 text-gray-400" /></div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">Total Books Borrowed</dt>
-                        <dd className="text-3xl font-bold text-gray-900">{globalStats.total_borrows}</dd>
-                      </dl>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {/* Total Reports */}
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-5">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0"><FileText className="h-6 w-6 text-gray-400" /></div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">Total Book Reports</dt>
-                        <dd className="text-3xl font-bold text-gray-900">{globalStats.total_book_reports}</dd>
-                      </dl>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <input
+              type="text"
+              placeholder="Search by name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="block w-full rounded-md border-gray-300 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            />
           </div>
-        )}
+          <div className="w-full sm:w-auto">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            >
+              <option value="all">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+              <option value="pending_setup">Pending Setup</option>
+            </select>
+          </div>
+          {selectedInstitutionIds.length > 0 && (
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <select
+                onChange={(e) => handleBulkAction(e.target.value as 'suspend' | 'reactivate' | 'delete')}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                defaultValue=""
+                disabled={bulkActionLoading}
+              >
+                <option value="" disabled>Bulk Actions ({selectedInstitutionIds.length})</option>
+                <option value="reactivate">Reactivate Selected</option>
+                <option value="suspend">Suspend Selected</option>
+                <option value="delete">Delete Selected</option>
+              </select>
+              {bulkActionLoading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>}
+            </div>
+          )}
+        </div>
 
         <div className="bg-white rounded-lg shadow border overflow-hidden">
-          <table className="w-full"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Setup Complete?</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created At</th></tr></thead>
+          <table className="w-full"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-12"><input type="checkbox" onChange={handleSelectAll} checked={selectedInstitutionIds.length === paginatedInstitutions.length && paginatedInstitutions.length > 0} className="rounded text-blue-600" /></th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Setup Complete?</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created At</th></tr></thead>
             <tbody className="divide-y divide-gray-200">
-              {institutions.map((inst) => (
-                <tr key={inst.id} onClick={() => openDetailModal(inst)} className="hover:bg-gray-50 cursor-pointer">
-                  <td className="px-6 py-4 font-medium text-gray-900">{inst.name}</td>
-                  <td className="px-6 py-4"><span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${inst.is_setup_complete ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{inst.is_setup_complete ? 'Yes' : 'No'}</span></td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{new Date(inst.created_at).toLocaleDateString()}</td>
+              {paginatedInstitutions.length > 0 ? (
+                paginatedInstitutions.map((inst) => (
+                  <tr key={inst.id} className="hover:bg-gray-50 cursor-pointer">
+                    <td className="px-6 py-4"><input type="checkbox" checked={selectedInstitutionIds.includes(inst.id)} onChange={() => handleSelectInstitution(inst.id)} onClick={(e) => e.stopPropagation()} className="rounded text-blue-600" /></td>
+                    <td className="px-6 py-4 font-medium text-gray-900" onClick={() => openDetailModal(inst)}>{inst.name}</td>
+                    <td className="px-6 py-4" onClick={() => openDetailModal(inst)}><span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${inst.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{inst.is_active ? 'Active' : 'Suspended'}</span></td>
+                    <td className="px-6 py-4" onClick={() => openDetailModal(inst)}><span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${inst.is_setup_complete ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{inst.is_setup_complete ? 'Yes' : 'No'}</span></td>
+                    <td className="px-6 py-4 text-sm text-gray-500" onClick={() => openDetailModal(inst)}>{new Date(inst.created_at).toLocaleDateString()}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="text-center py-12 text-gray-500">
+                    No institutions match the current filters.
+                  </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
+          {/* Pagination Controls */}
+          <div className="p-4 border-t flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-700">
+                Showing <span className="font-medium">{Math.min(startIndex + 1, filteredInstitutions.length)}</span> to <span className="font-medium">{Math.min(startIndex + ITEMS_PER_PAGE, filteredInstitutions.length)}</span> of {' '}
+                <span className="font-medium">{filteredInstitutions.length}</span> results
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => goToPage(currentPage - 1)} 
+                disabled={currentPage === 1}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-gray-600">Page {currentPage} of {totalPages > 0 ? totalPages : 1}</span>
+              <button 
+                onClick={() => goToPage(currentPage + 1)} 
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
