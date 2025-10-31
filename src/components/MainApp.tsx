@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, lazy, Suspense, useEffect } from 'react';
 import { BookOpen, Users, BookMarked, LayoutDashboard, LogOut, UserCog, Calendar, Trophy, Star, Target, Shield, Library, Monitor, Settings, TrendingUp, BarChart3, FileText, Flame, MessageCircle, Clock, ThumbsUp, Upload } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useReportNotifications } from '../hooks/useReportNotifications';
