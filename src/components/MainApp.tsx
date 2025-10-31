@@ -6,6 +6,22 @@ import schoolLogo from '../assets/Iisbenin logo.png';
 import BackgroundCarousel from './BackgroundCarousel';
 import NetworkStatus from './NetworkStatus';
 
+// Set document title based on institution
+const useDynamicTitle = () => {
+  const { institution } = useAuth();
+  useEffect(() => {
+    if (institution?.name) {
+      document.title = institution.name;
+    } else {
+      document.title = 'ArkosLIB';
+    }
+    // Reset title on component unmount (logout)
+    return () => {
+      document.title = 'ArkosLIB';
+    };
+  }, [institution]);
+};
+
 // Lazy load components for better code splitting
 const Dashboard = lazy(() => import('./Dashboard').then(m => ({ default: m.Dashboard })));
 const BookManagement = lazy(() => import('./BookManagement').then(m => ({ default: m.BookManagement })));
@@ -34,10 +50,12 @@ const BulkBookUpload = lazy(() => import('./BulkBookUpload').then(m => ({ defaul
 const BulkUserRegistration = lazy(() => import('./BulkUserRegistration').then(m => ({ default: m.BulkUserRegistration })));
 const BookReportReview = lazy(() => import('./BookReportReview').then(m => ({ default: m.BookReportReview })));
 const ReadingProgress = lazy(() => import('./ReadingProgress').then(m => ({ default: m.ReadingProgress })));
+const SuperAdminDashboard = lazy(() => import('./SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
 
 type Tab = 'dashboard' | 'books' | 'mybooks' | 'digital' | 'students' | 'staff' | 'librarians' | 'borrowing' | 'reservations' | 'leaderboard' | 'reviews' | 'challenges' | 'loginlogs' | 'settings' | 'changePassword' | 'recommendations' | 'analytics' | 'reports' | 'securitylogs' | 'streaks' | 'bookclubs' | 'waitinglist' | 'moderation' | 'messages' | 'bulkbooks' | 'bulkusers' | 'bookreports' | 'progress';
 
 export function MainApp() {
+  useDynamicTitle(); // Set document title dynamically
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const { signOut, profile, institution } = useAuth();
   
@@ -81,6 +99,7 @@ export function MainApp() {
       { id: 'moderation' as Tab, label: 'Review Moderation', icon: ThumbsUp, roles: ['librarian'] },
       { id: 'challenges' as Tab, label: 'Challenges', icon: Target, roles: ['librarian', 'staff', 'student'] },
       { id: 'changePassword' as Tab, label: 'Change Password', icon: UserCog, roles: ['staff', 'student'] },
+      { id: 'super_admin' as Tab, label: 'Super Admin', icon: Shield, roles: ['super_admin'] }, // Add Super Admin tab
     ];
 
     return allTabs.filter(tab => profile?.role && tab.roles.includes(profile.role));
@@ -181,6 +200,7 @@ export function MainApp() {
             {activeTab === 'moderation' && profile && <ReviewModeration userId={profile.id} userRole={profile.role} />}
             {activeTab === 'challenges' && <Challenges />}
             {activeTab === 'changePassword' && <ChangePassword />}
+            {activeTab === 'super_admin' && <SuperAdminDashboard />} 
           </Suspense>
         </div>
       </div>
