@@ -30,7 +30,7 @@ type StaffReadingData = {
 };
 
 export function Dashboard() {
-  const { profile } = useAuth();
+  const { profile, institution } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Stats>({
     totalBooks: 0,
@@ -248,8 +248,8 @@ export function Dashboard() {
       <div className="relative z-10 space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6">
         {/* Header - Mobile Responsive */}
         <div className="flex items-center gap-2 sm:gap-4 mb-4 sm:mb-6 bg-white/90 backdrop-blur-sm rounded-xl p-3 sm:p-4 shadow-lg">
-          <img src={schoolLogo} alt="IISBenin Logo" className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 object-contain flex-shrink-0" />
-          <h2 className="text-lg sm:text-2xl md:text-3xl font-bold text-gray-900">Dashboard Overview</h2>
+          <img src={institution?.theme_settings?.logo_url || schoolLogo} alt={institution?.name || 'Logo'} className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 object-contain flex-shrink-0" />
+          <h2 className="text-lg sm:text-2xl md:text-3xl font-bold text-gray-900">{institution?.name || 'Dashboard'} Overview</h2>
         </div>
 
         <QuoteOfTheDay />

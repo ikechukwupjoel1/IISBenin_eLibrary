@@ -57,7 +57,8 @@ const BulkBookUpload = lazy(() => import('./BulkBookUpload').then(m => ({ defaul
 const BulkUserRegistration = lazy(() => import('./BulkUserRegistration').then(m => ({ default: m.BulkUserRegistration })));
 const BookReportReview = lazy(() => import('./BookReportReview').then(m => ({ default: m.BookReportReview })));
 const ReadingProgress = lazy(() => import('./ReadingProgress').then(m => ({ default: m.ReadingProgress })));
-const SuperAdminDashboard = lazy(() => import('./SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
+const SuperAdminLayout = lazy(() => import('../layouts/SuperAdminLayout').then(m => ({ default: m.SuperAdminLayout })));
+
 
 type Tab = 'dashboard' | 'books' | 'mybooks' | 'digital' | 'students' | 'staff' | 'librarians' | 'borrowing' | 'reservations' | 'leaderboard' | 'reviews' | 'challenges' | 'loginlogs' | 'settings' | 'changePassword' | 'recommendations' | 'analytics' | 'reports' | 'securitylogs' | 'streaks' | 'bookclubs' | 'waitinglist' | 'moderation' | 'messages' | 'bulkbooks' | 'bulkusers' | 'bookreports' | 'progress';
 
@@ -68,6 +69,15 @@ export function MainApp() {
   
   // Enable real-time notifications for report status changes
   useReportNotifications();
+
+  // If the user is a super_admin, render the dedicated admin layout
+  if (profile?.role === 'super_admin') {
+    return (
+      <Suspense fallback={<div>Loading Admin Dashboard...</div>}>
+        <SuperAdminLayout />
+      </Suspense>
+    );
+  }
 
   const handleSignOut = async () => {
     try {
