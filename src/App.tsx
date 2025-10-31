@@ -1,7 +1,7 @@
 import { Toaster } from 'react-hot-toast';
 import { useAuth } from './contexts/AuthContext';
 import { Auth } from './components/Auth';
-import { MainApp } from './components/MainApp';
+import MainApp from './components/MainApp';
 import { LibrarianSetup } from './components/LibrarianSetup';
 import { InstitutionSetup } from './components/InstitutionSetup'; // Import the new component
 import PWAInstallPrompt from './components/PWAInstallPrompt';
