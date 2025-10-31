@@ -187,7 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (data?.user) {
           const userProfile = await loadUserProfile(data.user.id);
-          if (!userProfile || userProfile.role !== 'librarian') {
+          if (!userProfile || !['librarian', 'super_admin'].includes(userProfile.role)) {
             await supabase.auth.signOut();
             await logLogin(email, data.user.id, false, role, userProfile?.full_name, userProfile?.institution_id);
             setAuthError('Access denied. Not a librarian account.');

@@ -10,11 +10,18 @@ import NetworkStatus from './NetworkStatus';
 const useDynamicTitle = () => {
   const { institution } = useAuth();
   useEffect(() => {
+    const favicon = document.querySelector("link[rel*='icon']") as HTMLLinkElement | null;
+
     if (institution?.name) {
       document.title = institution.name;
     } else {
       document.title = 'ArkosLIB';
     }
+
+    if (favicon && institution?.theme_settings?.favicon_url) {
+      favicon.href = institution.theme_settings.favicon_url;
+    }
+
     // Reset title on component unmount (logout)
     return () => {
       document.title = 'ArkosLIB';
