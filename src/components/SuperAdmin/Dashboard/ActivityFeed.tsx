@@ -1,49 +1,10 @@
-import { 
-  Building2, 
-  UserPlus, 
-  Power, 
-  PowerOff, 
-  Clock,
-  UserMinus,
-  UserCheck,
-  UserX,
-  ToggleLeft,
-  BookPlus,
-  Trash2,
-  DollarSign,
-  AlertTriangle,
-  Shield,
-  Settings
-} from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { getActivityConfig, type ActivityType } from '../../../utils/activityTypes';
 
 interface ActivityItem {
   id: string;
-  type: 
-    | 'institution_created'
-    | 'institution_updated'
-    | 'institution_suspended'
-    | 'institution_reactivated'
-    | 'institution_deleted'
-    | 'librarian_invited'
-    | 'librarian_registered'
-    | 'librarian_removed'
-    | 'user_registered'
-    | 'user_suspended'
-    | 'user_reactivated'
-    | 'user_deleted'
-    | 'feature_toggled'
-    | 'book_added'
-    | 'book_removed'
-    | 'bulk_action_executed'
-    | 'payment_received'
-    | 'payment_failed'
-    | 'subscription_changed'
-    | 'impersonation_started'
-    | 'impersonation_ended'
-    | 'system_setting_changed'
-    | 'backup_created'
-    | 'security_alert';
+  type: ActivityType;
   description: string;
   timestamp: string;
   metadata?: Record<string, unknown>;
@@ -56,58 +17,12 @@ interface ActivityFeedProps {
 
 export function ActivityFeed({ activities, loading }: ActivityFeedProps) {
   const getActivityIcon = (type: ActivityItem['type']) => {
-    switch (type) {
-      case 'institution_created':
-        return { icon: Building2, color: 'text-blue-600', bg: 'bg-blue-50' };
-      case 'institution_updated':
-        return { icon: Building2, color: 'text-blue-500', bg: 'bg-blue-50' };
-      case 'institution_suspended':
-        return { icon: PowerOff, color: 'text-red-600', bg: 'bg-red-50' };
-      case 'institution_reactivated':
-        return { icon: Power, color: 'text-green-600', bg: 'bg-green-50' };
-      case 'institution_deleted':
-        return { icon: Trash2, color: 'text-red-700', bg: 'bg-red-50' };
-      case 'librarian_invited':
-        return { icon: UserPlus, color: 'text-purple-600', bg: 'bg-purple-50' };
-      case 'librarian_registered':
-        return { icon: UserCheck, color: 'text-green-600', bg: 'bg-green-50' };
-      case 'librarian_removed':
-        return { icon: UserMinus, color: 'text-orange-600', bg: 'bg-orange-50' };
-      case 'user_registered':
-        return { icon: UserPlus, color: 'text-indigo-600', bg: 'bg-indigo-50' };
-      case 'user_suspended':
-        return { icon: UserX, color: 'text-red-600', bg: 'bg-red-50' };
-      case 'user_reactivated':
-        return { icon: UserCheck, color: 'text-green-600', bg: 'bg-green-50' };
-      case 'user_deleted':
-        return { icon: UserX, color: 'text-red-700', bg: 'bg-red-50' };
-      case 'feature_toggled':
-        return { icon: ToggleLeft, color: 'text-blue-600', bg: 'bg-blue-50' };
-      case 'book_added':
-        return { icon: BookPlus, color: 'text-green-600', bg: 'bg-green-50' };
-      case 'book_removed':
-        return { icon: Trash2, color: 'text-orange-600', bg: 'bg-orange-50' };
-      case 'bulk_action_executed':
-        return { icon: Settings, color: 'text-purple-600', bg: 'bg-purple-50' };
-      case 'payment_received':
-        return { icon: DollarSign, color: 'text-green-600', bg: 'bg-green-50' };
-      case 'payment_failed':
-        return { icon: DollarSign, color: 'text-red-600', bg: 'bg-red-50' };
-      case 'subscription_changed':
-        return { icon: DollarSign, color: 'text-blue-600', bg: 'bg-blue-50' };
-      case 'impersonation_started':
-        return { icon: Shield, color: 'text-orange-600', bg: 'bg-orange-50' };
-      case 'impersonation_ended':
-        return { icon: Shield, color: 'text-blue-600', bg: 'bg-blue-50' };
-      case 'system_setting_changed':
-        return { icon: Settings, color: 'text-gray-600', bg: 'bg-gray-50' };
-      case 'backup_created':
-        return { icon: Shield, color: 'text-green-600', bg: 'bg-green-50' };
-      case 'security_alert':
-        return { icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' };
-      default:
-        return { icon: Clock, color: 'text-gray-600', bg: 'bg-gray-50' };
-    }
+    const config = getActivityConfig(type);
+    return {
+      icon: config.icon,
+      color: config.color,
+      bg: config.bgColor
+    };
   };
 
   const formatTimestamp = (timestamp: string) => {
