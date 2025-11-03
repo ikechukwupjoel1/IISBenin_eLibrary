@@ -90,17 +90,6 @@ export function SuperAdminDashboard() {
 
 
   const [activeSection, setActiveSection] = useState('dashboard');
-  const sectionRefs = {
-    dashboard: React.useRef<HTMLDivElement>(null),
-    institutions: React.useRef<HTMLDivElement>(null),
-    analytics: React.useRef<HTMLDivElement>(null),
-    features: React.useRef<HTMLDivElement>(null),
-    impersonation: React.useRef<HTMLDivElement>(null),
-  };
-  const scrollToSection = (section: keyof typeof sectionRefs) => {
-    setActiveSection(section);
-    sectionRefs[section].current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -449,32 +438,32 @@ export function SuperAdminDashboard() {
           <h2 className="text-base sm:text-lg font-bold mb-6 text-blue-700">Super Admin Panel</h2>
           <ul className="space-y-2">
             <li>
-              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'dashboard' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {scrollToSection('dashboard'); setSidebarOpen(false);}}>Dashboard</button>
+              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'dashboard' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {setActiveSection('dashboard'); setSidebarOpen(false);}}>Dashboard</button>
             </li>
             <li>
-              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'institutions' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {scrollToSection('institutions'); setSidebarOpen(false);}}>Institution Management</button>
+              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'institutions' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {setActiveSection('institutions'); setSidebarOpen(false);}}>Institution Management</button>
             </li>
             <li>
-              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'analytics' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {scrollToSection('analytics'); setSidebarOpen(false);}}>Analytics</button>
+              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'analytics' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {setActiveSection('analytics'); setSidebarOpen(false);}}>Analytics</button>
             </li>
             <li>
-              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'features' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {scrollToSection('features'); setSidebarOpen(false);}}>Feature Flags</button>
+              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'features' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {setActiveSection('features'); setSidebarOpen(false);}}>Feature Flags</button>
             </li>
             <li>
-              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'impersonation' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {scrollToSection('impersonation'); setSidebarOpen(false);}}>Impersonation</button>
+              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'impersonation' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {setActiveSection('impersonation'); setSidebarOpen(false);}}>Impersonation</button>
             </li>
           </ul>
         </div>
       </nav>
       {/* Main Content */}
-      <div className="flex-1 px-2 sm:px-6 py-8 space-y-12">
-        {/* Dashboard Home Section */}
-        <section ref={sectionRefs.dashboard} className="scroll-mt-24">
+      <div className="flex-1 px-2 sm:px-6 py-8">
+        {/* Dashboard Tab */}
+        {activeSection === 'dashboard' && (
           <DashboardHome />
-        </section>
+        )}
 
-        {/* Institution Management Section */}
-        <section ref={sectionRefs.institutions} className="scroll-mt-24">
+        {/* Institution Management Tab */}
+        {activeSection === 'institutions' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-base sm:text-lg md:text-2xl font-bold text-gray-900">Institution Management</h2>
@@ -600,10 +589,12 @@ export function SuperAdminDashboard() {
               </div>
             </div>
           </div>
-        </section>
-        {/* Analytics Section */}
-        <section ref={sectionRefs.analytics} className="scroll-mt-24">
-          <h2 className="text-base sm:text-lg md:text-2xl font-bold text-gray-900 mb-4">Analytics</h2>
+        )}
+
+        {/* Analytics Tab */}
+        {activeSection === 'analytics' && (
+          <div>
+            <h2 className="text-base sm:text-lg md:text-2xl font-bold text-gray-900 mb-4">Analytics</h2>
           <div className="bg-white rounded-lg shadow p-6 text-gray-700">
             {analyticsLoading ? (
               <div>Loading analytics...</div>
@@ -640,10 +631,13 @@ export function SuperAdminDashboard() {
               </div>
             )}
           </div>
-        </section>
-        {/* Feature Flags Section */}
-        <section ref={sectionRefs.features} className="scroll-mt-24">
-          <h2 className="text-base sm:text-lg md:text-2xl font-bold text-gray-900 mb-4">Feature Flags</h2>
+        </div>
+        )}
+
+        {/* Feature Flags Tab */}
+        {activeSection === 'features' && (
+          <div>
+            <h2 className="text-base sm:text-lg md:text-2xl font-bold text-gray-900 mb-4">Feature Flags</h2>
           <div className="bg-white rounded-lg shadow p-6 text-gray-700 overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead>
@@ -684,10 +678,13 @@ export function SuperAdminDashboard() {
               </tbody>
             </table>
           </div>
-        </section>
-        {/* Impersonation Section */}
-        <section ref={sectionRefs.impersonation} className="scroll-mt-24">
-          <h2 className="text-base sm:text-lg md:text-2xl font-bold text-gray-900 mb-4">Impersonation</h2>
+        </div>
+        )}
+
+        {/* Impersonation Tab */}
+        {activeSection === 'impersonation' && (
+          <div>
+            <h2 className="text-base sm:text-lg md:text-2xl font-bold text-gray-900 mb-4">Impersonation</h2>
           <div className="bg-white rounded-lg shadow p-6 text-gray-700">
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">Select Institution</label>
@@ -736,8 +733,10 @@ export function SuperAdminDashboard() {
               </ul>
             </div>
           </div>
-        </section>
+        </div>
+        )}
       </div>
+
       {/* ...existing modals remain unchanged... */}
 
       {/* Modals - must be inside main div for valid JSX */}
