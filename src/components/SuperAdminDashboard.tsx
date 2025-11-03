@@ -30,6 +30,55 @@ const TOGGLEABLE_FEATURES = [
 ];
 
 export function SuperAdminDashboard() {
+  // Analytics state
+  const [analytics, setAnalytics] = useState({
+    totalInstitutions: 0,
+    activeInstitutions: 0,
+    suspendedInstitutions: 0,
+    totalUsers: 0,
+    totalStaff: 0,
+    totalStudents: 0,
+    totalBooks: 0,
+  });
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      setAnalyticsLoading(true);
+      try {
+        // Fetch analytics data directly from tables
+        const [institutionsResult, usersResult, staffResult, studentsResult, booksResult] = await Promise.all([
+          supabase.from('institutions').select('id, is_active', { count: 'exact', head: true }),
+          supabase.from('user_profiles').select('id', { count: 'exact', head: true }),
+          supabase.from('staff').select('id', { count: 'exact', head: true }),
+          supabase.from('students').select('id', { count: 'exact', head: true }),
+          supabase.from('books').select('id', { count: 'exact', head: true }),
+        ]);
+
+        // Count active and suspended institutions
+        const { data: institutions } = await supabase.from('institutions').select('is_active');
+        const activeCount = institutions?.filter(i => i.is_active).length || 0;
+        const suspendedCount = institutions?.filter(i => !i.is_active).length || 0;
+
+        setAnalytics({
+          totalInstitutions: institutionsResult.count || 0,
+          activeInstitutions: activeCount,
+          suspendedInstitutions: suspendedCount,
+          totalUsers: usersResult.count || 0,
+          totalStaff: staffResult.count || 0,
+          totalStudents: studentsResult.count || 0,
+          totalBooks: booksResult.count || 0,
+        });
+      } catch (err) {
+        console.error('Failed to load analytics:', err);
+        // Don't show error toast, just keep default values
+      } finally {
+        setAnalyticsLoading(false);
+      }
+    };
+    fetchAnalytics();
+  }, []);
+  
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // Impersonation state
   const [impersonateInstitutionId, setImpersonateInstitutionId] = useState<string | null>(null);
@@ -65,10 +114,13 @@ export function SuperAdminDashboard() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
   const [selectedInstitution, setSelectedInstitution] = useState<Institution | null>(null);
   const [selectedInstitutionStats, setSelectedInstitutionStats] = useState<InstitutionStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [generatedInviteLink, setGeneratedInviteLink] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState({
     name: '',
     tagline: '',
@@ -99,7 +151,7 @@ export function SuperAdminDashboard() {
     setIsSubmitting(true);
     const { data, error } = await supabase.rpc('create_institution', { 
       new_name: newName,
-      feature_flags: newInstitutionFeatureFlags
+      new_feature_flags: newInstitutionFeatureFlags
     });
     if (error) toast.error(`Failed to create institution: ${error.message}`);
     else if (data) {
@@ -186,6 +238,34 @@ export function SuperAdminDashboard() {
       setIsSubmitting(false);
       setNewLogoFile(null);
       setNewFaviconFile(null);
+    }
+  };
+
+  const handleInviteLibrarian = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedInstitution || !inviteEmail.trim()) {
+      toast.error('Please enter a valid email address.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { data, error } = await supabase.rpc('create_librarian_invitation', {
+        target_institution_id: selectedInstitution.id,
+        invitee_email: inviteEmail.trim(),
+      });
+
+      if (error) throw error;
+
+      const inviteToken = data;
+      const inviteLink = `${window.location.origin}/accept-invitation/${inviteToken}`;
+      setGeneratedInviteLink(inviteLink);
+
+      toast.success('Invitation created successfully!');
+    } catch (error) {
+      toast.error(`Failed to create invitation: ${(error as Error).message}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -345,7 +425,7 @@ export function SuperAdminDashboard() {
 
 
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // const [sidebarOpen, setSidebarOpen] = useState(false); // Duplicate, removed
   return (
     <div className="flex min-h-[80vh] relative">
       {/* Hamburger for mobile */}
@@ -687,7 +767,7 @@ export function SuperAdminDashboard() {
               )}
             </div>
 
-            <div className="flex justify-end gap-2 pt-4 border-t"><button type="button" onClick={handleImpersonate} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700"><LogIn className="h-4 w-4"/>Impersonate</button><button type="button" onClick={() => setIsSuspendModalOpen(true)} className={`flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-lg ${selectedInstitution.is_active ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-green-600 hover:bg-green-700'}`}>{selectedInstitution.is_active ? <><EyeOff className="h-4 w-4"/>Suspend</> : <><Eye className="h-4 w-4"/>Reactivate</>}</button><button type="button" onClick={() => setIsDeleteModalOpen(true)} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"><Trash2 className="h-4 w-4"/>Delete</button><button type="button" onClick={() => setModalMode('edit')} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"><Edit className="h-4 w-4"/>Edit</button></div></div>)}
+            <div className="flex justify-end gap-2 pt-4 border-t"><button type="button" onClick={() => setIsInviteModalOpen(true)} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"><Plus className="h-4 w-4"/>Invite Librarian</button><button type="button" onClick={handleImpersonate} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700"><LogIn className="h-4 w-4"/>Impersonate</button><button type="button" onClick={() => setIsSuspendModalOpen(true)} className={`flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-lg ${selectedInstitution.is_active ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-green-600 hover:bg-green-700'}`}>{selectedInstitution.is_active ? <><EyeOff className="h-4 w-4"/>Suspend</> : <><Eye className="h-4 w-4"/>Reactivate</>}</button><button type="button" onClick={() => setIsDeleteModalOpen(true)} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"><Trash2 className="h-4 w-4"/>Delete</button><button type="button" onClick={() => setModalMode('edit')} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"><Edit className="h-4 w-4"/>Edit</button></div></div>)}
 
             {modalMode === 'edit' && (<form onSubmit={handleUpdateInstitution} className="space-y-4 mt-4"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-gray-700">Name</label><input type="text" value={editFormData.name} onChange={(e) => setEditFormData({...editFormData, name: e.target.value})} className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg" required /></div><div><label className="block text-sm font-medium text-gray-700">Tagline</label><input type="text" value={editFormData.tagline} onChange={(e) => setEditFormData({...editFormData, tagline: e.target.value})} className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg" /></div></div><div><label className="block text-sm font-medium text-gray-700">Logo</label><input type="file" onChange={(e) => e.target.files && setNewLogoFile(e.target.files[0])} className="w-full text-sm" accept="image/png, image/jpeg, image/webp" /></div><div><label className="block text-sm font-medium text-gray-700">Favicon</label><input type="file" onChange={(e) => e.target.files && setNewFaviconFile(e.target.files[0])} className="w-full text-sm" accept="image/x-icon, image/png, image/svg+xml" /></div><div className="border-t pt-4"><h4 className="text-md font-semibold text-gray-800 mb-2">Feature Toggles</h4><div className="grid grid-cols-2 gap-2">{TOGGLEABLE_FEATURES.map(feature => (<div key={feature.id} className="flex items-center"><input type="checkbox" id={`feature-${feature.id}`} checked={!!editFormData.feature_flags[feature.id]} onChange={(e) => setEditFormData(prev => ({ ...prev, feature_flags: { ...prev.feature_flags, [feature.id]: e.target.checked } }))} className="h-4 w-4 text-blue-600 border-gray-300 rounded" /><label htmlFor={`feature-${feature.id}`} className="ml-2 text-sm text-gray-700">{feature.label}</label></div>))}</div></div>
 <div className="flex justify-end gap-2 pt-4 border-t">
@@ -725,6 +805,87 @@ export function SuperAdminDashboard() {
               {isSubmitting ? 'Updating...' : (selectedInstitution.is_active ? 'Suspend' : 'Reactivate')}
             </button>
           </div>
+        </div>
+      </div>
+    )}
+
+    {isInviteModalOpen && selectedInstitution && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold text-gray-900">Invite Librarian</h3>
+            <button onClick={() => { setIsInviteModalOpen(false); setInviteEmail(''); setGeneratedInviteLink(null); }} className="text-gray-400 hover:text-gray-600">
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+
+          {!generatedInviteLink ? (
+            <form onSubmit={handleInviteLibrarian} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="librarian@example.com"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  required
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  An invitation link will be generated for this email address.
+                </p>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setIsInviteModalOpen(false); setInviteEmail(''); }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Creating...' : 'Create Invitation'}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-sm font-medium text-green-800 mb-2">
+                  Invitation link created successfully!
+                </p>
+                <div className="bg-white border border-green-300 rounded p-2 mb-2 break-all text-xs font-mono">
+                  {generatedInviteLink}
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(generatedInviteLink);
+                    toast.success('Link copied to clipboard!');
+                  }}
+                  className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                >
+                  Copy Link
+                </button>
+              </div>
+              <p className="text-xs text-gray-600">
+                Share this link with the librarian. They can use it to create their account for "{selectedInstitution.name}". The link expires in 7 days.
+              </p>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => { setIsInviteModalOpen(false); setInviteEmail(''); setGeneratedInviteLink(null); }}
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )}

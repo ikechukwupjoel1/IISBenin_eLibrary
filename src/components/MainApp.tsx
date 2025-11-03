@@ -15,8 +15,18 @@ import { Reservations } from './Reservations';
 import { SuperAdminDashboard } from './SuperAdminDashboard';
 
 function MainApp() {
-  const { profile, institution, signOut } = useAuth();
+  const { profile, institution, signOut, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
+  
+  // Wait for profile to load to prevent flash of wrong dashboard
+  if (loading || !profile) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+  
   // Dynamic tab logic: role and feature-flag filtering
   const allTabs = [
     { id: 'dashboard', label: 'Dashboard', roles: ['librarian', 'staff', 'student', 'super_admin'] },
