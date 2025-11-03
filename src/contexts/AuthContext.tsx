@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
+import { startSession, endSession } from '../utils/sessionTracking';
 
 type UserProfile = {
   id: string;
@@ -133,6 +134,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const institutionData = await loadInstitution(userProfile.institution_id);
           setInstitution(institutionData);
         }
+        
+        // Start session tracking
+        await startSession();
       }
       setLoading(false);
     };
@@ -193,6 +197,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           await logLogin(userProfile.enrollment_id || email, data.user.id, true, role, userProfile.full_name, userProfile.institution_id);
           setProfile(userProfile);
+          
+          // Start session tracking
+          await startSession();
+          
           if (userProfile.role === 'super_admin') {
             setInstitution(null);
           } else if (userProfile.institution_id) {
@@ -248,6 +256,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const profileData = data.profile;
         await logLogin(identifier, profileData.id, true, role, profileData.full_name, profileData.institution_id);
         setProfile(profileData);
+        
+        // Start session tracking
+        await startSession();
+        
         if (profileData.institution_id) {
           const institutionData = await loadInstitution(profileData.institution_id);
           setInstitution(institutionData);
@@ -288,6 +300,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    // End session tracking
+    await endSession();
+    
     if (profile?.role !== 'student' && profile?.role !== 'staff') {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;

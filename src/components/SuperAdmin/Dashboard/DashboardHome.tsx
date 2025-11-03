@@ -68,15 +68,19 @@ export function DashboardHome() {
 
   const fetchMetrics = async (): Promise<DashboardMetrics | null> => {
     try {
-      // Fetch current counts
-      const [institutions, users, books, sessions] = await Promise.all([
-        supabase.from('institutions').select('id, is_active, created_at', { count: 'exact' }),
-        supabase.from('user_profiles').select('id, created_at', { count: 'exact' }),
-        supabase.from('books').select('id, created_at', { count: 'exact' }),
-        supabase.from('user_profiles').select('id', { count: 'exact' }) // TODO: Replace with actual active sessions
-      ]);
+      // Use optimized RPC function for all metrics
+      const { data, error } = await supabase.rpc('get_dashboard_metrics');
 
-      // Calculate trends (compare with 30 days ago)
+      if (error) {
+        console.error('RPC error:', error);
+        return null;
+      }
+
+      if (!data || data.length === 0) return null;
+
+      const metrics = data[0];
+
+      // Calculate trends (compare current with 30 days ago)
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       const isoDate = thirtyDaysAgo.toISOString();
@@ -88,23 +92,30 @@ export function DashboardHome() {
       ]);
 
       const calculateTrend = (current: number, old: number) => {
-        if (old === 0) return 100;
+        if (old === 0) return current > 0 ? 100 : 0;
         return Math.round(((current - old) / old) * 100);
       };
 
-      const activeCount = institutions.data?.filter(i => i.is_active).length || 0;
-
       return {
-        totalInstitutions: institutions.count || 0,
-        institutionsTrend: calculateTrend(institutions.count || 0, oldInstitutions.count || 0),
-        activeInstitutions: activeCount,
-        totalUsers: users.count || 0,
-        usersTrend: calculateTrend(users.count || 0, oldUsers.count || 0),
-        totalBooks: books.count || 0,
-        booksTrend: calculateTrend(books.count || 0, oldBooks.count || 0),
-        activeSessionsCount: sessions.count || 0, // TODO: Implement proper session tracking
-        storageUsed: 0, // TODO: Implement storage tracking
-        storageLimit: 100 // TODO: Get from config
+        totalInstitutions: Number(metrics.total_institutions) || 0,
+        institutionsTrend: calculateTrend(
+          Number(metrics.total_institutions) || 0,
+          oldInstitutions.count || 0
+        ),
+        activeInstitutions: Number(metrics.active_institutions) || 0,
+        totalUsers: Number(metrics.total_users) || 0,
+        usersTrend: calculateTrend(
+          Number(metrics.total_users) || 0,
+          oldUsers.count || 0
+        ),
+        totalBooks: Number(metrics.total_books) || 0,
+        booksTrend: calculateTrend(
+          Number(metrics.total_books) || 0,
+          oldBooks.count || 0
+        ),
+        activeSessionsCount: Number(metrics.active_sessions_count) || 0,
+        storageUsed: Number(metrics.storage_used_gb) || 0,
+        storageLimit: Number(metrics.storage_limit_gb) || 100
       };
     } catch (error) {
       console.error('Failed to fetch metrics:', error);
@@ -114,49 +125,33 @@ export function DashboardHome() {
 
   const fetchActivities = async (): Promise<ActivityItem[]> => {
     try {
-      // Fetch recent institutions (last 10)
-      const { data: recentInstitutions } = await supabase
-        .from('institutions')
-        .select('id, name, created_at, is_active')
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      // Fetch recent invitations (last 5)
-      const { data: recentInvitations } = await supabase
-        .from('librarian_invitations')
-        .select('id, email, invited_at, institutions(name)')
-        .order('invited_at', { ascending: false })
-        .limit(5);
-
-      const activities: ActivityItem[] = [];
-
-      // Process institutions
-      recentInstitutions?.forEach(inst => {
-        activities.push({
-          id: inst.id,
-          type: 'institution_created',
-          description: `New institution "${inst.name}" was created`,
-          timestamp: inst.created_at,
-          metadata: { institutionName: inst.name }
-        });
+      // Use optimized RPC function for activity feed
+      const { data, error } = await supabase.rpc('get_activity_feed', {
+        p_limit: 15,
+        p_offset: 0
       });
 
-      // Process invitations
-      recentInvitations?.forEach(inv => {
-        const institutionName = (inv.institutions as unknown as { name: string } | null)?.name || 'Unknown';
-        activities.push({
-          id: inv.id,
-          type: 'librarian_invited',
-          description: `Librarian invited to "${institutionName}" (${inv.email})`,
-          timestamp: inv.invited_at,
-          metadata: { email: inv.email, institutionName }
-        });
-      });
+      if (error) {
+        console.error('RPC error:', error);
+        return [];
+      }
 
-      // Sort by timestamp (most recent first)
-      activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      if (!data) return [];
 
-      return activities.slice(0, 10); // Return top 10
+      // Map database results to ActivityItem format
+      return data.map((activity: {
+        id: string;
+        activity_type: string;
+        description: string;
+        created_at: string;
+        metadata: Record<string, unknown>;
+      }) => ({
+        id: activity.id,
+        type: activity.activity_type as ActivityItem['type'],
+        description: activity.description,
+        timestamp: activity.created_at,
+        metadata: activity.metadata
+      }));
     } catch (error) {
       console.error('Failed to fetch activities:', error);
       return [];
