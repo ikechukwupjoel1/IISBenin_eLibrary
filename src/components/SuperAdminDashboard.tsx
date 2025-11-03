@@ -5,6 +5,7 @@ type InstitutionStats = { students: number; staff: number; books: number; borrow
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { Plus, X, Edit, Trash2, Eye, EyeOff, LogIn, Search } from 'lucide-react';
+import { DashboardHome } from './SuperAdmin/Dashboard/DashboardHome';
 
 type Institution = {
   id: string;
@@ -88,8 +89,9 @@ export function SuperAdminDashboard() {
   const [impersonationHistory, setImpersonationHistory] = useState<Array<{timestamp: string, adminName: string, adminEmail: string, institutionName: string}>>([]);
 
 
-  const [activeSection, setActiveSection] = useState('institutions');
+  const [activeSection, setActiveSection] = useState('dashboard');
   const sectionRefs = {
+    dashboard: React.useRef<HTMLDivElement>(null),
     institutions: React.useRef<HTMLDivElement>(null),
     analytics: React.useRef<HTMLDivElement>(null),
     features: React.useRef<HTMLDivElement>(null),
@@ -447,6 +449,9 @@ export function SuperAdminDashboard() {
           <h2 className="text-base sm:text-lg font-bold mb-6 text-blue-700">Super Admin Panel</h2>
           <ul className="space-y-2">
             <li>
+              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'dashboard' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {scrollToSection('dashboard'); setSidebarOpen(false);}}>Dashboard</button>
+            </li>
+            <li>
               <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'institutions' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {scrollToSection('institutions'); setSidebarOpen(false);}}>Institution Management</button>
             </li>
             <li>
@@ -463,6 +468,11 @@ export function SuperAdminDashboard() {
       </nav>
       {/* Main Content */}
       <div className="flex-1 px-2 sm:px-6 py-8 space-y-12">
+        {/* Dashboard Home Section */}
+        <section ref={sectionRefs.dashboard} className="scroll-mt-24">
+          <DashboardHome />
+        </section>
+
         {/* Institution Management Section */}
         <section ref={sectionRefs.institutions} className="scroll-mt-24">
           <div className="space-y-6">
