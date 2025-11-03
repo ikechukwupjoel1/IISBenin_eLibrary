@@ -459,7 +459,21 @@ export function SuperAdminDashboard() {
       <div className="flex-1 px-2 sm:px-6 py-8">
         {/* Dashboard Tab */}
         {activeSection === 'dashboard' && (
-          <DashboardHome />
+          <DashboardHome 
+            onCreateInstitution={() => {
+              setActiveSection('institutions');
+              setIsCreateModalOpen(true);
+            }}
+            onInviteLibrarian={() => {
+              setActiveSection('institutions');
+            }}
+            onViewAnalytics={() => {
+              setActiveSection('analytics');
+            }}
+            onOpenSettings={() => {
+              setActiveSection('features');
+            }}
+          />
         )}
 
         {/* Institution Management Tab */}

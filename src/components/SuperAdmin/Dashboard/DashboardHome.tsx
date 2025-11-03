@@ -34,7 +34,19 @@ interface ActivityItem {
   metadata?: Record<string, unknown>;
 }
 
-export function DashboardHome() {
+interface DashboardHomeProps {
+  onCreateInstitution?: () => void;
+  onInviteLibrarian?: () => void;
+  onViewAnalytics?: () => void;
+  onOpenSettings?: () => void;
+}
+
+export function DashboardHome({
+  onCreateInstitution,
+  onInviteLibrarian,
+  onViewAnalytics,
+  onOpenSettings
+}: DashboardHomeProps = {}) {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -178,7 +190,12 @@ export function DashboardHome() {
       </div>
 
       {/* Quick Actions */}
-      <QuickActions />
+      <QuickActions 
+        onCreateInstitution={onCreateInstitution}
+        onInviteLibrarian={onInviteLibrarian}
+        onViewAnalytics={onViewAnalytics}
+        onOpenSettings={onOpenSettings}
+      />
 
       {/* Key Metrics Grid */}
       {metrics && (
