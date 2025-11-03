@@ -59,18 +59,7 @@ SELECT cron.schedule(
 SELECT cron.schedule(
   'calculate-all-storage',
   '0 4 * * *',                               -- Daily at 4 AM
-  $$
-  DO $$
-  DECLARE
-    inst_record RECORD;
-  BEGIN
-    FOR inst_record IN 
-      SELECT id FROM institutions WHERE is_active = true
-    LOOP
-      PERFORM calculate_storage_usage(inst_record.id);
-    END LOOP;
-  END $$;
-  $$
+  $$SELECT calculate_all_storage();$$
 );
 
 -- Job 5: Record daily metrics snapshot
@@ -207,17 +196,6 @@ LIMIT 50;
 
 -- Enable a job that was unscheduled
 -- You'll need to re-run the schedule command
-
--- Update job schedule (unschedule and re-schedule)
--- Example: Change cleanup frequency
-/*
-SELECT cron.unschedule('cleanup-inactive-sessions');
-SELECT cron.schedule(
-  'cleanup-inactive-sessions',
-  '0 */2 * * *',  -- Every 2 hours instead of every hour
-  $$SELECT cleanup_old_sessions();$$
-);
-*/
 
 -- =====================================================
 -- TROUBLESHOOTING
