@@ -39,11 +39,16 @@ class ErrorBoundary extends Component<Props, State> {
             <p className="text-gray-600 mb-6">
               The application encountered an unexpected error. Don't worry, your data is safe.
             </p>
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {this.state.error && (
               <div className="bg-gray-50 p-4 rounded-lg mb-6 text-left overflow-auto max-h-40">
                 <p className="text-sm font-mono text-red-600 break-words">
                   {this.state.error.toString()}
                 </p>
+                {this.state.error.stack && (
+                  <p className="text-xs font-mono text-gray-500 mt-2 break-words">
+                    {this.state.error.stack.slice(0, 500)}
+                  </p>
+                )}
               </div>
             )}
             <div className="flex gap-3">
