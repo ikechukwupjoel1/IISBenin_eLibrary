@@ -13,6 +13,7 @@ import BookClubs from './BookClubs';
 import { DigitalLibrary } from './DigitalLibrary';
 import { Reservations } from './Reservations';
 import { SuperAdminDashboard } from './SuperAdminDashboard';
+import { ChatMessaging } from './ChatMessaging';
 
 function MainApp() {
   const { profile, institution, signOut, loading } = useAuth();
@@ -33,16 +34,19 @@ function MainApp() {
     { id: 'books', label: 'Books', roles: ['librarian', 'staff'] },
     { id: 'students', label: 'Students', roles: ['librarian'] },
     { id: 'staff', label: 'Staff', roles: ['librarian'] },
-    { id: 'settings', label: 'Settings', roles: ['librarian'] },
+    { id: 'messaging', label: 'Chat / Messaging', roles: ['librarian', 'staff', 'student'], featureFlag: 'messages' },
     { id: 'leaderboard', label: 'Leaderboard', roles: ['librarian', 'staff', 'student'], featureFlag: 'leaderboard' },
     { id: 'reviews', label: 'Reviews', roles: ['librarian', 'staff', 'student'], featureFlag: 'reviews' },
     { id: 'challenges', label: 'Challenges', roles: ['librarian', 'staff', 'student'], featureFlag: 'challenges' },
-    { id: 'bookClubs', label: 'Book Clubs', roles: ['librarian', 'staff', 'student'], featureFlag: 'bookClubs' },
+    { id: 'bookClubs', label: 'Book Clubs', roles: ['librarian', 'staff', 'student'], featureFlag: 'bookclubs' },
     { id: 'digitalLibrary', label: 'Digital Library', roles: ['librarian', 'staff', 'student'] },
     { id: 'reservations', label: 'Reservations', roles: ['librarian', 'staff', 'student'], featureFlag: 'reservations' },
+    { id: 'settings', label: 'Settings', roles: ['librarian'] },
   ];
   const tabs = allTabs.filter(tab => {
     if (!profile?.role || !tab.roles.includes(profile.role)) return false;
+    // Super admin bypasses feature flags when impersonating
+    if (profile.role === 'super_admin') return true;
     if (tab.featureFlag) {
       return institution?.feature_flags?.[tab.featureFlag] === true;
     }
@@ -103,6 +107,7 @@ function MainApp() {
           {activeTab === 'books' && <BookManagement />}
           {activeTab === 'students' && <StudentManagement />}
           {activeTab === 'staff' && <StaffManagement />}
+          {activeTab === 'messaging' && <ChatMessaging />}
           {activeTab === 'leaderboard' && <Leaderboard />}
           {activeTab === 'reviews' && <Reviews />}
           {activeTab === 'challenges' && <Challenges />}
