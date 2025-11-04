@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { UserCog, Plus, Pencil, Trash2, Search, X, KeyRound, Printer } from 'lucide-react';
+import { UserCog, Plus, Pencil, Trash2, Search, X, KeyRound, Printer, Upload } from 'lucide-react';
 import { supabase, type Staff } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { generateSecurePassword } from '../utils/validation';
 import { useAuth } from '../contexts/AuthContext';
 import { LoadingSkeleton } from './ui/LoadingSkeleton';
+import { BulkUserRegistration } from './BulkUserRegistration';
 
 type GeneratedCredentials = {
   enrollment_id: string;
@@ -19,6 +20,7 @@ export function StaffManagement() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddingStaff, setIsAddingStaff] = useState(false);
+  const [showBulkRegister, setShowBulkRegister] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [showCredentials, setShowCredentials] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
@@ -467,21 +469,50 @@ export function StaffManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {!isAddingStaff && !showBulkRegister ? (
+        <>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Staff Management</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                {staff.length} staff member{staff.length !== 1 ? 's' : ''} registered
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowBulkRegister(true)}
+                className="flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 min-h-[44px]"
+              >
+                <Upload className="h-5 w-5" />
+                Bulk Register
+              </button>
+              <button
+                onClick={() => setIsAddingStaff(true)}
+                className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 min-h-[44px]"
+              >
+                <Plus className="h-5 w-5" />
+                Register Staff
+              </button>
+            </div>
+          </div>
+        </>
+      ) : (
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Staff Management</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            {staff.length} staff member{staff.length !== 1 ? 's' : ''} registered
-          </p>
+          <button
+            onClick={() => {
+              setIsAddingStaff(false);
+              setShowBulkRegister(false);
+              setEditingStaff(null);
+            }}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors mb-4"
+          >
+            <X className="h-5 w-5" />
+            Back to List
+          </button>
         </div>
-        <button
-          onClick={() => setIsAddingStaff(true)}
-          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 min-h-[44px]"
-        >
-          <Plus className="h-5 w-5" />
-          Register Staff
-        </button>
-      </div>
+      )}
+
+      {showBulkRegister && <BulkUserRegistration />}
 
       {isAddingStaff && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300">
@@ -562,7 +593,8 @@ export function StaffManagement() {
         </div>
       )}
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-all duration-300">
+      {!showBulkRegister && !isAddingStaff && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-all duration-300">
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
@@ -646,6 +678,7 @@ export function StaffManagement() {
           )}
         </div>
       </div>
+      )}
 
       {showCredentials && generatedCredentials && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto animate-fade-in">

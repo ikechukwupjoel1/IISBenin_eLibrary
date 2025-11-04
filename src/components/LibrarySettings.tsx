@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings, Plus, Trash2 } from 'lucide-react';
+import { Settings, Plus, Trash2, BarChart3, Download, ShieldAlert, Users } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
@@ -170,14 +170,71 @@ export function LibrarySettings() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-3">
-        <div className="bg-purple-100 p-3 rounded-xl">
-          <Settings className="h-6 w-6 text-purple-600" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="bg-purple-100 p-3 rounded-xl">
+            <Settings className="h-6 w-6 text-purple-600" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Library Settings</h2>
+            <p className="text-sm text-gray-600">Manage categories, shelf locations, and advanced features</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Library Settings</h2>
-          <p className="text-sm text-gray-600">Manage categories and shelf locations</p>
-        </div>
+      </div>
+
+      {/* Action Buttons for Advanced Features */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <button
+          onClick={() => toast('Analytics feature: View library performance metrics, borrowing trends, and user engagement statistics', { icon: '📊' })}
+          className="flex flex-col items-center gap-3 p-6 bg-white rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:shadow-lg transition-all group"
+        >
+          <div className="p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
+            <BarChart3 className="h-6 w-6 text-blue-600" />
+          </div>
+          <div className="text-center">
+            <h3 className="font-semibold text-gray-900">Analytics</h3>
+            <p className="text-xs text-gray-600 mt-1">View insights</p>
+          </div>
+        </button>
+
+        <button
+          onClick={() => toast('Export Reports: Download borrowing records, user data, and system logs in CSV/PDF formats', { icon: '📥' })}
+          className="flex flex-col items-center gap-3 p-6 bg-white rounded-xl border-2 border-gray-200 hover:border-green-500 hover:shadow-lg transition-all group"
+        >
+          <div className="p-3 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
+            <Download className="h-6 w-6 text-green-600" />
+          </div>
+          <div className="text-center">
+            <h3 className="font-semibold text-gray-900">Export Reports</h3>
+            <p className="text-xs text-gray-600 mt-1">Download data</p>
+          </div>
+        </button>
+
+        <button
+          onClick={() => toast('Security Logs: Monitor login attempts, failed authentications, and security events', { icon: '🔒' })}
+          className="flex flex-col items-center gap-3 p-6 bg-white rounded-xl border-2 border-gray-200 hover:border-red-500 hover:shadow-lg transition-all group"
+        >
+          <div className="p-3 bg-red-100 rounded-lg group-hover:bg-red-200 transition-colors">
+            <ShieldAlert className="h-6 w-6 text-red-600" />
+          </div>
+          <div className="text-center">
+            <h3 className="font-semibold text-gray-900">Security Logs</h3>
+            <p className="text-xs text-gray-600 mt-1">View activity</p>
+          </div>
+        </button>
+
+        <button
+          onClick={() => toast('Manage Librarians: Add, edit, or remove librarian accounts and permissions', { icon: '👥' })}
+          className="flex flex-col items-center gap-3 p-6 bg-white rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:shadow-lg transition-all group"
+        >
+          <div className="p-3 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
+            <Users className="h-6 w-6 text-purple-600" />
+          </div>
+          <div className="text-center">
+            <h3 className="font-semibold text-gray-900">Manage Librarians</h3>
+            <p className="text-xs text-gray-600 mt-1">User admin</p>
+          </div>
+        </button>
       </div>
 
       {/* Categories Section */}

@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Search, CreditCard as Edit2, Trash2, Upload, Link, BookPlus } from 'lucide-react';
+import { Plus, Search, CreditCard as Edit2, Trash2, Upload, Link, BookPlus, Filter } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase, type Book } from '../lib/supabase';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { BulkBookUpload } from './BulkBookUpload';
+import { AdvancedBookSearch } from './AdvancedBookSearch';
 
 export function BookManagement() {
   const [books, setBooks] = useState<Book[]>([]);
@@ -12,6 +13,7 @@ export function BookManagement() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isAddingBook, setIsAddingBook] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
@@ -391,8 +393,65 @@ export function BookManagement() {
             <Plus className="h-5 w-5" />
             Add Book
           </button>
+          </div>
         </div>
-      </div>
+
+          {/* Filter Bar - Category and Status Dropdowns */}
+          <div className="flex flex-wrap gap-3 mb-4">
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Category</label>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-h-[44px]"
+              >
+                <option value="all">All Categories</option>
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Status</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-h-[44px]"
+              >
+                <option value="all">All Status</option>
+                <option value="available">Available</option>
+                <option value="borrowed">Borrowed</option>
+              </select>
+            </div>
+
+            <div className="flex items-end">
+              <button
+                onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all min-h-[44px] ${
+                  showAdvancedSearch
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <Filter className="h-4 w-4" />
+                Advanced Search
+              </button>
+            </div>
+          </div>
+
+          {/* Advanced Search Panel */}
+          {showAdvancedSearch && (
+            <div className="mb-4">
+              <AdvancedBookSearch 
+                onResults={(results) => setBooks(results)}
+                onFilterChange={(filters) => {
+                  // Update local filters if needed
+                  console.log('Advanced filters:', filters);
+                }}
+              />
+            </div>
+          )}
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -403,9 +462,7 @@ export function BookManagement() {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-300 focus:outline-none transition-all duration-200 min-h-[44px]"
         />
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-lg">
+      </div>      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-lg">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">

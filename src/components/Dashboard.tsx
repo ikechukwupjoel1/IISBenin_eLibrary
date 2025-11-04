@@ -7,6 +7,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { LoadingSkeleton } from './ui/LoadingSkeleton';
 import { Announcements } from './Announcements';
 import { QuoteOfTheDay } from './QuoteOfTheDay';
+import { ReadingProgress } from './ReadingProgress';
+import ReadingStreaks from './ReadingStreaks';
 
 type Stats = {
   totalBooks: number;
@@ -273,6 +275,14 @@ export function Dashboard() {
             );
           })}
         </div>
+
+        {/* Reading Progress & Streaks Widgets */}
+        {profile?.id && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ReadingProgress />
+            <ReadingStreaks userId={profile.id} />
+          </div>
+        )}
 
         {/* Top Reading Students Chart - Mobile Responsive */}
         <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-4 sm:p-6 transition-all duration-300 hover:shadow-2xl">

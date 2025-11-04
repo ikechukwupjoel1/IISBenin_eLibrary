@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Search, Edit2, Trash2, X, History, KeyRound, Printer, UserPlus } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, History, KeyRound, Printer, UserPlus, Upload } from 'lucide-react';
 import { supabase, type Student, type BorrowRecord, type Book } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { generateSecurePassword } from '../utils/validation';
 import { useAuth } from '../contexts/AuthContext';
 import { LoadingSkeleton } from './ui/LoadingSkeleton';
+import { BulkUserRegistration } from './BulkUserRegistration';
 
 type StudentWithHistory = Student & {
   borrow_records?: (BorrowRecord & { books?: Book })[];
@@ -24,6 +25,7 @@ export function StudentManagement() {
   const [studentsPerPage] = useState(10); // Number of students to display per page
   const [totalStudents, setTotalStudents] = useState(0);
   const [isAddingStudent, setIsAddingStudent] = useState(false);
+  const [showBulkRegister, setShowBulkRegister] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showCredentials, setShowCredentials] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
@@ -460,33 +462,67 @@ export function StudentManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      {/* Header with Add/Bulk Register Buttons */}
+      {!isAddingStudent && !showBulkRegister ? (
+        <>
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Student Management</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                {students.length} student{students.length !== 1 ? 's' : ''} registered
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowBulkRegister(true)}
+                className="flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 min-h-[44px]"
+              >
+                <Upload className="h-5 w-5" />
+                Bulk Register
+              </button>
+              <button
+                onClick={() => openModal()}
+                className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 min-h-[44px]"
+              >
+                <Plus className="h-5 w-5" />
+                Register Student
+              </button>
+            </div>
+          </div>
+
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by name, grade, or enrollment ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-600 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-h-[44px]"
+            />
+          </div>
+        </>
+      ) : (
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Student Management</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            {students.length} student{students.length !== 1 ? 's' : ''} registered
-          </p>
+          <button
+            onClick={() => {
+              setIsAddingStudent(false);
+              setShowBulkRegister(false);
+              setEditingStudent(null);
+            }}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors mb-4"
+          >
+            <X className="h-5 w-5" />
+            Back to List
+          </button>
         </div>
-        <button
-          onClick={() => openModal()}
-          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 min-h-[44px]"
-        >
-          <Plus className="h-5 w-5" />
-          Register Student
-        </button>
-      </div>
+      )}
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Search by name, grade, or enrollment ID..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-600 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-h-[44px]"
-        />
-      </div>
+      {/* Bulk Register View */}
+      {showBulkRegister && (
+        <BulkUserRegistration />
+      )}
 
+      {/* Add/Edit Student Form */}
       {isAddingStudent && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300">
           <div className="flex items-center gap-3 mb-6">
@@ -567,7 +603,9 @@ export function StudentManagement() {
         </div>
       )}
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300">
+      {/* Student List Table */}
+      {!isAddingStudent && !showBulkRegister && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
@@ -642,6 +680,7 @@ export function StudentManagement() {
           </button>
         </div>
       </div>
+      )}
 
       {showCredentials && generatedCredentials && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">

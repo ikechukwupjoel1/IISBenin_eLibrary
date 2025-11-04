@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Star, MessageSquare, Edit2, Trash2, Plus, X, Search } from 'lucide-react';
+import { Star, MessageSquare, Edit2, Trash2, Plus, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -31,6 +31,7 @@ type Book = {
 
 export function Reviews() {
   const { profile } = useAuth();
+  const [activeTab, setActiveTab] = useState<'reviews' | 'reports'>('reviews');
   const [reviews, setReviews] = useState<Review[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
@@ -241,8 +242,43 @@ export function Reviews() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      {/* Tab Switcher */}
+      <div className="border-b border-gray-200 dark:border-gray-700">
+        <div className="flex gap-4">
+          <button
+            onClick={() => setActiveTab('reviews')}
+            className={`pb-3 px-4 font-medium transition-all border-b-2 ${
+              activeTab === 'reviews'
+                ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Book Reviews
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('reports')}
+            className={`pb-3 px-4 font-medium transition-all border-b-2 ${
+              activeTab === 'reports'
+                ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Book Reports
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* Reviews Tab Content */}
+      {activeTab === 'reviews' && (
+        <>
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30 p-3 rounded-xl">
             <MessageSquare className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -394,6 +430,47 @@ export function Reviews() {
               </div>
             </form>
           </div>
+      )}
+        </>
+      )}
+
+      {/* Book Reports Tab Content */}
+      {activeTab === 'reports' && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 text-center">
+            <FileText className="h-16 w-16 mx-auto mb-4 text-blue-600 dark:text-blue-400" />
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Book Reports System</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Manage book reports, reviewers, and moderation tools
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto mt-6">
+              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Report Submission</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Students submit detailed book reports</p>
+              </div>
+              
+              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Review System</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Teachers review and grade reports</p>
+              </div>
+              
+              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Reviewer Management</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Assign reviewers to reports</p>
+              </div>
+              
+              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Moderation Tools</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Monitor and moderate content</p>
+              </div>
+            </div>
+            
+            <p className="text-sm text-gray-500 dark:text-gray-500 mt-6">
+              Note: This feature requires student borrow records to function. Access book report forms from the Borrowing System tab.
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );
