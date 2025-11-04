@@ -9,6 +9,8 @@ import { Announcements } from './Announcements';
 import { QuoteOfTheDay } from './QuoteOfTheDay';
 import { ReadingProgress } from './ReadingProgress';
 import ReadingStreaks from './ReadingStreaks';
+import WaitingList from './WaitingList';
+import { BookRecommendations } from './BookRecommendations';
 
 type Stats = {
   totalBooks: number;
@@ -284,6 +286,14 @@ export function Dashboard() {
           </div>
         )}
 
+        {/* Waiting List & Recommendations */}
+        {profile?.id && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <WaitingList userId={profile.id} userRole={profile.role || 'student'} />
+            <BookRecommendations />
+          </div>
+        )}
+
         {/* Top Reading Students Chart - Mobile Responsive */}
         <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-4 sm:p-6 transition-all duration-300 hover:shadow-2xl">
           <div className="flex items-center gap-2 mb-4 sm:mb-6">
@@ -364,6 +374,21 @@ export function Dashboard() {
               </div>
             )}
           </div>
+        )}
+
+        {/* Waiting List & Recommendations - Student/Staff View */}
+        {(profile?.role === 'student' || profile?.role === 'staff') && (
+          <>
+            {/* Waiting List Widget */}
+            <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-4 sm:p-6">
+              <WaitingList />
+            </div>
+
+            {/* Book Recommendations Widget */}
+            <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-4 sm:p-6">
+              <BookRecommendations />
+            </div>
+          </>
         )}
       </div>
     </div>

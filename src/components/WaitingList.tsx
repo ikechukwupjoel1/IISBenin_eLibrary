@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Clock, Bell, Users, X, Check, AlertCircle, BookOpen, Calendar } from 'lucide-react';
 import { LoadingSkeleton } from './ui/LoadingSkeleton';
+import { useAuth } from '../contexts/AuthContext';
 
 interface WaitlistEntry {
   id: string;
@@ -27,21 +28,25 @@ interface BookWaitlist {
   estimated_return_date?: string;
 }
 
-export default function WaitingList({ userId, userRole }: { userId: string; userRole: string }) {
+export default function WaitingList() {
+  const { profile } = useAuth();
   const [myWaitlist, setMyWaitlist] = useState<WaitlistEntry[]>([]);
   const [allWaitlists, setAllWaitlists] = useState<BookWaitlist[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'my' | 'all'>('my');
 
   useEffect(() => {
+    if (!profile?.id) return;
+    
     fetchMyWaitlist();
-    if (userRole === 'librarian' || userRole === 'admin') {
+    if (profile.role === 'librarian' || profile.role === 'super_admin') {
       fetchAllWaitlists();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, userRole]);
+  }, [profile?.id, profile?.role]);
 
   const fetchMyWaitlist = async () => {
+    if (!profile?.id) return;
+    
     try {
       setLoading(true);
 
@@ -51,7 +56,7 @@ export default function WaitingList({ userId, userRole }: { userId: string; user
           *,
           books(title, author)
         `)
-        .eq('user_id', userId)
+        .eq('user_id', profile.id)
         .in('status', ['waiting', 'notified'])
         .order('created_at', { ascending: true });
 
