@@ -31,11 +31,24 @@ export function AdminManagement() {
   const [institutions, setInstitutions] = useState<{ id: string; name: string }[]>([]);
 
   const isSuperAdmin = profile?.role === 'super_admin';
+  const isLibrarian = profile?.role === 'librarian';
+  const canManageAdmins = isSuperAdmin || isLibrarian;
 
   useEffect(() => {
     loadAdmins();
     loadInstitutions();
   }, []);
+
+  useEffect(() => {
+    // Auto-set institution for librarians when modal opens
+    if (showAddModal && isLibrarian && profile?.institution_id) {
+      setFormData(prev => ({
+        ...prev,
+        institution_id: profile.institution_id || '',
+        role: 'librarian'
+      }));
+    }
+  }, [showAddModal, isLibrarian, profile?.institution_id]);
 
   const loadInstitutions = async () => {
     const { data, error } = await supabase
@@ -51,7 +64,7 @@ export function AdminManagement() {
   const loadAdmins = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('user_profiles')
         .select(`
           *,
@@ -59,6 +72,13 @@ export function AdminManagement() {
         `)
         .in('role', ['librarian', 'super_admin'])
         .order('created_at', { ascending: false });
+
+      // Librarians can only see admins in their institution
+      if (isLibrarian && profile?.institution_id) {
+        query = query.eq('institution_id', profile.institution_id);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('Error loading admins:', error);
@@ -81,6 +101,20 @@ export function AdminManagement() {
       return;
     }
 
+    // Librarians can only create librarians in their own institution
+    if (isLibrarian) {
+      if (formData.role !== 'librarian') {
+        toast.error('Librarians can only create other librarian accounts');
+        return;
+      }
+      if (!profile?.institution_id) {
+        toast.error('Your institution information is missing');
+        return;
+      }
+      // Auto-set to librarian's institution
+      formData.institution_id = profile.institution_id;
+    }
+
     if (formData.role === 'librarian' && !formData.institution_id) {
       toast.error('Institution is required for librarians');
       return;
@@ -93,7 +127,7 @@ export function AdminManagement() {
       const tempPassword = `Temp${Math.random().toString(36).slice(-8)}!`;
 
       // Call existing Edge Function to create admin user
-      const { data, error } = await supabase.functions.invoke('create-user-account', {
+      const { error } = await supabase.functions.invoke('create-user-account', {
         body: {
           email: formData.email,
           password: tempPassword,
@@ -121,9 +155,10 @@ export function AdminManagement() {
         setFormData({ email: '', full_name: '', role: 'librarian', institution_id: '' });
         loadAdmins();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Unexpected error:', err);
-      toast.error('Failed to create administrator: ' + (err.message || 'Unknown error'));
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      toast.error('Failed to create administrator: ' + errorMessage);
     }
 
     setSubmitting(false);
@@ -155,13 +190,13 @@ export function AdminManagement() {
     }
   };
 
-  if (!isSuperAdmin) {
+  if (!isSuperAdmin && !isLibrarian) {
     return (
       <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8 text-center">
         <Shield className="h-16 w-16 mx-auto mb-4 text-yellow-600" />
         <h3 className="text-xl font-semibold text-gray-900 mb-2">Access Restricted</h3>
         <p className="text-gray-600">
-          Only super administrators can manage admin accounts.
+          Only administrators can manage admin accounts.
         </p>
       </div>
     );
@@ -344,10 +379,14 @@ export function AdminManagement() {
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  disabled={isLibrarian}
                 >
                   <option value="librarian">Librarian</option>
-                  <option value="super_admin">Super Admin</option>
+                  {isSuperAdmin && <option value="super_admin">Super Admin</option>}
                 </select>
+                {isLibrarian && (
+                  <p className="text-xs text-gray-500 mt-1">Librarians can only create other librarian accounts</p>
+                )}
               </div>
 
               {formData.role === 'librarian' && (
@@ -360,12 +399,16 @@ export function AdminManagement() {
                     onChange={(e) => setFormData({ ...formData, institution_id: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     required
+                    disabled={isLibrarian}
                   >
                     <option value="">Select Institution</option>
                     {institutions.map((inst) => (
                       <option key={inst.id} value={inst.id}>{inst.name}</option>
                     ))}
                   </select>
+                  {isLibrarian && (
+                    <p className="text-xs text-gray-500 mt-1">New librarian will be added to your institution</p>
+                  )}
                 </div>
               )}
 

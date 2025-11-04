@@ -31,7 +31,50 @@ Deno.serve(async (req: Request) => {
 
     const { email, password, full_name, role, enrollment_id, grade_level, phone_number, parent_email, institution_id } = await req.json();
 
-    if (!institution_id) {
+    // Verify the requesting user's permissions for librarian/super_admin creation
+    if (role === 'librarian' || role === 'super_admin') {
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+
+      if (userError || !user) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      // Get the requesting user's profile
+      const { data: requestingProfile, error: profileError } = await supabaseAdmin
+        .from('user_profiles')
+        .select('role, institution_id')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError || !requestingProfile) {
+        return new Response(JSON.stringify({ error: 'User profile not found' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      // Check permissions
+      if (role === 'super_admin') {
+        // Only super admins can create super admins
+        if (requestingProfile.role !== 'super_admin') {
+          return new Response(JSON.stringify({ error: 'Only super administrators can create super admin accounts' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+      } else if (role === 'librarian') {
+        // Super admins can create librarians anywhere, librarians can only create in their institution
+        if (requestingProfile.role === 'librarian') {
+          if (!institution_id || requestingProfile.institution_id !== institution_id) {
+            return new Response(JSON.stringify({ error: 'Librarians can only create accounts in their own institution' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          }
+        } else if (requestingProfile.role !== 'super_admin') {
+          return new Response(JSON.stringify({ error: 'Insufficient permissions' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+      }
+    }
+
+    if (!institution_id && role !== 'super_admin') {
       return new Response(JSON.stringify({ error: 'institution_id is required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
