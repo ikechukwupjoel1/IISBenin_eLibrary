@@ -3,10 +3,6 @@ CREATE TABLE IF NOT EXISTS public.book_waitlist (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   book_id UUID NOT NULL REFERENCES public.books(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  student_id UUID REFERENCES public.students(id) ON DELETE CASCADE,
-  staff_id UUID REFERENCES public.staff(id) ON DELETE CASCADE,
-  institution_id UUID NOT NULL REFERENCES public.institutions(id) ON DELETE CASCADE,
-  position INTEGER,
   status TEXT NOT NULL DEFAULT 'waiting' CHECK (status IN ('waiting', 'notified', 'cancelled', 'fulfilled')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   notified_at TIMESTAMPTZ,
@@ -19,9 +15,6 @@ CREATE TABLE IF NOT EXISTS public.book_waitlist (
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_waitlist_book_id ON public.book_waitlist(book_id);
 CREATE INDEX IF NOT EXISTS idx_waitlist_user_id ON public.book_waitlist(user_id);
-CREATE INDEX IF NOT EXISTS idx_waitlist_student_id ON public.book_waitlist(student_id);
-CREATE INDEX IF NOT EXISTS idx_waitlist_staff_id ON public.book_waitlist(staff_id);
-CREATE INDEX IF NOT EXISTS idx_waitlist_institution_id ON public.book_waitlist(institution_id);
 CREATE INDEX IF NOT EXISTS idx_waitlist_status ON public.book_waitlist(status);
 CREATE INDEX IF NOT EXISTS idx_waitlist_created_at ON public.book_waitlist(created_at);
 
@@ -43,22 +36,7 @@ DROP POLICY IF EXISTS "Super admins can manage all waitlist" ON public.book_wait
 CREATE POLICY "Users can view their own waitlist entries"
   ON public.book_waitlist
   FOR SELECT
-  USING (
-    auth.uid() = user_id
-    OR
-    EXISTS (
-      SELECT 1 FROM public.user_profiles
-      WHERE user_profiles.id = auth.uid()
-      AND user_profiles.role = 'super_admin'
-    )
-    OR
-    EXISTS (
-      SELECT 1 FROM public.user_profiles
-      WHERE user_profiles.id = auth.uid()
-      AND user_profiles.role = 'librarian'
-      AND user_profiles.institution_id = book_waitlist.institution_id
-    )
-  );
+  USING (auth.uid() = user_id);
 
 -- Users can create their own waitlist entries
 CREATE POLICY "Users can create their own waitlist entries"
@@ -73,7 +51,7 @@ CREATE POLICY "Users can update their own waitlist entries"
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
--- Librarians can view all waitlist in their institution
+-- Librarians can view all waitlist entries
 CREATE POLICY "Librarians can view all waitlist in their institution"
   ON public.book_waitlist
   FOR SELECT
@@ -82,11 +60,10 @@ CREATE POLICY "Librarians can view all waitlist in their institution"
       SELECT 1 FROM public.user_profiles
       WHERE user_profiles.id = auth.uid()
       AND user_profiles.role = 'librarian'
-      AND user_profiles.institution_id = book_waitlist.institution_id
     )
   );
 
--- Librarians can manage waitlist in their institution
+-- Librarians can manage waitlist entries
 CREATE POLICY "Librarians can manage all waitlist in their institution"
   ON public.book_waitlist
   FOR UPDATE
@@ -95,7 +72,6 @@ CREATE POLICY "Librarians can manage all waitlist in their institution"
       SELECT 1 FROM public.user_profiles
       WHERE user_profiles.id = auth.uid()
       AND user_profiles.role = 'librarian'
-      AND user_profiles.institution_id = book_waitlist.institution_id
     )
   );
 
@@ -143,7 +119,7 @@ CREATE OR REPLACE FUNCTION notify_next_in_waitlist()
 RETURNS TRIGGER AS $$
 BEGIN
   -- When a book is returned, notify the first person in the waiting list
-  IF NEW.status = 'returned' AND OLD.status = 'borrowed' THEN
+  IF NEW.return_date IS NOT NULL AND OLD.return_date IS NULL THEN
     UPDATE public.book_waitlist
     SET status = 'notified',
         notified_at = NOW(),
@@ -163,10 +139,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Create trigger on borrows table to notify waitlist
-DROP TRIGGER IF EXISTS notify_waitlist_on_return ON public.borrows;
+-- Create trigger on borrow_records table to notify waitlist
+DROP TRIGGER IF EXISTS notify_waitlist_on_return ON public.borrow_records;
 CREATE TRIGGER notify_waitlist_on_return
-  AFTER UPDATE ON public.borrows
+  AFTER UPDATE ON public.borrow_records
   FOR EACH ROW
   EXECUTE FUNCTION notify_next_in_waitlist();
 
@@ -176,4 +152,3 @@ GRANT USAGE ON SCHEMA public TO authenticated;
 
 COMMENT ON TABLE public.book_waitlist IS 'Stores waiting list for borrowed books';
 COMMENT ON COLUMN public.book_waitlist.status IS 'Waitlist status: waiting, notified, cancelled, fulfilled';
-COMMENT ON COLUMN public.book_waitlist.position IS 'Position in the waiting queue (optional, can be calculated)';
