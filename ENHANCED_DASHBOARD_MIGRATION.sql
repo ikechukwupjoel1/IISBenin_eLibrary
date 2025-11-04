@@ -36,7 +36,7 @@ BEGIN
   SELECT AVG(metric_value) INTO avg_response_time
   FROM system_metrics
   WHERE metric_name = 'api_response_time'
-    AND created_at > NOW() - INTERVAL '5 minutes';
+    AND recorded_at > NOW() - INTERVAL '5 minutes';
   
   -- Count errors in last hour
   SELECT COUNT(*) INTO error_count
@@ -122,9 +122,9 @@ BEGIN
       AVG(sm.metric_value) OVER (PARTITION BY sm.metric_name) as avg_value,
       MIN(sm.metric_value) OVER (PARTITION BY sm.metric_name) as min_value,
       MAX(sm.metric_value) OVER (PARTITION BY sm.metric_name) as max_value,
-      ROW_NUMBER() OVER (PARTITION BY sm.metric_name ORDER BY sm.created_at DESC) as rn
+      ROW_NUMBER() OVER (PARTITION BY sm.metric_name ORDER BY sm.recorded_at DESC) as rn
     FROM system_metrics sm
-    WHERE sm.created_at > NOW() - time_range
+    WHERE sm.recorded_at > NOW() - time_range
   ),
   trend_calc AS (
     SELECT 
@@ -146,12 +146,12 @@ BEGIN
       sm.metric_name,
       json_agg(
         json_build_object(
-          'timestamp', sm.created_at,
+          'timestamp', sm.recorded_at,
           'value', sm.metric_value
-        ) ORDER BY sm.created_at
+        ) ORDER BY sm.recorded_at
       ) as data_points
     FROM system_metrics sm
-    WHERE sm.created_at > NOW() - time_range
+    WHERE sm.recorded_at > NOW() - time_range
     GROUP BY sm.metric_name
   )
   SELECT 
