@@ -3,6 +3,7 @@ import { Plus, Search, CreditCard as Edit2, Trash2, Upload, Link, BookPlus } fro
 import toast from 'react-hot-toast';
 import { supabase, type Book } from '../lib/supabase';
 import { ConfirmDialog } from './ui/ConfirmDialog';
+import { BulkBookUpload } from './BulkBookUpload';
 
 export function BookManagement() {
   const [books, setBooks] = useState<Book[]>([]);
@@ -10,6 +11,7 @@ export function BookManagement() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isAddingBook, setIsAddingBook] = useState(false);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
@@ -370,13 +372,22 @@ export function BookManagement() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Book Management</h2>
-        <button
-          onClick={() => openModal()}
-          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 min-h-[44px]"
-        >
-          <Plus className="h-5 w-5" />
-          Add Book
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowBulkUpload(true)}
+            className="flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 min-h-[44px]"
+          >
+            <Upload className="h-5 w-5" />
+            Bulk Upload
+          </button>
+          <button
+            onClick={() => openModal()}
+            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 min-h-[44px]"
+          >
+            <Plus className="h-5 w-5" />
+            Add Book
+          </button>
+        </div>
       </div>
 
       <div className="relative">
@@ -792,6 +803,28 @@ export function BookManagement() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Bulk Upload Modal */}
+      {showBulkUpload && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-2xl font-bold text-gray-900">Bulk Upload Books</h3>
+                <button
+                  onClick={() => setShowBulkUpload(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <BulkBookUpload onComplete={() => { setShowBulkUpload(false); loadBooks(); }} />
+            </div>
+          </div>
         </div>
       )}
     </div>
