@@ -14,6 +14,7 @@ import { DigitalLibrary } from './DigitalLibrary';
 import { Reservations } from './Reservations';
 import { SuperAdminDashboard } from './SuperAdminDashboard';
 import { ChatMessaging } from './ChatMessaging';
+import { LibrarySettings } from './LibrarySettings';
 
 function MainApp() {
   const { profile, institution, signOut, loading } = useAuth();
@@ -114,6 +115,7 @@ function MainApp() {
           {activeTab === 'bookClubs' && <BookClubs userId={profile?.id || ''} />}
           {activeTab === 'digitalLibrary' && <DigitalLibrary />}
           {activeTab === 'reservations' && <Reservations />}
+          {activeTab === 'settings' && <LibrarySettings />}
         </div>
       </main>
     </div>

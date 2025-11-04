@@ -2,13 +2,14 @@
 -- ADD SAMPLE DATA FOR IIS BENIN LIBRARY
 -- =====================================================
 -- This adds sample books, students, and staff to test all features
+-- Simplified version matching original schema
 -- =====================================================
 
--- Get institution ID
 DO $$
 DECLARE
   institution_uuid UUID;
 BEGIN
+  
   -- Get IIS Benin institution ID
   SELECT id INTO institution_uuid FROM institutions WHERE name ILIKE '%benin%' LIMIT 1;
   
@@ -18,20 +19,20 @@ BEGIN
   
   RAISE NOTICE 'Found institution ID: %', institution_uuid;
   
-  -- Add sample books
-  INSERT INTO books (title, author, isbn, category, total_copies, available_copies, status, institution_id, material_type, condition, page_number)
+  -- Add sample books (filling both author AND author_publisher columns, plus institution_id)
+  INSERT INTO books (title, author, author_publisher, isbn, category, status, institution_id)
   VALUES 
-    ('Introduction to Mathematics', 'John Smith', '978-1234567890', 'Mathematics', 5, 5, 'available', institution_uuid, 'book', 'good', '350'),
-    ('English Grammar Advanced', 'Jane Doe', '978-0987654321', 'English Language', 3, 2, 'borrowed', institution_uuid, 'book', 'good', '420'),
-    ('Biology Textbook Grade 10', 'Dr. Brown', '978-1111111111', 'Biology', 10, 10, 'available', institution_uuid, 'book', 'excellent', '580'),
-    ('Chemistry Basics', 'Prof. White', '978-2222222222', 'Chemistry', 8, 6, 'borrowed', institution_uuid, 'book', 'good', '400'),
-    ('World History Complete', 'Dr. Green', '978-3333333333', 'History', 6, 6, 'available', institution_uuid, 'book', 'good', '650'),
-    ('Physics for Beginners', 'Dr. James', '978-4444444444', 'Physics', 7, 5, 'borrowed', institution_uuid, 'book', 'fair', '320'),
-    ('Computer Science 101', 'Prof. Tech', '978-5555555555', 'Computer Science', 4, 4, 'available', institution_uuid, 'book', 'excellent', '280'),
-    ('Geography Atlas', 'Map Masters', '978-6666666666', 'Geography', 5, 3, 'borrowed', institution_uuid, 'book', 'good', '200'),
-    ('Literature Anthology', 'Various Authors', '978-7777777777', 'Literature', 8, 8, 'available', institution_uuid, 'book', 'good', '500'),
-    ('Economics Principles', 'Dr. Money', '978-8888888888', 'Economics', 6, 4, 'borrowed', institution_uuid, 'book', 'good', '380')
-  ON CONFLICT (isbn, institution_id) DO NOTHING;
+    ('Introduction to Mathematics', 'John Smith', 'John Smith', '978-1234567890', 'Mathematics', 'available', institution_uuid),
+    ('English Grammar Advanced', 'Jane Doe', 'Jane Doe', '978-0987654321', 'English Language', 'borrowed', institution_uuid),
+    ('Biology Textbook Grade 10', 'Dr. Brown', 'Dr. Brown', '978-1111111111', 'Biology', 'available', institution_uuid),
+    ('Chemistry Basics', 'Prof. White', 'Prof. White', '978-2222222222', 'Chemistry', 'borrowed', institution_uuid),
+    ('World History Complete', 'Dr. Green', 'Dr. Green', '978-3333333333', 'History', 'available', institution_uuid),
+    ('Physics for Beginners', 'Dr. James', 'Dr. James', '978-4444444444', 'Physics', 'borrowed', institution_uuid),
+    ('Computer Science 101', 'Prof. Tech', 'Prof. Tech', '978-5555555555', 'Computer Science', 'available', institution_uuid),
+    ('Geography Atlas', 'Map Masters', 'Map Masters', '978-6666666666', 'Geography', 'borrowed', institution_uuid),
+    ('Literature Anthology', 'Various Authors', 'Various Authors', '978-7777777777', 'Literature', 'available', institution_uuid),
+    ('Economics Principles', 'Dr. Money', 'Dr. Money', '978-8888888888', 'Economics', 'borrowed', institution_uuid)
+  ON CONFLICT (isbn) DO NOTHING;
   
   RAISE NOTICE '✅ Added 10 sample books';
   
@@ -43,7 +44,7 @@ BEGIN
     ('Carol Davis', 'carol.d@student.local', 'Grade 9', 'STU003', institution_uuid),
     ('David Miller', 'david.m@student.local', 'Grade 12', 'STU004', institution_uuid),
     ('Emma Wilson', 'emma.w@student.local', 'Grade 10', 'STU005', institution_uuid)
-  ON CONFLICT (enrollment_id, institution_id) DO NOTHING;
+  ON CONFLICT (enrollment_id) DO NOTHING;
   
   RAISE NOTICE '✅ Added 5 sample students';
   
@@ -52,7 +53,7 @@ BEGIN
   VALUES 
     ('Mr. John Teacher', 'john.teacher@school.com', 'STAFF001', '+229-12345678', institution_uuid),
     ('Ms. Sarah Admin', 'sarah.admin@school.com', 'STAFF002', '+229-87654321', institution_uuid)
-  ON CONFLICT (enrollment_id, institution_id) DO NOTHING;
+  ON CONFLICT (enrollment_id) DO NOTHING;
   
   RAISE NOTICE '✅ Added 2 sample staff members';
   
