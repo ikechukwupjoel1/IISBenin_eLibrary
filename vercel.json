@@ -1,6 +1,19 @@
 {
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, must-revalidate"
+        }
+      ]
+    }
+  ],
   "rewrites": [
+    { "source": "/site-manifest.json", "destination": "/site-manifest.json" },
     { "source": "/manifest.json", "destination": "/manifest.json" },
+    { "source": "/service-worker.js", "destination": "/service-worker.js" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
