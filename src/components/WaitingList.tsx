@@ -34,6 +34,9 @@ export default function WaitingList() {
   const [allWaitlists, setAllWaitlists] = useState<BookWaitlist[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'my' | 'all'>('my');
+  
+  // Get user role from profile
+  const userRole = profile?.role || 'student';
 
   useEffect(() => {
     if (!profile?.id) return;

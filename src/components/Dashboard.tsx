@@ -289,7 +289,7 @@ export function Dashboard() {
         {/* Waiting List & Recommendations */}
         {profile?.id && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <WaitingList userId={profile.id} userRole={profile.role || 'student'} />
+            <WaitingList />
             <BookRecommendations />
           </div>
         )}
