@@ -70,12 +70,16 @@ export function AdminManagement() {
           *,
           institutions:institution_id (name)
         `)
-        .in('role', ['librarian', 'super_admin'])
         .order('created_at', { ascending: false });
 
-      // Librarians can only see admins in their institution
+      // Librarians can only see librarians in their institution (not super admins)
       if (isLibrarian && profile?.institution_id) {
-        query = query.eq('institution_id', profile.institution_id);
+        query = query
+          .eq('role', 'librarian')
+          .eq('institution_id', profile.institution_id);
+      } else if (isSuperAdmin) {
+        // Super admins can see all librarians and super admins
+        query = query.in('role', ['librarian', 'super_admin']);
       }
 
       const { data, error } = await query;
