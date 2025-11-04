@@ -6,6 +6,9 @@ import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { Plus, X, Edit, Trash2, Eye, EyeOff, LogIn, Search } from 'lucide-react';
 import { DashboardHome } from './SuperAdmin/Dashboard/DashboardHome';
+import { SystemHealth } from './SuperAdmin/Dashboard/SystemHealth';
+import { PerformanceMonitor } from './SuperAdmin/Dashboard/PerformanceMonitor';
+import { UserManagement } from './SuperAdmin/Users/UserManagement';
 
 type Institution = {
   id: string;
@@ -444,7 +447,16 @@ export function SuperAdminDashboard() {
               <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'institutions' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {setActiveSection('institutions'); setSidebarOpen(false);}}>Institution Management</button>
             </li>
             <li>
+              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'users' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {setActiveSection('users'); setSidebarOpen(false);}}>User Management</button>
+            </li>
+            <li>
               <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'analytics' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {setActiveSection('analytics'); setSidebarOpen(false);}}>Analytics</button>
+            </li>
+            <li>
+              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'system-health' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {setActiveSection('system-health'); setSidebarOpen(false);}}>System Health</button>
+            </li>
+            <li>
+              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'performance' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {setActiveSection('performance'); setSidebarOpen(false);}}>Performance</button>
             </li>
             <li>
               <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'features' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {setActiveSection('features'); setSidebarOpen(false);}}>Feature Flags</button>
@@ -605,6 +617,11 @@ export function SuperAdminDashboard() {
           </div>
         )}
 
+        {/* User Management Tab */}
+        {activeSection === 'users' && (
+          <UserManagement />
+        )}
+
         {/* Analytics Tab */}
         {activeSection === 'analytics' && (
           <div>
@@ -646,6 +663,22 @@ export function SuperAdminDashboard() {
             )}
           </div>
         </div>
+        )}
+
+        {/* System Health Tab */}
+        {activeSection === 'system-health' && (
+          <div>
+            <h2 className="text-base sm:text-lg md:text-2xl font-bold text-gray-900 mb-6">System Health</h2>
+            <SystemHealth />
+          </div>
+        )}
+
+        {/* Performance Tab */}
+        {activeSection === 'performance' && (
+          <div>
+            <h2 className="text-base sm:text-lg md:text-2xl font-bold text-gray-900 mb-6">Performance Monitoring</h2>
+            <PerformanceMonitor />
+          </div>
         )}
 
         {/* Feature Flags Tab */}
