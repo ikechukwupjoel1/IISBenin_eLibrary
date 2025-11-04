@@ -272,11 +272,11 @@ BEGIN
   -- Analyze borrow trends
   WITH borrow_daily AS (
     SELECT 
-      DATE(borrowed_at) as date,
+      DATE(borrow_date) as date,
       COUNT(*) as count
-    FROM borrows
-    WHERE borrowed_at > NOW() - (days_back || ' days')::INTERVAL
-    GROUP BY DATE(borrowed_at)
+    FROM borrow_records
+    WHERE borrow_date > NOW() - (days_back || ' days')::INTERVAL
+    GROUP BY DATE(borrow_date)
     ORDER BY date
   )
   SELECT json_agg(json_build_object('date', date, 'count', count))
