@@ -56,12 +56,12 @@ BEGIN
     'status', CASE 
       WHEN active_connections > 100 THEN 'warning'
       WHEN error_count > 10 THEN 'warning'
-      WHEN (storage_used::FLOAT / NULLIF(storage_total, 0)) > 0.9 THEN 'warning'
+      WHEN (storage_used::NUMERIC / NULLIF(storage_total, 0)) > 0.9 THEN 'warning'
       ELSE 'healthy'
     END,
     'database', json_build_object(
       'size_bytes', db_size,
-      'size_mb', ROUND(db_size / 1024.0 / 1024.0, 2),
+      'size_mb', ROUND((db_size / 1024.0 / 1024.0)::NUMERIC, 2),
       'status', CASE WHEN db_size > 10737418240 THEN 'warning' ELSE 'healthy' END
     ),
     'connections', json_build_object(
@@ -83,10 +83,10 @@ BEGIN
     'storage', json_build_object(
       'total_bytes', COALESCE(storage_total, 0),
       'used_bytes', COALESCE(storage_used, 0),
-      'used_percentage', ROUND((COALESCE(storage_used, 0)::FLOAT / NULLIF(storage_total, 0)) * 100, 2),
+      'used_percentage', ROUND(((COALESCE(storage_used, 0)::NUMERIC / NULLIF(storage_total, 0)) * 100)::NUMERIC, 2),
       'status', CASE 
-        WHEN (storage_used::FLOAT / NULLIF(storage_total, 0)) > 0.9 THEN 'critical'
-        WHEN (storage_used::FLOAT / NULLIF(storage_total, 0)) > 0.8 THEN 'warning'
+        WHEN (storage_used::NUMERIC / NULLIF(storage_total, 0)) > 0.9 THEN 'critical'
+        WHEN (storage_used::NUMERIC / NULLIF(storage_total, 0)) > 0.8 THEN 'warning'
         ELSE 'healthy'
       END
     ),
@@ -182,32 +182,32 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
-BEGIN
+  BEGIN
   RETURN QUERY
   SELECT 
     su.institution_id,
     i.name as institution_name,
     'storage' as alert_type,
     CASE 
-      WHEN (su.books_bytes + su.digital_library_bytes + su.images_bytes + su.other_bytes)::FLOAT / NULLIF(su.total_bytes, 0) > 0.95 THEN 'critical'
-      WHEN (su.books_bytes + su.digital_library_bytes + su.images_bytes + su.other_bytes)::FLOAT / NULLIF(su.total_bytes, 0) > 0.85 THEN 'warning'
+      WHEN (su.books_bytes + su.digital_library_bytes + su.images_bytes + su.other_bytes)::NUMERIC / NULLIF(su.total_bytes, 0) > 0.95 THEN 'critical'
+      WHEN (su.books_bytes + su.digital_library_bytes + su.images_bytes + su.other_bytes)::NUMERIC / NULLIF(su.total_bytes, 0) > 0.85 THEN 'warning'
       ELSE 'info'
     END as alert_level,
     CASE 
-      WHEN (su.books_bytes + su.digital_library_bytes + su.images_bytes + su.other_bytes)::FLOAT / NULLIF(su.total_bytes, 0) > 0.95 THEN 
+      WHEN (su.books_bytes + su.digital_library_bytes + su.images_bytes + su.other_bytes)::NUMERIC / NULLIF(su.total_bytes, 0) > 0.95 THEN 
         'Storage critically low - immediate action required'
-      WHEN (su.books_bytes + su.digital_library_bytes + su.images_bytes + su.other_bytes)::FLOAT / NULLIF(su.total_bytes, 0) > 0.85 THEN 
+      WHEN (su.books_bytes + su.digital_library_bytes + su.images_bytes + su.other_bytes)::NUMERIC / NULLIF(su.total_bytes, 0) > 0.85 THEN 
         'Storage usage high - consider cleanup'
       ELSE 
         'Storage usage normal'
     END as message,
     (su.books_bytes + su.digital_library_bytes + su.images_bytes + su.other_bytes) as used_bytes,
     su.total_bytes,
-    ROUND(((su.books_bytes + su.digital_library_bytes + su.images_bytes + su.other_bytes)::FLOAT / NULLIF(su.total_bytes, 0)) * 100, 2) as used_percentage
+    ROUND((((su.books_bytes + su.digital_library_bytes + su.images_bytes + su.other_bytes)::NUMERIC / NULLIF(su.total_bytes, 0)) * 100)::NUMERIC, 2) as used_percentage
   FROM storage_usage su
   JOIN institutions i ON su.institution_id = i.id
   WHERE su.total_bytes > 0
-    AND (su.books_bytes + su.digital_library_bytes + su.images_bytes + su.other_bytes)::FLOAT / NULLIF(su.total_bytes, 0) > 0.75
+    AND (su.books_bytes + su.digital_library_bytes + su.images_bytes + su.other_bytes)::NUMERIC / NULLIF(su.total_bytes, 0) > 0.75
   ORDER BY used_percentage DESC;
 END;
 $$;
