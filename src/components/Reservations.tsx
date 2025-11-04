@@ -46,7 +46,7 @@ export function Reservations() {
       .from('reservations')
       .select(`
         *,
-        books (
+        books:book_id (
           title,
           author_publisher
         )

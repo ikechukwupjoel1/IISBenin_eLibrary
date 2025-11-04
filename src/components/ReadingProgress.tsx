@@ -47,7 +47,10 @@ export function ReadingProgress() {
   }, [profile]);
 
   const loadData = async () => {
-    if (!profile) return;
+    if (!profile) {
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -58,19 +61,30 @@ export function ReadingProgress() {
           id,
           book_id,
           due_date,
-          books (title, author_publisher)
+          books:book_id (title, author_publisher)
         `)
         .eq('status', 'active');
 
-      if (profile.role === 'student') {
+      if (profile.role === 'student' && profile.student_id) {
         borrowQuery.eq('student_id', profile.student_id);
-      } else if (profile.role === 'staff') {
+      } else if (profile.role === 'staff' && profile.staff_id) {
         borrowQuery.eq('staff_id', profile.staff_id);
+      } else {
+        // If no student_id or staff_id, set empty data
+        setActiveBorrows([]);
+        setProgressSessions([]);
+        setLoading(false);
+        return;
       }
 
       const { data: borrowsData, error: borrowsError } = await borrowQuery;
 
-      if (borrowsError) throw borrowsError;
+      if (borrowsError) {
+        console.error('Error loading borrows:', borrowsError);
+        toast.error('Failed to load borrowed books');
+        setLoading(false);
+        return;
+      }
       
       // Type assertion to handle Supabase join result
       const typedBorrows = (borrowsData || []).map(borrow => ({

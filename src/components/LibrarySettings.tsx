@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Settings, Plus, Trash2, BarChart3, Download, ShieldAlert, Users } from 'lucide-react';
+import { Settings, Plus, Trash2, BarChart3, Download, ShieldAlert, Users, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { LibrarianAnalytics } from './LibrarianAnalytics';
+import { ReportsExports } from './ReportsExports';
+import { EnhancedLoginLogs } from './EnhancedLoginLogs';
 
 type Setting = {
   id: string;
@@ -16,6 +19,7 @@ export function LibrarySettings() {
   const [newCategory, setNewCategory] = useState('');
   const [newShelf, setNewShelf] = useState('');
   const [loading, setLoading] = useState(true);
+  const [activeFeature, setActiveFeature] = useState<'analytics' | 'exports' | 'logs' | 'librarians' | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -183,62 +187,64 @@ export function LibrarySettings() {
       </div>
 
       {/* Action Buttons for Advanced Features */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <button
-          onClick={() => toast('Analytics feature: View library performance metrics, borrowing trends, and user engagement statistics', { icon: '📊' })}
-          className="flex flex-col items-center gap-3 p-6 bg-white rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:shadow-lg transition-all group"
-        >
-          <div className="p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
-            <BarChart3 className="h-6 w-6 text-blue-600" />
-          </div>
-          <div className="text-center">
-            <h3 className="font-semibold text-gray-900">Analytics</h3>
-            <p className="text-xs text-gray-600 mt-1">View insights</p>
-          </div>
-        </button>
+      {!activeFeature && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <button
+              onClick={() => setActiveFeature('analytics')}
+              className="flex flex-col items-center gap-3 p-6 bg-white rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:shadow-lg transition-all group"
+            >
+              <div className="p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
+                <BarChart3 className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="text-center">
+                <h3 className="font-semibold text-gray-900">Analytics</h3>
+                <p className="text-xs text-gray-600 mt-1">View insights</p>
+              </div>
+            </button>
 
-        <button
-          onClick={() => toast('Export Reports: Download borrowing records, user data, and system logs in CSV/PDF formats', { icon: '📥' })}
-          className="flex flex-col items-center gap-3 p-6 bg-white rounded-xl border-2 border-gray-200 hover:border-green-500 hover:shadow-lg transition-all group"
-        >
-          <div className="p-3 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
-            <Download className="h-6 w-6 text-green-600" />
-          </div>
-          <div className="text-center">
-            <h3 className="font-semibold text-gray-900">Export Reports</h3>
-            <p className="text-xs text-gray-600 mt-1">Download data</p>
-          </div>
-        </button>
+            <button
+              onClick={() => setActiveFeature('exports')}
+              className="flex flex-col items-center gap-3 p-6 bg-white rounded-xl border-2 border-gray-200 hover:border-green-500 hover:shadow-lg transition-all group"
+            >
+              <div className="p-3 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
+                <Download className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="text-center">
+                <h3 className="font-semibold text-gray-900">Export Reports</h3>
+                <p className="text-xs text-gray-600 mt-1">Download data</p>
+              </div>
+            </button>
 
-        <button
-          onClick={() => toast('Security Logs: Monitor login attempts, failed authentications, and security events', { icon: '🔒' })}
-          className="flex flex-col items-center gap-3 p-6 bg-white rounded-xl border-2 border-gray-200 hover:border-red-500 hover:shadow-lg transition-all group"
-        >
-          <div className="p-3 bg-red-100 rounded-lg group-hover:bg-red-200 transition-colors">
-            <ShieldAlert className="h-6 w-6 text-red-600" />
-          </div>
-          <div className="text-center">
-            <h3 className="font-semibold text-gray-900">Security Logs</h3>
-            <p className="text-xs text-gray-600 mt-1">View activity</p>
-          </div>
-        </button>
+            <button
+              onClick={() => setActiveFeature('logs')}
+              className="flex flex-col items-center gap-3 p-6 bg-white rounded-xl border-2 border-gray-200 hover:border-red-500 hover:shadow-lg transition-all group"
+            >
+              <div className="p-3 bg-red-100 rounded-lg group-hover:bg-red-200 transition-colors">
+                <ShieldAlert className="h-6 w-6 text-red-600" />
+              </div>
+              <div className="text-center">
+                <h3 className="font-semibold text-gray-900">Security Logs</h3>
+                <p className="text-xs text-gray-600 mt-1">View activity</p>
+              </div>
+            </button>
 
-        <button
-          onClick={() => toast('Manage Librarians: Add, edit, or remove librarian accounts and permissions', { icon: '👥' })}
-          className="flex flex-col items-center gap-3 p-6 bg-white rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:shadow-lg transition-all group"
-        >
-          <div className="p-3 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
-            <Users className="h-6 w-6 text-purple-600" />
+            <button
+              onClick={() => setActiveFeature('librarians')}
+              className="flex flex-col items-center gap-3 p-6 bg-white rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:shadow-lg transition-all group"
+            >
+              <div className="p-3 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
+                <Users className="h-6 w-6 text-purple-600" />
+              </div>
+              <div className="text-center">
+                <h3 className="font-semibold text-gray-900">Manage Librarians</h3>
+                <p className="text-xs text-gray-600 mt-1">User admin</p>
+              </div>
+            </button>
           </div>
-          <div className="text-center">
-            <h3 className="font-semibold text-gray-900">Manage Librarians</h3>
-            <p className="text-xs text-gray-600 mt-1">User admin</p>
-          </div>
-        </button>
-      </div>
 
-      {/* Categories Section */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+          {/* Categories Section */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h3 className="text-xl font-semibold text-gray-900 mb-4">Book Categories</h3>
         
         <div className="flex gap-2 mb-4">
@@ -340,6 +346,67 @@ export function LibrarySettings() {
           </p>
         </div>
       </div>
+      </>
+      )}
+
+      {/* Feature Views */}
+      {activeFeature === 'analytics' && (
+        <div>
+          <button
+            onClick={() => setActiveFeature(null)}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-4"
+          >
+            <X className="h-5 w-5" />
+            Back to Settings
+          </button>
+          <LibrarianAnalytics />
+        </div>
+      )}
+
+      {activeFeature === 'exports' && (
+        <div>
+          <button
+            onClick={() => setActiveFeature(null)}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-4"
+          >
+            <X className="h-5 w-5" />
+            Back to Settings
+          </button>
+          <ReportsExports />
+        </div>
+      )}
+
+      {activeFeature === 'logs' && (
+        <div>
+          <button
+            onClick={() => setActiveFeature(null)}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-4"
+          >
+            <X className="h-5 w-5" />
+            Back to Settings
+          </button>
+          <EnhancedLoginLogs />
+        </div>
+      )}
+
+      {activeFeature === 'librarians' && (
+        <div>
+          <button
+            onClick={() => setActiveFeature(null)}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-4"
+          >
+            <X className="h-5 w-5" />
+            Back to Settings
+          </button>
+          <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+            <Users className="h-16 w-16 mx-auto mb-4 text-purple-600" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Librarian Management</h3>
+            <p className="text-gray-600">
+              This feature allows super admins to manage librarian accounts. Please contact your system administrator.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
