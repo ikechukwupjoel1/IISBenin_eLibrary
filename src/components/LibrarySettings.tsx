@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { LibrarianAnalytics } from './LibrarianAnalytics';
 import { ReportsExports } from './ReportsExports';
 import { EnhancedLoginLogs } from './EnhancedLoginLogs';
+import { AdminManagement } from './AdminManagement';
 
 type Setting = {
   id: string;
@@ -398,13 +399,7 @@ export function LibrarySettings() {
             <X className="h-5 w-5" />
             Back to Settings
           </button>
-          <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-            <Users className="h-16 w-16 mx-auto mb-4 text-purple-600" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Librarian Management</h3>
-            <p className="text-gray-600">
-              This feature allows super admins to manage librarian accounts. Please contact your system administrator.
-            </p>
-          </div>
+          <AdminManagement />
         </div>
       )}
     </div>
