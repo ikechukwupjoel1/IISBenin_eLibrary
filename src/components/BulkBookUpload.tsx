@@ -10,7 +10,11 @@ type UploadResult = {
   message: string;
 };
 
-export function BulkBookUpload() {
+interface BulkBookUploadProps {
+  onComplete?: () => void;
+}
+
+export function BulkBookUpload({ onComplete }: BulkBookUploadProps = {}) {
   const [uploading, setUploading] = useState(false);
   const [results, setResults] = useState<UploadResult[]>([]);
 
@@ -159,6 +163,11 @@ export function BulkBookUpload() {
       const errorCount = uploadResults.filter(r => r.status === 'error').length;
 
       toast.success(`Upload complete! ${successCount} books added, ${errorCount} failed`, { id: 'bulk-upload' });
+      
+      // Call onComplete callback if provided and there were successful uploads
+      if (onComplete && successCount > 0) {
+        setTimeout(() => onComplete(), 1500); // Small delay to show success message
+      }
     } catch (error: any) {
       toast.error(`Error reading file: ${error.message}`, { id: 'bulk-upload' });
     }
