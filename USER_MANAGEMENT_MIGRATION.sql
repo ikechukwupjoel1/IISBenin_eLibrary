@@ -373,6 +373,7 @@ BEGIN
   FROM (
     SELECT role, COUNT(*) as count
     FROM user_profiles
+    WHERE role IS NOT NULL
     GROUP BY role
   ) roles;
   
