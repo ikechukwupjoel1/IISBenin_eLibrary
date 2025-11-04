@@ -71,11 +71,11 @@ BEGIN
   WITH filtered_users AS (
     SELECT 
       u.id,
-      u.email,
+      u.email::TEXT,
       up.full_name,
       up.role,
       up.institution_id,
-      i.name as institution_name,
+      i.name::TEXT as institution_name,
       CASE 
         WHEN u.deleted_at IS NULL THEN true
         ELSE false
