@@ -37,12 +37,15 @@ Deno.serve(async (req: Request) => {
 
     let authUserId = null;
 
-    if (role === 'librarian') {
+    if (role === 'librarian' || role === 'super_admin') {
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: email,
         password,
         email_confirm: true,
-        user_metadata: { institution_id: institution_id },
+        user_metadata: { 
+          institution_id: role === 'librarian' ? institution_id : null,
+          role: role
+        },
       });
 
       if (authError || !authData.user) {
@@ -54,7 +57,7 @@ Deno.serve(async (req: Request) => {
       authUserId = authData.user.id;
     }
 
-    let recordId: string;
+    let recordId: string | undefined;
     if (role === 'student') {
       const studentId = crypto.randomUUID();
       const { data: studentData, error: studentError } = await supabaseAdmin
@@ -90,6 +93,9 @@ Deno.serve(async (req: Request) => {
         return new Response(JSON.stringify({ error: `Staff creation failed: ${staffError.message}` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
       recordId = staffId;
+    } else if (role === 'librarian' || role === 'super_admin') {
+      // Librarians and super_admins don't need separate student/staff records
+      recordId = undefined;
     } else {
       if (authUserId) {
         await supabaseAdmin.auth.admin.deleteUser(authUserId);
@@ -99,14 +105,14 @@ Deno.serve(async (req: Request) => {
 
     const profileId = authUserId || recordId;
 
-    const profileData: any = {
+    const profileData: Record<string, any> = {
       id: profileId,
-      email: role === 'librarian' ? email : (email ?? parent_email ?? null),
+      email: role === 'librarian' || role === 'super_admin' ? email : (email ?? parent_email ?? null),
       full_name,
       role,
-      enrollment_id,
-      password_hash: role !== 'librarian' ? password : null,
-      institution_id: institution_id,
+      enrollment_id: role === 'student' || role === 'staff' ? enrollment_id : null,
+      password_hash: role !== 'librarian' && role !== 'super_admin' ? password : null,
+      institution_id: role === 'super_admin' ? null : institution_id,
     };
 
     if (role === 'student') {

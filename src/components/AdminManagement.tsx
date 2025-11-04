@@ -89,10 +89,14 @@ export function AdminManagement() {
     setSubmitting(true);
 
     try {
-      // Call Edge Function to create admin user
-      const { data, error } = await supabase.functions.invoke('create-admin-user', {
+      // Generate a temporary password
+      const tempPassword = `Temp${Math.random().toString(36).slice(-8)}!`;
+
+      // Call existing Edge Function to create admin user
+      const { data, error } = await supabase.functions.invoke('create-user-account', {
         body: {
           email: formData.email,
+          password: tempPassword,
           full_name: formData.full_name,
           role: formData.role,
           institution_id: formData.role === 'librarian' ? formData.institution_id : null,
@@ -103,7 +107,16 @@ export function AdminManagement() {
         console.error('Error creating admin:', error);
         toast.error('Failed to create administrator: ' + error.message);
       } else {
-        toast.success('Administrator created successfully! Invitation email sent.');
+        // Send password reset email
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(formData.email);
+        
+        if (resetError) {
+          console.error('Error sending password reset:', resetError);
+          toast.success('Administrator created! Please manually send password reset email.');
+        } else {
+          toast.success('Administrator created successfully! Invitation email sent.');
+        }
+        
         setShowAddModal(false);
         setFormData({ email: '', full_name: '', role: 'librarian', institution_id: '' });
         loadAdmins();
