@@ -284,10 +284,11 @@ export function ChatMessaging() {
 
     // Apply role-based filtering
     if (profile.role === 'student') {
-      // Students can only see users from their own institution
+      // Students can only chat with staff and librarians from their own institution
+      // NO student-to-student chat to prevent distraction
       query = query
         .eq('institution_id', profile.institution_id)
-        .in('role', ['librarian', 'student', 'staff']);
+        .in('role', ['librarian', 'staff']);
     } else if (profile.role === 'staff') {
       // Staff can only see librarians and other staff from their own institution
       query = query
