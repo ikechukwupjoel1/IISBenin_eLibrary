@@ -69,11 +69,19 @@ export function ReadingProgress() {
       // Check role and query accordingly
       if (profile.role === 'student') {
         // Get student record by enrollment_id from user_profile
-        const { data: studentData } = await supabase
+        const { data: studentData, error: studentError } = await supabase
           .from('students')
-          .select('id')
+          .select('id, enrollment_id, name')
           .eq('enrollment_id', profile.enrollment_id)
           .single();
+        
+        if (studentError) {
+          console.error('Error fetching student:', studentError);
+          setActiveBorrows([]);
+          setProgressSessions([]);
+          setLoading(false);
+          return;
+        }
         
         if (studentData?.id) {
           borrowQuery = borrowQuery.eq('student_id', studentData.id);
@@ -86,11 +94,19 @@ export function ReadingProgress() {
         }
       } else if (profile.role === 'staff') {
         // Get staff record by enrollment_id from user_profile
-        const { data: staffData } = await supabase
+        const { data: staffData, error: staffError } = await supabase
           .from('staff')
-          .select('id')
+          .select('id, enrollment_id, name')
           .eq('enrollment_id', profile.enrollment_id)
           .single();
+        
+        if (staffError) {
+          console.error('Error fetching staff:', staffError);
+          setActiveBorrows([]);
+          setProgressSessions([]);
+          setLoading(false);
+          return;
+        }
         
         if (staffData?.id) {
           borrowQuery = borrowQuery.eq('staff_id', staffData.id);
