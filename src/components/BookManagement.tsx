@@ -1,20 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import { Plus, Search, CreditCard as Edit2, Trash2, Upload, Link, BookPlus, Filter } from 'lucide-react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { Plus, Search, CreditCard as Edit2, Trash2, Upload, Link, Filter } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase, type Book } from '../lib/supabase';
-import { ConfirmDialog } from './ui/ConfirmDialog';
 import { BulkBookUpload } from './BulkBookUpload';
 import { AdvancedBookSearch } from './AdvancedBookSearch';
+import { useAuth } from '../contexts/AuthContext';
+import { validateFileForUpload, sanitizeFileName, sanitizeInput } from '../utils/fileValidation';
 
 export function BookManagement() {
+  const { profile } = useAuth();
   const [books, setBooks] = useState<Book[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isAddingBook, setIsAddingBook] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
   const [shelves, setShelves] = useState<string[]>([]);
@@ -144,6 +146,15 @@ export function BookManagement() {
     };
   }, []);
 
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const loadSettings = async () => {
     try {
       // Load categories
@@ -186,26 +197,61 @@ export function BookManagement() {
     }
   };
 
-  const filteredBooks = books.filter((book) => {
-    const matchesSearch =
-      book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      book.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      book.isbn?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      book.category?.toLowerCase().includes(searchTerm.toLowerCase());
+  // Optimize filtering with useMemo and debounced search
+  const filteredBooks = useMemo(() => {
+    return books.filter((book) => {
+      const matchesSearch =
+        book.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        book.author_publisher.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        book.isbn?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        book.category?.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
 
-    const matchesCategory = categoryFilter === 'all' || book.category === categoryFilter;
-    const matchesStatus = statusFilter === 'all' || book.status === statusFilter;
+      const matchesCategory = categoryFilter === 'all' || book.category === categoryFilter;
+      const matchesStatus = statusFilter === 'all' || book.status === statusFilter;
 
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
-
-  const allCategories = ['all', ...categories];
-  const statuses = ['all', 'available', 'borrowed'];
+      return matchesSearch && matchesCategory && matchesStatus;
+    });
+  }, [books, debouncedSearchTerm, categoryFilter, statusFilter]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validate and sanitize inputs
+    const title = sanitizeInput(formData.title.trim());
+    const author = sanitizeInput(formData.author.trim());
+
+    if (!title) {
+      toast.error('Book title is required');
+      return;
+    }
+
+    if (title.length < 2) {
+      toast.error('Book title must be at least 2 characters');
+      return;
+    }
+
+    if (title.length > 500) {
+      toast.error('Book title is too long (max 500 characters)');
+      return;
+    }
+
+    if (!author) {
+      toast.error('Author/Publisher is required');
+      return;
+    }
+
+    if (author.length < 2) {
+      toast.error('Author/Publisher must be at least 2 characters');
+      return;
+    }
+
+    if (author.length > 300) {
+      toast.error('Author/Publisher is too long (max 300 characters)');
+      return;
+    }
+
     let fileUrl = formData.isbn;
+    let uploadedFileName: string | null = null;
 
     // Handle file upload for digital materials
     if ((formData.material_type === 'ebook' || formData.material_type === 'electronic_material') &&
@@ -213,10 +259,10 @@ export function BookManagement() {
         selectedFile &&
         !editingBook) {
       
-      // Check file size (max 50MB)
-      const maxSize = 50 * 1024 * 1024; // 50MB in bytes
-      if (selectedFile.size > maxSize) {
-        toast.error('File too large! Maximum size is 50MB. Please compress the file or use a URL instead.');
+      // Validate file
+      const validation = validateFileForUpload(selectedFile);
+      if (!validation.valid) {
+        toast.error(validation.error || 'Invalid file');
         return;
       }
 
@@ -224,7 +270,9 @@ export function BookManagement() {
       const uploadToast = toast.loading(`Uploading ${selectedFile.name}... Please wait.`);
 
       try {
-        const fileName = `${Date.now()}-${selectedFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        const safeFileName = sanitizeFileName(selectedFile.name);
+        const fileName = `${Date.now()}-${safeFileName}`;
+        uploadedFileName = fileName;
         
         console.log('📤 Uploading file:', fileName, 'Size:', (selectedFile.size / 1024 / 1024).toFixed(2), 'MB');
         
@@ -264,48 +312,65 @@ export function BookManagement() {
     }
 
     // Only submit columns that exist in the database
-    const dataToSubmit = {
-      title: formData.title,
-      author: formData.author,
+    const dataToSubmit: Partial<Book> = {
+      title: title,
+      author_publisher: author,
       isbn: fileUrl,
-      category: formData.category || null,
+      category: formData.category?.trim() || undefined,
       status: 'available',
-      material_type: formData.material_type,
-      page_number: formData.page_number || null,
     };
+
+    // Add institution_id from user profile if available
+    if (profile?.institution_id) {
+      dataToSubmit.institution_id = profile.institution_id;
+    }
 
     // Debug logging
     console.log('📝 Form Data:', formData);
     console.log('📤 Submitting to database:', dataToSubmit);
     console.log('🏷️ Material Type:', formData.material_type);
 
-    if (editingBook) {
-      const { error } = await supabase
-        .from('books')
-        .update(dataToSubmit)
-        .eq('id', editingBook.id);
+    try {
+      if (editingBook) {
+        const { error } = await supabase
+          .from('books')
+          .update(dataToSubmit)
+          .eq('id', editingBook.id);
 
-      if (error) {
-        console.error('Error updating book:', error);
-        toast.error('Error updating book: ' + error.message);
-      } else {
+        if (error) {
+          // Cleanup uploaded file if update failed
+          if (uploadedFileName && fileUrl !== formData.isbn) {
+            await supabase.storage.from('ebooks').remove([uploadedFileName]);
+            console.log('Cleaned up orphaned file:', uploadedFileName);
+          }
+          throw error;
+        }
+
         toast.success('Book updated successfully');
-        loadBooks();
+        await loadBooks();
         closeModal();
-      }
-    } else {
-      const { error } = await supabase
-        .from('books')
-        .insert([dataToSubmit]);
-
-      if (error) {
-        console.error('Error adding book:', error);
-        toast.error('Error adding book: ' + error.message);
       } else {
+        const { error } = await supabase
+          .from('books')
+          .insert([dataToSubmit]);
+
+        if (error) {
+          // Cleanup uploaded file if insert failed
+          if (uploadedFileName) {
+            await supabase.storage.from('ebooks').remove([uploadedFileName]);
+            console.log('Cleaned up orphaned file:', uploadedFileName);
+          }
+          throw error;
+        }
+
         toast.success('Book added successfully');
-        loadBooks();
+        await loadBooks();
         closeModal();
       }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Error submitting book:', error);
+      toast.error(`Error ${editingBook ? 'updating' : 'adding'} book: ${errorMessage}`);
     }
   };
 
@@ -327,7 +392,7 @@ export function BookManagement() {
       setEditingBook(book);
       setFormData({
         title: book.title,
-        author: book.author,
+        author: book.author_publisher,
         isbn: book.isbn || '',
         category: book.category || '',
         total_copies: 1,
@@ -335,12 +400,12 @@ export function BookManagement() {
         condition: 'good',
         location: '',
         barcode: '',
-        material_type: book.material_type || 'book',
+        material_type: 'book',
         is_ebook: false,
         class_specific: '',
         recommended_grade_levels: [],
         reading_level: '',
-        page_number: book.page_number || '',
+        page_number: '',
       });
     }
     setIsAddingBook(true);
@@ -349,6 +414,15 @@ export function BookManagement() {
   const closeModal = () => {
     setIsAddingBook(false);
     setEditingBook(null);
+    // Memory leak fix: Clear file input and revoke object URL
+    if (selectedFile) {
+      const fileInputs = document.querySelectorAll('input[type="file"]');
+      fileInputs.forEach(input => {
+        if (input instanceof HTMLInputElement) {
+          input.value = '';
+        }
+      });
+    }
     setSelectedFile(null);
     setUploadMethod('url');
     setFormData({
@@ -485,7 +559,7 @@ export function BookManagement() {
                 return (
                   <tr key={book.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{book.title}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{book.author}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{book.author_publisher}</td>
                     <td className="px-6 py-4 text-sm">
                       {isDigital ? (
                         <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-teal-100 text-teal-700 rounded">
@@ -498,13 +572,7 @@ export function BookManagement() {
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-700">
-                      {isDigital ? (
-                        book.page_number ? (
-                          <span className="text-blue-600">{book.page_number}</span>
-                        ) : '-'
-                      ) : (
-                        book.isbn || '-'
-                      )}
+                      {book.isbn || '-'}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-700">{book.category || '-'}</td>
                     <td className="px-6 py-4">

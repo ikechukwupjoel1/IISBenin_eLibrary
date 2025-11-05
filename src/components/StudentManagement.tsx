@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Search, Edit2, Trash2, X, History, KeyRound, Printer, UserPlus, Upload } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, History, KeyRound, Printer, UserPlus, Upload, Eye, EyeOff, Copy } from 'lucide-react';
 import { supabase, type Student, type BorrowRecord, type Book } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { generateSecurePassword } from '../utils/validation';
@@ -19,6 +19,7 @@ type GeneratedCredentials = {
 export function StudentManagement() {
   const { profile: currentLibrarianProfile } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -40,9 +41,20 @@ export function StudentManagement() {
   });
 
   useEffect(() => {
-    if (currentLibrarianProfile) { // Only load if profile is available
-      loadStudents();
+    let isMounted = true;
+    
+    if (currentLibrarianProfile) {
+      const fetchData = async () => {
+        if (isMounted) {
+          await loadStudents();
+        }
+      };
+      fetchData();
     }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [currentPage, searchTerm, currentLibrarianProfile]);
 
   const loadStudents = async () => {
@@ -120,18 +132,25 @@ export function StudentManagement() {
         loadStudents();
         closeModal();
       } else {
-        alert('Error updating student: ' + error.message);
+        toast.error('Error updating student: ' + error.message);
       }
     } else {
       const enrollmentId = await generateEnrollmentId();
       const password = generatePassword();
       const email = formData.parent_email.trim().toLowerCase();
 
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        toast.error('Please enter a valid email address');
+        return;
+      }
+
       // Use Edge Function to create user without affecting current session
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
-        alert('You must be logged in to create students');
+        toast.error('You must be logged in to create students');
         return;
       }
 
@@ -161,7 +180,7 @@ export function StudentManagement() {
         const result = await response.json();
 
         if (!response.ok || result.error) {
-          alert('Error creating student: ' + (result.error || 'Unknown error'));
+          toast.error('Error creating student: ' + (result.error || 'Unknown error'));
           return;
         }
 
@@ -181,24 +200,49 @@ export function StudentManagement() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this student? This will permanently remove their account.')) {
-      // Delete the student (CASCADE will delete user_profile too)
-      const { error } = await supabase
-        .from('students')
-        .delete()
-        .eq('id', id);
+    if (confirm('Are you sure you want to delete this student? This will permanently remove their account and all associated records.')) {
+      try {
+        // Delete associated borrow records (or update them to remove student reference)
+        const { error: borrowError } = await supabase
+          .from('borrow_records')
+          .delete()
+          .eq('student_id', id);
 
-      if (error) {
-        alert('Error deleting student: ' + error.message);
-        return;
+        if (borrowError) {
+          console.warn('Error deleting borrow records:', borrowError);
+          // Continue with deletion even if borrow records fail
+        }
+
+        // Delete reading progress
+        const { error: progressError } = await supabase
+          .from('reading_progress')
+          .delete()
+          .eq('student_id', id);
+
+        if (progressError) {
+          console.warn('Error deleting reading progress:', progressError);
+        }
+
+        // Delete the student (CASCADE will handle user_profile)
+        const { error } = await supabase
+          .from('students')
+          .delete()
+          .eq('id', id);
+
+        if (error) {
+          toast.error('Error deleting student: ' + error.message);
+          return;
+        }
+
+        // Note: Auth user deletion requires admin privileges and should be done separately
+        // The auth user record will remain but won't be able to log in since the profile is gone
+
+        await loadStudents();
+        toast.success('Student and associated records deleted successfully');
+      } catch (error) {
+        console.error('Error during deletion:', error);
+        toast.error('Failed to delete student completely');
       }
-
-      // Note: Auth user deletion requires admin privileges
-      // The auth user record will remain but won't be able to log in
-      // since the profile is gone
-
-      loadStudents();
-      alert('Student deleted successfully');
     }
   };
 
@@ -248,6 +292,24 @@ export function StudentManagement() {
   const handleResetPassword = async () => {
     if (!resetPasswordStudent) return;
 
+    // SECURITY FIX: Verify institution ownership
+    if (!currentLibrarianProfile?.institution_id) {
+      toast.error('Unable to verify your institution access');
+      console.error('No librarian profile or institution_id available');
+      return;
+    }
+
+    if (resetPasswordStudent.institution_id !== currentLibrarianProfile.institution_id) {
+      toast.error('You can only reset passwords for students in your own institution');
+      console.warn('Unauthorized password reset attempt:', {
+        librarian_institution: currentLibrarianProfile.institution_id,
+        student_institution: resetPasswordStudent.institution_id,
+        student_id: resetPasswordStudent.id,
+        librarian_id: currentLibrarianProfile.id
+      });
+      return;
+    }
+
     const newPassword = generatePassword();
 
     try {
@@ -262,7 +324,7 @@ export function StudentManagement() {
       // Get the auth user ID from user_profiles linked to this student
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
-        .select('id, email, role, student_id')
+        .select('id, email, role, student_id, institution_id')
         .eq('student_id', resetPasswordStudent.id)
         .maybeSingle();
 
@@ -281,6 +343,17 @@ export function StudentManagement() {
       if (!profileData) {
         toast.error('No user account found for this student. They may not have been registered properly.');
         console.error('No profile found for student_id:', resetPasswordStudent.id);
+        return;
+      }
+
+      // SECURITY FIX: Double-check institution match on user profile
+      if (profileData.institution_id !== currentLibrarianProfile.institution_id) {
+        toast.error('Security error: Institution mismatch detected');
+        console.error('Institution mismatch between student and user profile:', {
+          student_institution: resetPasswordStudent.institution_id,
+          profile_institution: profileData.institution_id,
+          librarian_institution: currentLibrarianProfile.institution_id
+        });
         return;
       }
 
@@ -496,7 +569,10 @@ export function StudentManagement() {
               type="text"
               placeholder="Search by name, grade, or enrollment ID..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to first page on search
+              }}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-600 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-h-[44px]"
             />
           </div>
@@ -717,11 +793,28 @@ export function StudentManagement() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
                   <div className="flex gap-2">
                     <input
-                      type="text"
+                      type={showPassword ? "text" : "password"}
                       value={generatedCredentials.password}
                       readOnly
                       className="flex-1 px-3 py-3 border border-gray-300 rounded-lg bg-gray-50 font-mono min-h-[44px]"
                     />
+                    <button
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                      title={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedCredentials.password);
+                        toast.success('Password copied to clipboard');
+                      }}
+                      className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                      title="Copy password"
+                    >
+                      <Copy className="h-5 w-5" />
+                    </button>
                   </div>
                 </div>
               </div>

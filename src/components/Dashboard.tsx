@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { BookOpen, Users, BookMarked, AlertCircle, UserCog, FileText } from 'lucide-react';
+import { BookOpen, Users, BookMarked, AlertCircle, UserCog, FileText, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import toast from 'react-hot-toast';
 import BackgroundCarousel from './BackgroundCarousel';
 import schoolLogo from '../assets/Iisbenin logo.png';
 import { useAuth } from '../contexts/AuthContext';
@@ -36,6 +37,7 @@ type StaffReadingData = {
 export function Dashboard() {
   const { profile, institution } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<Stats>({
     totalBooks: 0,
     borrowedBooks: 0,
@@ -53,92 +55,141 @@ export function Dashboard() {
       return; // Do not load stats if no institution is found
     }
 
-    // For students, filter overdue books by their student_id
-    let overdueQuery = supabase.from('borrow_records').select('id', { count: 'exact', head: true })
-      .eq('status', 'active')
-      .eq('institution_id', profile.institution_id)
-      .lt('due_date', new Date().toISOString());
+    try {
+      // For students, filter overdue books by their student_id
+      let overdueQuery = supabase.from('borrow_records').select('id', { count: 'exact', head: true })
+        .eq('status', 'active')
+        .eq('institution_id', profile.institution_id)
+        .lt('due_date', new Date().toISOString());
 
-    if (profile?.role === 'student' && profile?.student_id) {
-      overdueQuery = overdueQuery.eq('student_id', profile.student_id);
+      if (profile?.role === 'student' && profile?.student_id) {
+        overdueQuery = overdueQuery.eq('student_id', profile.student_id);
+      }
+
+      // Get pending reports count for librarians/staff
+      const pendingReportsQuery = (profile?.role === 'librarian' || profile?.role === 'staff')
+        ? supabase.from('book_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending').eq('institution_id', profile.institution_id)
+        : Promise.resolve({ count: 0 });
+
+      const [booksResult, studentsResult, staffResult, borrowedResult, overdueResult, reportsResult] = await Promise.all([
+        supabase.from('books').select('id', { count: 'exact', head: true }).eq('institution_id', profile.institution_id),
+        supabase.from('students').select('id', { count: 'exact', head: true }).eq('institution_id', profile.institution_id),
+        supabase.from('staff').select('id', { count: 'exact', head: true }).eq('institution_id', profile.institution_id),
+        supabase.from('books').select('id', { count: 'exact', head: true }).eq('status', 'borrowed').eq('institution_id', profile.institution_id),
+        overdueQuery,
+        pendingReportsQuery,
+      ]);
+
+      // Check for errors
+      if (booksResult.error) {
+        console.error('Error loading books count:', booksResult.error);
+        throw new Error(`Failed to load books: ${booksResult.error.message}`);
+      }
+      if (studentsResult.error) {
+        console.error('Error loading students count:', studentsResult.error);
+        throw new Error(`Failed to load students: ${studentsResult.error.message}`);
+      }
+      if (staffResult.error) {
+        console.error('Error loading staff count:', staffResult.error);
+        throw new Error(`Failed to load staff: ${staffResult.error.message}`);
+      }
+      if (borrowedResult.error) {
+        console.error('Error loading borrowed books:', borrowedResult.error);
+        throw new Error(`Failed to load borrowed books: ${borrowedResult.error.message}`);
+      }
+      if (overdueResult.error) {
+        console.error('Error loading overdue books:', overdueResult.error);
+        throw new Error(`Failed to load overdue books: ${overdueResult.error.message}`);
+      }
+
+      // Debug logging to inspect raw query results
+      console.log('Dashboard loadStats results:', {
+        booksResult,
+        studentsResult,
+        staffResult,
+        borrowedResult,
+        overdueResult,
+        reportsResult,
+      });
+
+      setStats({
+        totalBooks: booksResult.count || 0,
+        borrowedBooks: borrowedResult.count || 0,
+        totalStudents: studentsResult.count || 0,
+        totalStaff: staffResult.count || 0,
+        overdueBooks: overdueResult.count || 0,
+        pendingReports: reportsResult.count || 0,
+      });
+    } catch (error) {
+      console.error('Error loading dashboard stats:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load dashboard statistics';
+      toast.error(errorMessage);
+      // Set default values on error
+      setStats({
+        totalBooks: 0,
+        borrowedBooks: 0,
+        totalStudents: 0,
+        totalStaff: 0,
+        overdueBooks: 0,
+        pendingReports: 0,
+      });
     }
-
-    // Get pending reports count for librarians/staff
-    const pendingReportsQuery = (profile?.role === 'librarian' || profile?.role === 'staff')
-      ? supabase.from('book_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending').eq('institution_id', profile.institution_id)
-      : Promise.resolve({ count: 0 });
-
-    const [booksResult, studentsResult, staffResult, borrowedResult, overdueResult, reportsResult] = await Promise.all([
-      supabase.from('books').select('id', { count: 'exact', head: true }).eq('institution_id', profile.institution_id),
-      supabase.from('students').select('id', { count: 'exact', head: true }).eq('institution_id', profile.institution_id),
-      supabase.from('staff').select('id', { count: 'exact', head: true }).eq('institution_id', profile.institution_id),
-      supabase.from('books').select('id', { count: 'exact', head: true }).eq('status', 'borrowed').eq('institution_id', profile.institution_id),
-      overdueQuery,
-      pendingReportsQuery,
-    ]);
-
-    // Debug logging to inspect raw query results and any errors
-    console.log('Dashboard loadStats results:', {
-      booksResult,
-      studentsResult,
-      staffResult,
-      borrowedResult,
-      overdueResult,
-      reportsResult,
-    });
-    console.log('staffResult details:', staffResult);
-
-    setStats({
-      totalBooks: booksResult.count || 0,
-      borrowedBooks: borrowedResult.count || 0,
-      totalStudents: studentsResult.count || 0,
-      totalStaff: staffResult.count || 0,
-      overdueBooks: overdueResult.count || 0,
-      pendingReports: reportsResult.count || 0,
-    });
-  }, [profile?.role, profile?.student_id]);
+  }, [profile?.role, profile?.student_id, profile?.institution_id]);
 
   const loadStudentReadingData = useCallback(async () => {
-    const { data: borrowRecords, error } = await supabase
-      .from('borrow_records')
-      .select(`
-        student_id,
-        students (
-          name
-        )
-      `)
-      .eq('status', 'completed');
+    try {
+      const { data: borrowRecords, error } = await supabase
+        .from('borrow_records')
+        .select(`
+          student_id,
+          students (
+            name
+          )
+        `)
+        .eq('status', 'completed');
 
-    if (error || !borrowRecords) {
-      return;
-    }
-
-    const studentMap = new Map<string, { name: string; count: number }>();
-
-    borrowRecords.forEach((record) => {
-      if (record.student_id && record.students && typeof record.students === 'object' && 'name' in record.students) {
-        const existing = studentMap.get(record.student_id);
-        if (existing) {
-          existing.count++;
-        } else {
-          studentMap.set(record.student_id, {
-            name: record.students.name as string,
-            count: 1,
-          });
-        }
+      if (error) {
+        console.error('Error loading student reading data:', error);
+        throw new Error(`Failed to load reading data: ${error.message}`);
       }
-    });
 
-    const readingData: StudentReadingData[] = Array.from(studentMap.entries())
-      .map(([id, data]) => ({
-        student_id: id,
-        student_name: data.name,
-        books_read: data.count,
-      }))
-      .sort((a, b) => b.books_read - a.books_read)
-      .slice(0, 10);
+      if (!borrowRecords) {
+        setStudentReadingData([]);
+        return;
+      }
 
-    setStudentReadingData(readingData);
+      const studentMap = new Map<string, { name: string; count: number }>();
+
+      borrowRecords.forEach((record) => {
+        if (record.student_id && record.students && typeof record.students === 'object' && 'name' in record.students) {
+          const existing = studentMap.get(record.student_id);
+          if (existing) {
+            existing.count++;
+          } else {
+            studentMap.set(record.student_id, {
+              name: record.students.name as string,
+              count: 1,
+            });
+          }
+        }
+      });
+
+      const readingData: StudentReadingData[] = Array.from(studentMap.entries())
+        .map(([id, data]) => ({
+          student_id: id,
+          student_name: data.name,
+          books_read: data.count,
+        }))
+        .sort((a, b) => b.books_read - a.books_read)
+        .slice(0, 10);
+
+      setStudentReadingData(readingData);
+    } catch (error) {
+      console.error('Error in loadStudentReadingData:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load student reading data';
+      toast.error(errorMessage);
+      setStudentReadingData([]);
+    }
   }, []);
 
   const loadStaffReadingData = useCallback(async () => {
@@ -149,7 +200,11 @@ export function Dashboard() {
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const loadData = async () => {
+      if (!isMounted) return;
+      
       setLoading(true);
       try {
         await Promise.all([
@@ -160,11 +215,37 @@ export function Dashboard() {
       } catch (error) {
         console.error('Error loading dashboard:', error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
+    
     loadData();
+    
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
   }, [loadStats, loadStudentReadingData, loadStaffReadingData]);
+
+  // Manual refresh function
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        loadStats(),
+        loadStudentReadingData(),
+        loadStaffReadingData()
+      ]);
+      toast.success('Dashboard refreshed successfully');
+    } catch (error) {
+      console.error('Error refreshing dashboard:', error);
+      toast.error('Failed to refresh dashboard');
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const allStatCards = [
     {
@@ -228,7 +309,12 @@ export function Dashboard() {
     profile?.role && card.roles.includes(profile.role)
   );
 
+  // Division by zero protection
   const maxBooksRead = Math.max(...studentReadingData.map(s => s.books_read), 1);
+  const safePercentage = (value: number, total: number) => {
+    if (total === 0) return 0;
+    return Math.min((value / total) * 100, 100);
+  };
 
   // Loading skeleton
   if (loading) {
@@ -251,9 +337,21 @@ export function Dashboard() {
       <BackgroundCarousel />
       <div className="relative z-10 space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6">
         {/* Header - Mobile Responsive */}
-        <div className="flex items-center gap-2 sm:gap-4 mb-4 sm:mb-6 bg-white/90 backdrop-blur-sm rounded-xl p-3 sm:p-4 shadow-lg">
-          <img src={institution?.theme_settings?.logo_url || schoolLogo} alt={institution?.name || 'Logo'} className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 object-contain flex-shrink-0" />
-          <h2 className="text-lg sm:text-2xl md:text-3xl font-bold text-gray-900">{institution?.name || 'Dashboard'} Overview</h2>
+        <div className="flex items-center justify-between gap-2 sm:gap-4 mb-4 sm:mb-6 bg-white/90 backdrop-blur-sm rounded-xl p-3 sm:p-4 shadow-lg">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <img src={institution?.theme_settings?.logo_url || schoolLogo} alt={institution?.name || 'Logo'} className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 object-contain flex-shrink-0" />
+            <h2 className="text-lg sm:text-2xl md:text-3xl font-bold text-gray-900">{institution?.name || 'Dashboard'} Overview</h2>
+          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors min-h-[44px]"
+            aria-label="Refresh dashboard"
+            title="Refresh dashboard data"
+          >
+            <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
         </div>
 
         <QuoteOfTheDay />
@@ -323,7 +421,7 @@ export function Dashboard() {
                   <div className="w-full bg-gray-200 rounded-full h-2 sm:h-3 overflow-hidden">
                     <div
                       className="bg-gradient-to-r from-blue-500 to-green-500 h-2 sm:h-3 rounded-full transition-all duration-500"
-                      style={{ width: `${(student.books_read / maxBooksRead) * 100}%` }}
+                      style={{ width: `${safePercentage(student.books_read, maxBooksRead)}%` }}
                     />
                   </div>
                 </div>
@@ -378,21 +476,6 @@ export function Dashboard() {
               </div>
             )}
           </div>
-        )}
-
-        {/* Waiting List & Recommendations - Student/Staff View */}
-        {(profile?.role === 'student' || profile?.role === 'staff') && (
-          <>
-            {/* Waiting List Widget */}
-            <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-4 sm:p-6">
-              <WaitingList />
-            </div>
-
-            {/* Book Recommendations Widget */}
-            <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-4 sm:p-6">
-              <BookRecommendations />
-            </div>
-          </>
         )}
       </div>
     </div>

@@ -14,14 +14,13 @@ export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '');
 export type Book = {
   id: string;
   title: string;
-  author: string;
+  author_publisher: string;
   isbn?: string;
   category?: string;
   status: 'available' | 'borrowed';
-  material_type?: 'book' | 'ebook' | 'electronic_material';
-  page_number?: string;
   created_at: string;
   updated_at?: string;
+  institution_id?: string;
 };
 
 export type Student = {
@@ -30,9 +29,11 @@ export type Student = {
   email?: string;
   phone_number?: string;
   grade_level: string;
-  enrollment_id: string;
+  enrollment_id?: string;
   parent_email?: string;
   admission_number?: string;
+  date_of_birth?: string;
+  institution_id?: string;
   created_at: string;
 };
 
