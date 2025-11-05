@@ -19,6 +19,15 @@ const DigitalLibrary = lazy(() => import('./DigitalLibrary').then(m => ({ defaul
 const Reservations = lazy(() => import('./Reservations').then(m => ({ default: m.Reservations })));
 const ChatMessaging = lazy(() => import('./ChatMessaging').then(m => ({ default: m.ChatMessaging })));
 
+// Additional feature components (lazy-loaded)
+const BookReportForm = lazy(() => import('./BookReportForm'));
+const BookReportReview = lazy(() => import('./BookReportReview'));
+const ReadingChallenge = lazy(() => import('./ReadingChallenge'));
+const MyBooks = lazy(() => import('./MyBooks'));
+const Announcements = lazy(() => import('./Announcements'));
+const AdvancedBookSearch = lazy(() => import('./AdvancedBookSearch'));
+const WaitingList = lazy(() => import('./WaitingList'));
+
 // Loading component for lazy-loaded routes
 const LoadingFallback = () => (
   <div className="flex items-center justify-center py-12">
@@ -45,14 +54,21 @@ function MainApp() {
     { id: 'dashboard', label: 'Dashboard', roles: ['librarian', 'staff', 'student', 'super_admin'] },
     { id: 'books', label: 'Books', roles: ['librarian', 'staff'] },
     { id: 'borrowing', label: 'Borrowing', roles: ['librarian', 'staff', 'student'] },
+    { id: 'myBooks', label: 'My Books', roles: ['student', 'staff'] },
     { id: 'students', label: 'Students', roles: ['librarian'] },
     { id: 'staff', label: 'Staff', roles: ['librarian'] },
     { id: 'messaging', label: 'Chat / Messaging', roles: ['librarian', 'staff'], featureFlag: 'messages' },
+    { id: 'announcements', label: 'Announcements', roles: ['librarian', 'staff', 'student'] },
     { id: 'leaderboard', label: 'Leaderboard', roles: ['librarian', 'staff', 'student'], featureFlag: 'leaderboard' },
     { id: 'reviews', label: 'Reviews', roles: ['librarian', 'staff', 'student'], featureFlag: 'reviews' },
+    { id: 'bookReport', label: 'Book Report', roles: ['librarian', 'staff', 'student'], featureFlag: 'reviews' },
+    { id: 'bookReportReview', label: 'Report Review', roles: ['librarian'] },
     { id: 'challenges', label: 'Challenges', roles: ['librarian', 'staff', 'student'], featureFlag: 'challenges' },
+    { id: 'readingChallenge', label: 'Reading Challenge', roles: ['librarian', 'staff', 'student'], featureFlag: 'challenges' },
     { id: 'bookClubs', label: 'Book Clubs', roles: ['librarian', 'staff', 'student'], featureFlag: 'bookclubs' },
+    { id: 'advancedSearch', label: 'Advanced Search', roles: ['librarian', 'staff', 'student'] },
     { id: 'digitalLibrary', label: 'Digital Library', roles: ['librarian', 'staff', 'student'] },
+    { id: 'waiting', label: 'Waiting List', roles: ['student', 'staff'] },
     { id: 'reservations', label: 'Reservations', roles: ['librarian', 'staff', 'student'], featureFlag: 'reservations' },
     { id: 'settings', label: 'Settings', roles: ['librarian'] },
   ];
@@ -119,15 +135,22 @@ function MainApp() {
           <Suspense fallback={<LoadingFallback />}>
             {activeTab === 'dashboard' && (profile?.role === 'super_admin' ? <SuperAdminDashboard /> : <Dashboard />)}
             {activeTab === 'books' && <BookManagement />}
+            {activeTab === 'advancedSearch' && <AdvancedBookSearch />}
             {activeTab === 'borrowing' && <BorrowingSystem />}
+            {activeTab === 'myBooks' && <MyBooks />}
             {activeTab === 'students' && <StudentManagement />}
             {activeTab === 'staff' && <StaffManagement />}
             {activeTab === 'messaging' && <ChatMessaging />}
+            {activeTab === 'announcements' && <Announcements />}
             {activeTab === 'leaderboard' && <Leaderboard />}
             {activeTab === 'reviews' && <Reviews />}
+            {activeTab === 'bookReport' && <BookReportForm />}
+            {activeTab === 'bookReportReview' && <BookReportReview />}
             {activeTab === 'challenges' && <Challenges />}
+            {activeTab === 'readingChallenge' && <ReadingChallenge />}
             {activeTab === 'bookClubs' && <BookClubs userId={profile?.id || ''} />}
             {activeTab === 'digitalLibrary' && <DigitalLibrary />}
+            {activeTab === 'waiting' && <WaitingList />}
             {activeTab === 'reservations' && <Reservations />}
             {activeTab === 'settings' && <LibrarySettings />}
           </Suspense>
