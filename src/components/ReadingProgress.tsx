@@ -44,6 +44,7 @@ export function ReadingProgress() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile]);
 
   const loadData = async () => {
@@ -67,11 +68,11 @@ export function ReadingProgress() {
 
       // Check role and query accordingly
       if (profile.role === 'student') {
-        // Try to get student record by user_id first
+        // Get student record by enrollment_id from user_profile
         const { data: studentData } = await supabase
           .from('students')
           .select('id')
-          .eq('user_id', profile.id)
+          .eq('enrollment_id', profile.enrollment_id)
           .single();
         
         if (studentData?.id) {
@@ -84,11 +85,11 @@ export function ReadingProgress() {
           return;
         }
       } else if (profile.role === 'staff') {
-        // Try to get staff record by user_id first
+        // Get staff record by enrollment_id from user_profile
         const { data: staffData } = await supabase
           .from('staff')
           .select('id')
-          .eq('user_id', profile.id)
+          .eq('enrollment_id', profile.enrollment_id)
           .single();
         
         if (staffData?.id) {
@@ -138,9 +139,13 @@ export function ReadingProgress() {
       // Enrich with book titles
       const enrichedProgress = (progressData || []).map((session) => {
         const borrow = (borrowsData || []).find((b) => b.id === session.borrow_record_id);
+        // Handle both array and single object for books join result
+        const bookTitle = borrow?.books 
+          ? (Array.isArray(borrow.books) ? borrow.books[0]?.title : borrow.books.title)
+          : 'Unknown Book';
         return {
           ...session,
-          book_title: borrow?.books?.title || 'Unknown Book',
+          book_title: bookTitle || 'Unknown Book',
         };
       });
 

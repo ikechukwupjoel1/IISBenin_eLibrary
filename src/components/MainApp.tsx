@@ -1,20 +1,30 @@
 
 
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Dashboard } from './Dashboard';
 import { BookManagement } from './BookManagement';
 import { StudentManagement } from './StudentManagement';
 import { StaffManagement } from './StaffManagement';
-import { Leaderboard } from './Leaderboard';
-import { Reviews } from './Reviews';
-import Challenges from './Challenges';
-import BookClubs from './BookClubs';
-import { DigitalLibrary } from './DigitalLibrary';
-import { Reservations } from './Reservations';
 import { SuperAdminDashboard } from './SuperAdminDashboard';
-import { ChatMessaging } from './ChatMessaging';
 import { LibrarySettings } from './LibrarySettings';
+
+// Lazy load components that are not immediately needed
+const Leaderboard = lazy(() => import('./Leaderboard').then(m => ({ default: m.Leaderboard })));
+const Reviews = lazy(() => import('./Reviews').then(m => ({ default: m.Reviews })));
+const Challenges = lazy(() => import('./Challenges'));
+const BookClubs = lazy(() => import('./BookClubs'));
+const DigitalLibrary = lazy(() => import('./DigitalLibrary').then(m => ({ default: m.DigitalLibrary })));
+const Reservations = lazy(() => import('./Reservations').then(m => ({ default: m.Reservations })));
+const ChatMessaging = lazy(() => import('./ChatMessaging').then(m => ({ default: m.ChatMessaging })));
+
+// Loading component for lazy-loaded routes
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center py-12">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    <span className="ml-3 text-gray-600">Loading...</span>
+  </div>
+);
 
 function MainApp() {
   const { profile, institution, signOut, loading } = useAuth();
@@ -35,7 +45,7 @@ function MainApp() {
     { id: 'books', label: 'Books', roles: ['librarian', 'staff'] },
     { id: 'students', label: 'Students', roles: ['librarian'] },
     { id: 'staff', label: 'Staff', roles: ['librarian'] },
-    { id: 'messaging', label: 'Chat / Messaging', roles: ['librarian', 'staff', 'student'], featureFlag: 'messages' },
+    { id: 'messaging', label: 'Chat / Messaging', roles: ['librarian', 'staff'], featureFlag: 'messages' },
     { id: 'leaderboard', label: 'Leaderboard', roles: ['librarian', 'staff', 'student'], featureFlag: 'leaderboard' },
     { id: 'reviews', label: 'Reviews', roles: ['librarian', 'staff', 'student'], featureFlag: 'reviews' },
     { id: 'challenges', label: 'Challenges', roles: ['librarian', 'staff', 'student'], featureFlag: 'challenges' },
@@ -86,7 +96,7 @@ function MainApp() {
         </div>
       </header>
       <nav className="mb-4 sm:mb-6 bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="flex sm:flex-wrap gap-1 sm:gap-2 p-2 overflow-x-auto scrollbar-hide">
+        <div className="flex sm:flex-wrap justify-center gap-1 sm:gap-2 p-2 overflow-x-auto scrollbar-hide">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -104,18 +114,20 @@ function MainApp() {
       </nav>
       <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-3 sm:py-6 relative z-10">
         <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 md:p-6 overflow-hidden">
-          {activeTab === 'dashboard' && (profile?.role === 'super_admin' ? <SuperAdminDashboard /> : <Dashboard />)}
-          {activeTab === 'books' && <BookManagement />}
-          {activeTab === 'students' && <StudentManagement />}
-          {activeTab === 'staff' && <StaffManagement />}
-          {activeTab === 'messaging' && <ChatMessaging />}
-          {activeTab === 'leaderboard' && <Leaderboard />}
-          {activeTab === 'reviews' && <Reviews />}
-          {activeTab === 'challenges' && <Challenges />}
-          {activeTab === 'bookClubs' && <BookClubs userId={profile?.id || ''} />}
-          {activeTab === 'digitalLibrary' && <DigitalLibrary />}
-          {activeTab === 'reservations' && <Reservations />}
-          {activeTab === 'settings' && <LibrarySettings />}
+          <Suspense fallback={<LoadingFallback />}>
+            {activeTab === 'dashboard' && (profile?.role === 'super_admin' ? <SuperAdminDashboard /> : <Dashboard />)}
+            {activeTab === 'books' && <BookManagement />}
+            {activeTab === 'students' && <StudentManagement />}
+            {activeTab === 'staff' && <StaffManagement />}
+            {activeTab === 'messaging' && <ChatMessaging />}
+            {activeTab === 'leaderboard' && <Leaderboard />}
+            {activeTab === 'reviews' && <Reviews />}
+            {activeTab === 'challenges' && <Challenges />}
+            {activeTab === 'bookClubs' && <BookClubs userId={profile?.id || ''} />}
+            {activeTab === 'digitalLibrary' && <DigitalLibrary />}
+            {activeTab === 'reservations' && <Reservations />}
+            {activeTab === 'settings' && <LibrarySettings />}
+          </Suspense>
         </div>
       </main>
     </div>
