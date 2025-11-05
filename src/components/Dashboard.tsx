@@ -289,8 +289,12 @@ export function Dashboard() {
         {/* Waiting List & Recommendations */}
         {profile?.id && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <WaitingList />
-            <BookRecommendations />
+            <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-6 transition-all duration-300 hover:shadow-2xl">
+              <WaitingList />
+            </div>
+            <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-6 transition-all duration-300 hover:shadow-2xl">
+              <BookRecommendations />
+            </div>
           </div>
         )}
 

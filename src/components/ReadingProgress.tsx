@@ -55,7 +55,7 @@ export function ReadingProgress() {
     setLoading(true);
     try {
       // Load active borrows for this user
-      const borrowQuery = supabase
+      let borrowQuery = supabase
         .from('borrow_records')
         .select(`
           id,
@@ -65,12 +65,43 @@ export function ReadingProgress() {
         `)
         .eq('status', 'active');
 
-      if (profile.role === 'student' && profile.student_id) {
-        borrowQuery.eq('student_id', profile.student_id);
-      } else if (profile.role === 'staff' && profile.staff_id) {
-        borrowQuery.eq('staff_id', profile.staff_id);
+      // Check role and query accordingly
+      if (profile.role === 'student') {
+        // Try to get student record by user_id first
+        const { data: studentData } = await supabase
+          .from('students')
+          .select('id')
+          .eq('user_id', profile.id)
+          .single();
+        
+        if (studentData?.id) {
+          borrowQuery = borrowQuery.eq('student_id', studentData.id);
+        } else {
+          // No student record found, show empty state
+          setActiveBorrows([]);
+          setProgressSessions([]);
+          setLoading(false);
+          return;
+        }
+      } else if (profile.role === 'staff') {
+        // Try to get staff record by user_id first
+        const { data: staffData } = await supabase
+          .from('staff')
+          .select('id')
+          .eq('user_id', profile.id)
+          .single();
+        
+        if (staffData?.id) {
+          borrowQuery = borrowQuery.eq('staff_id', staffData.id);
+        } else {
+          // No staff record found, show empty state
+          setActiveBorrows([]);
+          setProgressSessions([]);
+          setLoading(false);
+          return;
+        }
       } else {
-        // If no student_id or staff_id, set empty data
+        // Librarian or other role - no borrows
         setActiveBorrows([]);
         setProgressSessions([]);
         setLoading(false);
