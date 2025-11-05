@@ -1,13 +1,15 @@
 import { Toaster } from 'react-hot-toast';
 import { useAuth } from './contexts/AuthContext';
 import { Auth } from './components/Auth';
-import MainApp from './components/MainApp';
-import { LibrarianSetup } from './components/LibrarianSetup';
-import { InstitutionSetup } from './components/InstitutionSetup'; // Import the new component
-import { AcceptInvitation } from './components/AcceptInvitation';
-import PWAInstallPrompt from './components/PWAInstallPrompt';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { supabase } from './lib/supabase';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
+
+// Lazy load heavy components
+const MainApp = lazy(() => import('./components/MainApp'));
+const LibrarianSetup = lazy(() => import('./components/LibrarianSetup').then(m => ({ default: m.LibrarianSetup })));
+const InstitutionSetup = lazy(() => import('./components/InstitutionSetup').then(m => ({ default: m.InstitutionSetup })));
+const AcceptInvitation = lazy(() => import('./components/AcceptInvitation').then(m => ({ default: m.AcceptInvitation })));
 
 function App() {
   const { user, profile, institution, loading } = useAuth();
@@ -51,14 +53,16 @@ function App() {
     return (
       <>
         <Toaster position="top-right" />
-        <AcceptInvitation 
-          token={invitationToken} 
-          onComplete={() => {
-            setInvitationToken(null);
-            // Clear the URL parameter
-            window.history.replaceState({}, document.title, window.location.pathname);
-          }} 
-        />
+        <Suspense fallback={<div className="min-h-screen bg-gray-100 flex items-center justify-center"><div className="text-gray-600">Loading...</div></div>}>
+          <AcceptInvitation 
+            token={invitationToken} 
+            onComplete={() => {
+              setInvitationToken(null);
+              // Clear the URL parameter
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }} 
+          />
+        </Suspense>
       </>
     );
   }
@@ -72,12 +76,20 @@ function App() {
   }
 
   if (needsSetup) {
-    return <LibrarianSetup />;
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-gray-100 flex items-center justify-center"><div className="text-gray-600">Loading...</div></div>}>
+        <LibrarianSetup />
+      </Suspense>
+    );
   }
 
   // New Onboarding Flow
   if (user && profile?.role === 'librarian' && institution && !institution.is_setup_complete) {
-    return <InstitutionSetup />;
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-gray-100 flex items-center justify-center"><div className="text-gray-600">Loading...</div></div>}>
+        <InstitutionSetup />
+      </Suspense>
+    );
   }
 
   return (
@@ -107,7 +119,9 @@ function App() {
         }}
       />
       <PWAInstallPrompt />
-      {user ? <MainApp /> : <Auth />}
+      <Suspense fallback={<div className="min-h-screen bg-gray-100 flex items-center justify-center"><div className="text-gray-600">Loading...</div></div>}>
+        {user ? <MainApp /> : <Auth />}
+      </Suspense>
     </>
   );
 }
