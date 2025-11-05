@@ -8,6 +8,7 @@ import { StudentManagement } from './StudentManagement';
 import { StaffManagement } from './StaffManagement';
 import { SuperAdminDashboard } from './SuperAdminDashboard';
 import { LibrarySettings } from './LibrarySettings';
+import { BorrowingSystem } from './BorrowingSystem';
 
 // Lazy load components that are not immediately needed
 const Leaderboard = lazy(() => import('./Leaderboard').then(m => ({ default: m.Leaderboard })));
@@ -43,6 +44,7 @@ function MainApp() {
   const allTabs = [
     { id: 'dashboard', label: 'Dashboard', roles: ['librarian', 'staff', 'student', 'super_admin'] },
     { id: 'books', label: 'Books', roles: ['librarian', 'staff'] },
+    { id: 'borrowing', label: 'Borrowing', roles: ['librarian', 'staff', 'student'] },
     { id: 'students', label: 'Students', roles: ['librarian'] },
     { id: 'staff', label: 'Staff', roles: ['librarian'] },
     { id: 'messaging', label: 'Chat / Messaging', roles: ['librarian', 'staff'], featureFlag: 'messages' },
@@ -117,6 +119,7 @@ function MainApp() {
           <Suspense fallback={<LoadingFallback />}>
             {activeTab === 'dashboard' && (profile?.role === 'super_admin' ? <SuperAdminDashboard /> : <Dashboard />)}
             {activeTab === 'books' && <BookManagement />}
+            {activeTab === 'borrowing' && <BorrowingSystem />}
             {activeTab === 'students' && <StudentManagement />}
             {activeTab === 'staff' && <StaffManagement />}
             {activeTab === 'messaging' && <ChatMessaging />}

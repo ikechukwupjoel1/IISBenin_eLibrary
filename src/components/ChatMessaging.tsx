@@ -279,18 +279,25 @@ export function ChatMessaging() {
 
     let query = supabase
       .from('user_profiles')
-      .select('id, full_name, role, enrollment_id')
+      .select('id, full_name, role, enrollment_id, institution_id')
       .neq('id', profile.id); // Don't show self
 
     // Apply role-based filtering
     if (profile.role === 'student') {
-      // Students can chat with librarians, other students, and staff
-      query = query.in('role', ['librarian', 'student', 'staff']);
+      // Students can only see users from their own institution
+      query = query
+        .eq('institution_id', profile.institution_id)
+        .in('role', ['librarian', 'student', 'staff']);
     } else if (profile.role === 'staff') {
-      // Staff can chat with librarians, other staff, and students
-      query = query.in('role', ['librarian', 'staff', 'student']);
+      // Staff can only see librarians and other staff from their own institution
+      query = query
+        .eq('institution_id', profile.institution_id)
+        .in('role', ['librarian', 'staff']);
+    } else if (profile.role === 'librarian') {
+      // Librarians can see all users from their institution
+      query = query.eq('institution_id', profile.institution_id);
     }
-    // Librarians can chat with everyone (no filter needed)
+    // Super admin can see everyone (no filter needed)
 
     const { data, error } = await query.order('full_name');
 

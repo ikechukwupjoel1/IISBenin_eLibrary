@@ -16,6 +16,7 @@ WHERE up.id IS NULL;
 -- Default password: StaffPass123!
 
 INSERT INTO user_profiles (
+  id,
   enrollment_id,
   full_name,
   email,
@@ -25,6 +26,7 @@ INSERT INTO user_profiles (
   created_at
 )
 SELECT 
+  gen_random_uuid() as id,
   s.enrollment_id,
   s.name,
   s.email,
