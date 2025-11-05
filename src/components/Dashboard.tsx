@@ -278,8 +278,8 @@ export function Dashboard() {
           })}
         </div>
 
-        {/* Reading Progress & Streaks Widgets */}
-        {profile?.id && (
+        {/* Reading Progress & Streaks Widgets - Only for Students and Staff */}
+        {profile?.id && (profile.role === 'student' || profile.role === 'staff') && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ReadingProgress />
             <ReadingStreaks userId={profile.id} />
@@ -287,7 +287,7 @@ export function Dashboard() {
         )}
 
         {/* Waiting List & Recommendations */}
-        {profile?.id && (
+        {profile?.id && (profile.role === 'student' || profile.role === 'staff') && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-6 transition-all duration-300 hover:shadow-2xl">
               <WaitingList />
