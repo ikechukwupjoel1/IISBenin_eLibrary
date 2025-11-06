@@ -8,6 +8,7 @@ import { StudentManagement } from './StudentManagement';
 import { StaffManagement } from './StaffManagement';
 import { SuperAdminDashboard } from './SuperAdminDashboard';
 import { LibrarySettings } from './LibrarySettings';
+import { StudentProfile } from './StudentProfile';
 import { BorrowingSystem } from './BorrowingSystem';
 import { 
   LayoutDashboard, 
@@ -87,6 +88,7 @@ function MainApp() {
     { id: 'waiting', label: 'Waiting List', icon: Clock, roles: ['student', 'staff'] },
     { id: 'reservations', label: 'Reservations', icon: Calendar, roles: ['librarian', 'staff', 'student'], featureFlag: 'reservations' },
     { id: 'settings', label: 'Settings', icon: Settings, roles: ['librarian'] },
+    { id: 'profile', label: 'Profile', icon: Settings, roles: ['student', 'staff'] },
   ];
   const tabs = allTabs.filter(tab => {
     if (!profile?.role || !tab.roles.includes(profile.role)) return false;
@@ -119,13 +121,35 @@ function MainApp() {
                 )}
               </div>
             </div>
-            <button
-              onClick={signOut}
-              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors min-h-[44px] flex-shrink-0"
-            >
-              <span className="hidden sm:inline text-sm">Sign Out</span>
-              <span className="sm:hidden text-xs">Out</span>
-            </button>
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+              {/* Profile Avatar */}
+              {profile?.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt={profile.full_name}
+                  className="h-10 w-10 sm:h-12 sm:w-12 rounded-full object-cover border-2 border-gray-200 flex-shrink-0"
+                  onClick={() => (profile.role === 'student' || profile.role === 'staff') && setActiveTab('profile')}
+                  style={{ cursor: (profile.role === 'student' || profile.role === 'staff') ? 'pointer' : 'default' }}
+                  title={(profile.role === 'student' || profile.role === 'staff') ? 'Click to edit profile' : ''}
+                />
+              ) : (
+                <div 
+                  className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm sm:text-lg flex-shrink-0"
+                  onClick={() => (profile.role === 'student' || profile.role === 'staff') && setActiveTab('profile')}
+                  style={{ cursor: (profile.role === 'student' || profile.role === 'staff') ? 'pointer' : 'default' }}
+                  title={(profile.role === 'student' || profile.role === 'staff') ? 'Click to edit profile' : ''}
+                >
+                  {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
+                </div>
+              )}
+              <button
+                onClick={signOut}
+                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors min-h-[44px]"
+              >
+                <span className="hidden sm:inline text-sm">Sign Out</span>
+                <span className="sm:hidden text-xs">Out</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -174,6 +198,7 @@ function MainApp() {
             {activeTab === 'waiting' && <WaitingList />}
             {activeTab === 'reservations' && <Reservations />}
             {activeTab === 'settings' && <LibrarySettings />}
+            {activeTab === 'profile' && <StudentProfile />}
           </Suspense>
         </div>
       </main>
