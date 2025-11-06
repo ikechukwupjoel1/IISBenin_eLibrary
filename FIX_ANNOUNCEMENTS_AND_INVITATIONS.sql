@@ -38,15 +38,15 @@ SELECT EXISTS (
 -- PART 2: FIX ANNOUNCEMENTS (IF NEEDED)
 -- ========================================
 
--- Create get_user_role function if missing
-CREATE OR REPLACE FUNCTION get_user_role(user_id uuid)
+-- Just ensure get_user_role function exists (don't drop it - it's used by many policies)
+CREATE OR REPLACE FUNCTION get_user_role(user_uuid uuid)
 RETURNS text AS $$
 DECLARE
   v_role text;
 BEGIN
   SELECT role INTO v_role
   FROM user_profiles
-  WHERE id = user_id;
+  WHERE id = user_uuid;
   RETURN v_role;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -174,7 +174,9 @@ CREATE INDEX IF NOT EXISTS idx_librarian_invitations_token ON librarian_invitati
 CREATE INDEX IF NOT EXISTS idx_librarian_invitations_email ON librarian_invitations(email);
 CREATE INDEX IF NOT EXISTS idx_librarian_invitations_status ON librarian_invitations(status);
 
--- Create or replace the invitation function
+-- Drop and recreate the invitation function with correct return type
+DROP FUNCTION IF EXISTS create_librarian_invitation(uuid, text);
+
 CREATE OR REPLACE FUNCTION create_librarian_invitation(
   target_institution_id UUID,
   invitee_email TEXT

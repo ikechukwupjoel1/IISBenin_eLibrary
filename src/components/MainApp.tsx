@@ -131,17 +131,18 @@ function MainApp() {
       </header>
       <nav className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 relative">
         <div className="flex sm:flex-wrap justify-start sm:justify-center gap-1 sm:gap-2 p-2 overflow-x-auto overflow-y-visible scroll-smooth">
-          {tabs.map((tab) => {
+          {tabs.map((tab, index) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-all duration-200 whitespace-nowrap text-xs sm:text-sm flex-shrink-0 min-h-[44px] ${
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-all duration-200 whitespace-nowrap text-xs sm:text-sm flex-shrink-0 min-h-[44px] animate-fade-in ${
                   activeTab === tab.id
                     ? 'bg-blue-600 text-white shadow-md'
                     : 'text-gray-700 hover:bg-gray-100 hover:shadow-sm'
                 }`}
+                style={{ animationDelay: `${index * 30}ms` }}
               >
                 <Icon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                 <span>{tab.label}</span>
