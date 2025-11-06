@@ -70,6 +70,7 @@ export function SupportSystem() {
   const [activeTab, setActiveTab] = useState<'tickets' | 'knowledge-base'>('tickets');
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [articles, setArticles] = useState<KnowledgeBaseArticle[]>([]);
+  const [superAdmins, setSuperAdmins] = useState<Array<{ id: string; full_name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
@@ -80,6 +81,35 @@ export function SupportSystem() {
   const [showNewTicketModal, setShowNewTicketModal] = useState(false);
   const [showNewArticleModal, setShowNewArticleModal] = useState(false);
   const [editingArticle, setEditingArticle] = useState<KnowledgeBaseArticle | null>(null);
+  const [showTemplates, setShowTemplates] = useState(false);
+
+  // Response Templates
+  const responseTemplates = [
+    {
+      name: 'Welcome',
+      message: 'Thank you for contacting support. We have received your ticket and will respond shortly.'
+    },
+    {
+      name: 'Request Info',
+      message: 'Thank you for reaching out. Could you please provide more details about the issue? This will help us resolve it faster.'
+    },
+    {
+      name: 'Working On It',
+      message: 'We are currently investigating this issue and will update you with our findings soon.'
+    },
+    {
+      name: 'Resolved',
+      message: 'This issue has been resolved. Please verify on your end and let us know if you need any further assistance.'
+    },
+    {
+      name: 'Needs Testing',
+      message: 'We have implemented a fix. Please test it on your end and confirm if the issue is resolved.'
+    },
+    {
+      name: 'Closing',
+      message: 'Since we haven\'t heard back from you and the issue appears to be resolved, we are closing this ticket. Feel free to reopen if needed.'
+    },
+  ];
 
   // Form states for new ticket
   const [newTicket, setNewTicket] = useState({
@@ -109,6 +139,7 @@ export function SupportSystem() {
   useEffect(() => {
     fetchTickets();
     fetchArticles();
+    fetchSuperAdmins();
   }, []);
 
   useEffect(() => {
@@ -154,6 +185,21 @@ export function SupportSystem() {
       setArticles(data || []);
     } catch (error) {
       console.error('Error fetching articles:', error);
+    }
+  };
+
+  const fetchSuperAdmins = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('id, full_name')
+        .eq('role', 'super_admin')
+        .order('full_name');
+
+      if (error) throw error;
+      setSuperAdmins(data || []);
+    } catch (error) {
+      console.error('Error fetching super admins:', error);
     }
   };
 
@@ -254,6 +300,32 @@ export function SupportSystem() {
     } catch (error) {
       console.error('Error updating ticket:', error);
       toast.error('Failed to update ticket status');
+    }
+  };
+
+  const assignTicket = async (ticketId: string, adminId: string | null) => {
+    try {
+      const { error } = await supabase
+        .from('support_tickets')
+        .update({ 
+          assigned_to: adminId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', ticketId);
+
+      if (error) throw error;
+
+      toast.success(adminId ? 'Ticket assigned successfully' : 'Assignment removed');
+      fetchTickets();
+      if (selectedTicket?.id === ticketId) {
+        const updatedTicket = tickets.find(t => t.id === ticketId);
+        if (updatedTicket) {
+          setSelectedTicket({ ...updatedTicket, assigned_to: adminId || undefined });
+        }
+      }
+    } catch (error) {
+      console.error('Error assigning ticket:', error);
+      toast.error('Failed to assign ticket');
     }
   };
 
@@ -389,6 +461,40 @@ export function SupportSystem() {
       closed: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
     };
     return colors[status];
+  };
+
+  const getTimeElapsed = (createdAt: string) => {
+    const now = new Date();
+    const created = new Date(createdAt);
+    const hoursElapsed = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60));
+    
+    if (hoursElapsed < 1) {
+      const minutesElapsed = Math.floor((now.getTime() - created.getTime()) / (1000 * 60));
+      return `${minutesElapsed}m ago`;
+    } else if (hoursElapsed < 24) {
+      return `${hoursElapsed}h ago`;
+    } else {
+      const daysElapsed = Math.floor(hoursElapsed / 24);
+      return `${daysElapsed}d ago`;
+    }
+  };
+
+  const getSLAStatus = (ticket: SupportTicket) => {
+    const now = new Date();
+    const created = new Date(ticket.created_at);
+    const hoursElapsed = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60));
+    
+    // SLA rules: 24hrs for open, 48hrs for in_progress
+    if (ticket.status === 'open' && hoursElapsed > 24) {
+      return { status: 'overdue', label: 'Overdue', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' };
+    } else if (ticket.status === 'in_progress' && hoursElapsed > 48) {
+      return { status: 'overdue', label: 'Overdue', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' };
+    } else if (ticket.status === 'open' && hoursElapsed > 12) {
+      return { status: 'warning', label: 'At Risk', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' };
+    } else if (ticket.status === 'in_progress' && hoursElapsed > 36) {
+      return { status: 'warning', label: 'At Risk', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' };
+    }
+    return null;
   };
 
   if (loading) return <LoadingSkeleton />;
@@ -559,14 +665,19 @@ export function SupportSystem() {
                   {ticket.description}
                 </p>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(ticket.status)}`}>
                       {ticket.status.replace('_', ' ')}
                     </span>
                     <span className="text-xs text-gray-500">{ticket.category}</span>
+                    {getSLAStatus(ticket) && (
+                      <span className={`px-2 py-1 text-xs rounded-full ${getSLAStatus(ticket)!.color}`}>
+                        {getSLAStatus(ticket)!.label}
+                      </span>
+                    )}
                   </div>
                   <span className="text-xs text-gray-500">
-                    {new Date(ticket.created_at).toLocaleDateString()}
+                    {getTimeElapsed(ticket.created_at)}
                   </span>
                 </div>
                 <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
@@ -612,6 +723,30 @@ export function SupportSystem() {
                     <span className="px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
                       {selectedTicket.category}
                     </span>
+                  </div>
+
+                  {/* Assignment Dropdown */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Assign To
+                    </label>
+                    <select
+                      value={selectedTicket.assigned_to || ''}
+                      onChange={(e) => assignTicket(selectedTicket.id, e.target.value || null)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm"
+                    >
+                      <option value="">Unassigned</option>
+                      {superAdmins.map((admin) => (
+                        <option key={admin.id} value={admin.id}>
+                          {admin.full_name}
+                        </option>
+                      ))}
+                    </select>
+                    {selectedTicket.assigned_admin && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Currently assigned to: {selectedTicket.assigned_admin.full_name}
+                      </p>
+                    )}
                   </div>
                   
                   {/* Status Actions */}
@@ -669,19 +804,56 @@ export function SupportSystem() {
 
                 {/* Reply Box */}
                 <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+                  {/* Template Selector */}
+                  <div className="mb-2 relative">
+                    <button
+                      onClick={() => setShowTemplates(!showTemplates)}
+                      className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      Quick Reply Templates
+                    </button>
+                    {showTemplates && (
+                      <div className="absolute bottom-full mb-2 left-0 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-64 overflow-y-auto z-10">
+                        {responseTemplates.map((template, index) => (
+                          <button
+                            key={index}
+                            onClick={() => {
+                              setNewMessage(template.message);
+                              setShowTemplates(false);
+                            }}
+                            className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                          >
+                            <div className="font-medium text-sm text-gray-900 dark:text-white">
+                              {template.name}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                              {template.message}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
                   <div className="flex gap-2">
-                    <input
-                      type="text"
+                    <textarea
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                      placeholder="Type your reply..."
-                      className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          sendMessage();
+                        }
+                      }}
+                      placeholder="Type your reply... (Shift+Enter for new line)"
+                      rows={3}
+                      className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white resize-none"
                     />
                     <button
                       onClick={sendMessage}
                       disabled={!newMessage.trim()}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed self-end"
                     >
                       <Send className="h-5 w-5" />
                     </button>
