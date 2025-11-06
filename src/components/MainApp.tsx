@@ -141,8 +141,9 @@ function MainApp() {
           </div>
         </div>
       </header>
-      <nav className="mb-4 sm:mb-6 bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 relative pb-2" ref={dropdownRef}>
-        <div className="flex sm:flex-wrap justify-center gap-1 sm:gap-2 p-2 overflow-x-auto scrollbar-hide">
+      <div className="mb-4 sm:mb-6 relative" ref={dropdownRef}>
+        <nav className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200">
+          <div className="flex sm:flex-wrap justify-center gap-1 sm:gap-2 p-2 overflow-x-auto scrollbar-hide">
           {/* Group tabs by category */}
           {tabs.filter(t => !t.group).map((tab) => (
             <button
@@ -258,7 +259,8 @@ function MainApp() {
             </div>
           )}
         </div>
-      </nav>
+        </nav>
+      </div>
       <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-3 sm:py-6 relative z-10">
         <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 md:p-6 overflow-hidden">
           <Suspense fallback={<LoadingFallback />}>
