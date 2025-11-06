@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { UserCog, Plus, Pencil, Trash2, Search, X, KeyRound, Printer, Upload } from 'lucide-react';
 import { supabase, type Staff } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -18,6 +18,7 @@ export function StaffManagement() {
   const { profile: currentLibrarianProfile } = useAuth();
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false); // Guard against double submissions
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddingStaff, setIsAddingStaff] = useState(false);
   const [showBulkRegister, setShowBulkRegister] = useState(false);
@@ -33,33 +34,53 @@ export function StaffManagement() {
   });
 
   useEffect(() => {
-    if (currentLibrarianProfile) {
-      loadStaff();
-    }
-  }, [currentLibrarianProfile]);
+    let isMounted = true;
 
-  const loadStaff = async () => {
+    const fetchData = async () => {
+      if (currentLibrarianProfile && isMounted) {
+        await loadStaff();
+      }
+    };
+
+    fetchData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentLibrarianProfile, loadStaff]);
+
+  const loadStaff = useCallback(async () => {
     if (!currentLibrarianProfile?.institution_id) {
       setLoading(false);
+      toast.error('Institution information not available. Please log in again.');
       return;
     }
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('staff')
-      .select('*')
-      .eq('institution_id', currentLibrarianProfile.institution_id)
-      .order('name');
 
-    if (error) {
-      console.error('Error loading staff:', error);
-      toast.error('Failed to load staff members');
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('staff')
+        .select('*')
+        .eq('institution_id', currentLibrarianProfile.institution_id)
+        .order('name');
+
+      if (error) {
+        console.error('Error loading staff:', error);
+        toast.error(`Failed to load staff members: ${error.message}`);
+        setStaff([]);
+        return;
+      }
+
+      setStaff(data || []);
+    } catch (error) {
+      console.error('Unexpected error loading staff:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Error loading staff: ${errorMessage}`);
+      setStaff([]);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setStaff(data || []);
-    setLoading(false);
-  };
+  }, [currentLibrarianProfile?.institution_id]);
 
   const generateEnrollmentId = async () => {
     const { data, error } = await supabase
@@ -81,51 +102,58 @@ export function StaffManagement() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Prevent double submission
+    if (submitting) {
+      return;
+    }
+
     if (!currentLibrarianProfile?.institution_id) {
       toast.error('Could not identify your institution. Please re-login.');
       return;
     }
 
-    if (editingStaff) {
-      console.log('Updating staff:', editingStaff.id, formData);
-      
-      const { data, error } = await supabase
-        .from('staff')
-        .update({
-          name: formData.name,
-          email: formData.email || null,
-          phone_number: formData.phone_number || null,
-        })
-        .eq('id', editingStaff.id)
-        .select();
+    setSubmitting(true);
 
-      console.log('Update result:', { data, error });
+    try {
+      if (editingStaff) {
+        console.log('Updating staff:', editingStaff.id, formData);
+        
+        const { data, error } = await supabase
+          .from('staff')
+          .update({
+            name: formData.name,
+            email: formData.email || null,
+            phone_number: formData.phone_number || null,
+          })
+          .eq('id', editingStaff.id)
+          .select();
 
-      if (error) {
-        toast.error('Error updating staff member: ' + error.message);
-        console.error('Update error:', error);
-        return;
-      }
+        console.log('Update result:', { data, error });
 
-      toast.success('Staff member updated successfully');
-      await loadStaff();
-      handleCancel();
-    } else {
-      const enrollmentId = await generateEnrollmentId();
-      const password = generatePassword();
-      const email = formData.email || `${enrollmentId.toLowerCase()}@iisbenin.edu`;
+        if (error) {
+          toast.error('Error updating staff member: ' + error.message);
+          console.error('Update error:', error);
+          return;
+        }
 
-      // Use Edge Function to create user without affecting current session
-      const { data: { session } } = await supabase.auth.getSession();
+        toast.success('Staff member updated successfully');
+        await loadStaff();
+        handleCancel();
+      } else {
+        const enrollmentId = await generateEnrollmentId();
+        const password = generatePassword();
+        const email = formData.email || `${enrollmentId.toLowerCase()}@iisbenin.edu`;
 
-      if (!session) {
-        alert('You must be logged in to create staff members');
-        return;
-      }
+        // Use Edge Function to create user without affecting current session
+        const { data: { session } } = await supabase.auth.getSession();
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user-account`;
+        if (!session) {
+          toast.error('You must be logged in to create staff members');
+          return;
+        }
 
-      try {
+        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user-account`;
+
         const response = await fetch(apiUrl, {
           method: 'POST',
           headers: {
@@ -140,7 +168,7 @@ export function StaffManagement() {
             role: 'staff',
             enrollment_id: enrollmentId,
             phone_number: formData.phone_number || null,
-            institution_id: currentLibrarianProfile.institution_id, // Pass institution_id
+            institution_id: currentLibrarianProfile.institution_id,
           }),
         });
 
@@ -149,7 +177,7 @@ export function StaffManagement() {
         if (!response.ok || result.error) {
           const errorMsg = result.error || `HTTP ${response.status}: ${response.statusText}`;
           console.error('Staff creation failed:', { status: response.status, result });
-          alert('Error creating staff member: ' + errorMsg + (result.debug ? '\nDebug: ' + JSON.stringify(result.debug) : ''));
+          toast.error('Error creating staff member: ' + errorMsg);
           return;
         }
 
@@ -163,10 +191,13 @@ export function StaffManagement() {
 
         await loadStaff();
         handleCancel();
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        toast.error('Error creating staff member: ' + errorMessage);
       }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error in handleSubmit:', error);
+      toast.error('Error processing request: ' + errorMessage);
+    } finally {
+      setSubmitting(false);
     }
   };
 
