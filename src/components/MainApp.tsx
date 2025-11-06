@@ -141,7 +141,7 @@ function MainApp() {
           </div>
         </div>
       </header>
-      <nav className="mb-4 sm:mb-6 bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 overflow-hidden" ref={dropdownRef}>
+      <nav className="mb-4 sm:mb-6 bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200" ref={dropdownRef}>
         <div className="flex sm:flex-wrap justify-center gap-1 sm:gap-2 p-2 overflow-x-auto scrollbar-hide">
           {/* Group tabs by category */}
           {tabs.filter(t => !t.group).map((tab) => (
