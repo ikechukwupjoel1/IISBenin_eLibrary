@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { BookOpen, Users, BookMarked, AlertCircle, UserCog, FileText, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -32,6 +32,12 @@ type StaffReadingData = {
   staff_id: string;
   staff_name: string;
   books_read: number;
+};
+
+// Type for Supabase query response
+type BorrowRecordWithStudent = {
+  student_id: string | null;
+  students: { name: string } | null;
 };
 
 export function Dashboard() {
@@ -160,17 +166,21 @@ export function Dashboard() {
 
       const studentMap = new Map<string, { name: string; count: number }>();
 
-      borrowRecords.forEach((record) => {
-        if (record.student_id && record.students && typeof record.students === 'object' && 'name' in record.students) {
-          const existing = studentMap.get(record.student_id);
-          if (existing) {
-            existing.count++;
-          } else {
-            studentMap.set(record.student_id, {
-              name: record.students.name as string,
-              count: 1,
-            });
-          }
+      // Type-safe iteration with proper null checks
+      (borrowRecords as BorrowRecordWithStudent[]).forEach((record) => {
+        // Skip records with missing data
+        if (!record.student_id || !record.students?.name) {
+          return;
+        }
+
+        const existing = studentMap.get(record.student_id);
+        if (existing) {
+          existing.count++;
+        } else {
+          studentMap.set(record.student_id, {
+            name: record.students.name,
+            count: 1,
+          });
         }
       });
 
@@ -247,7 +257,8 @@ export function Dashboard() {
     }
   };
 
-  const allStatCards = [
+  // Memoize stat cards array to prevent unnecessary re-renders
+  const allStatCards = useMemo(() => [
     {
       title: 'Total Books',
       value: stats.totalBooks,
@@ -302,11 +313,14 @@ export function Dashboard() {
       bgColor: 'bg-indigo-50',
       roles: ['librarian', 'staff'],
     },
-  ];
+  ], [stats, profile?.role]);
 
-  // Filter stat cards based on user role
-  const statCards = allStatCards.filter(card => 
-    profile?.role && card.roles.includes(profile.role)
+  // Filter stat cards based on user role - memoized to prevent unnecessary re-renders
+  const statCards = useMemo(() => 
+    allStatCards.filter(card => 
+      profile?.role && card.roles.includes(profile.role)
+    ),
+    [profile?.role, allStatCards]
   );
 
   // Division by zero protection
