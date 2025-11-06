@@ -141,7 +141,7 @@ function MainApp() {
           </div>
         </div>
       </header>
-      <nav className="mb-4 sm:mb-6 bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200" ref={dropdownRef}>
+      <nav className="mb-4 sm:mb-6 bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 relative pb-2" ref={dropdownRef}>
         <div className="flex sm:flex-wrap justify-center gap-1 sm:gap-2 p-2 overflow-x-auto scrollbar-hide">
           {/* Group tabs by category */}
           {tabs.filter(t => !t.group).map((tab) => (
@@ -161,7 +161,7 @@ function MainApp() {
           
           {/* Library dropdown */}
           {tabs.some(t => t.group === 'library') && (
-            <div className="relative">
+            <div className="relative static sm:relative">
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'library' ? null : 'library')}
                 onKeyDown={handleKeyDown}
@@ -175,7 +175,7 @@ function MainApp() {
                 <ChevronDown className="w-4 h-4" />
               </button>
               {openDropdown === 'library' && (
-                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[160px] z-50">
+                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl py-1 min-w-[160px] z-[100]">
                   {tabs.filter(t => t.group === 'library').map((tab) => (
                     <button
                       key={tab.id}
@@ -194,7 +194,7 @@ function MainApp() {
           
           {/* Community dropdown */}
           {tabs.some(t => t.group === 'community') && (
-            <div className="relative">
+            <div className="relative static sm:relative">
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'community' ? null : 'community')}
                 onKeyDown={handleKeyDown}
@@ -208,7 +208,7 @@ function MainApp() {
                 <ChevronDown className="w-4 h-4" />
               </button>
               {openDropdown === 'community' && (
-                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[160px] z-50">
+                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl py-1 min-w-[160px] z-[100]">
                   {tabs.filter(t => t.group === 'community').map((tab) => (
                     <button
                       key={tab.id}
@@ -227,7 +227,7 @@ function MainApp() {
           
           {/* Reports dropdown */}
           {tabs.some(t => t.group === 'reports') && (
-            <div className="relative">
+            <div className="relative static sm:relative">
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'reports' ? null : 'reports')}
                 onKeyDown={handleKeyDown}
@@ -241,7 +241,7 @@ function MainApp() {
                 <ChevronDown className="w-4 h-4" />
               </button>
               {openDropdown === 'reports' && (
-                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[160px] z-50">
+                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl py-1 min-w-[160px] z-[100]">
                   {tabs.filter(t => t.group === 'reports').map((tab) => (
                     <button
                       key={tab.id}
