@@ -7,14 +7,20 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('avatars', 'avatars', true)
 ON CONFLICT (id) DO NOTHING;
 
+-- Drop existing policies if they exist (to avoid conflicts)
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
+DROP POLICY IF EXISTS "Users can upload own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete own avatar" ON storage.objects;
+
 -- Set up RLS policies for avatars bucket
 -- Allow anyone to view avatars (public bucket)
-CREATE POLICY IF NOT EXISTS "Public Access"
+CREATE POLICY "Public Access"
   ON storage.objects FOR SELECT
   USING ( bucket_id = 'avatars' );
 
 -- Allow authenticated users to upload their own avatar
-CREATE POLICY IF NOT EXISTS "Users can upload own avatar"
+CREATE POLICY "Users can upload own avatar"
   ON storage.objects FOR INSERT
   WITH CHECK (
     bucket_id = 'avatars' 
@@ -22,7 +28,7 @@ CREATE POLICY IF NOT EXISTS "Users can upload own avatar"
   );
 
 -- Allow users to update their own avatar
-CREATE POLICY IF NOT EXISTS "Users can update own avatar"
+CREATE POLICY "Users can update own avatar"
   ON storage.objects FOR UPDATE
   USING (
     bucket_id = 'avatars' 
@@ -30,7 +36,7 @@ CREATE POLICY IF NOT EXISTS "Users can update own avatar"
   );
 
 -- Allow users to delete their own avatar
-CREATE POLICY IF NOT EXISTS "Users can delete own avatar"
+CREATE POLICY "Users can delete own avatar"
   ON storage.objects FOR DELETE
   USING (
     bucket_id = 'avatars' 
