@@ -194,8 +194,22 @@ export function SupportSystem() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
 
+      // Get user's institution_id from profile
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('institution_id, role')
+        .eq('id', user.id)
+        .single();
+
+      if (!profile) throw new Error('User profile not found');
+      if (profile.role !== 'librarian' && profile.role !== 'super_admin') {
+        toast.error('Only librarians and super admins can create tickets');
+        return;
+      }
+
       const { error } = await supabase.from('support_tickets').insert({
         user_id: user.id,
+        institution_id: profile.institution_id,
         title: newTicket.title,
         description: newTicket.description,
         category: newTicket.category,
@@ -385,7 +399,9 @@ export function SupportSystem() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Support System</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Manage tickets and knowledge base</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Institution-to-Super Admin support communication • Librarians create tickets for system-level support
+          </p>
         </div>
         <button
           onClick={() => activeTab === 'tickets' ? setShowNewTicketModal(true) : setShowNewArticleModal(true)}
@@ -752,8 +768,13 @@ export function SupportSystem() {
       {showNewTicketModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Create Support Ticket</h3>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Create Support Ticket</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Report issues, request features, or get help from Super Admin team
+                </p>
+              </div>
               <button
                 onClick={() => setShowNewTicketModal(false)}
                 className="text-gray-400 hover:text-gray-600"

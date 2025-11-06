@@ -88,11 +88,6 @@ CREATE POLICY "super_admins_view_all_tickets" ON support_tickets
     )
   );
 
--- Users can see their own tickets
-CREATE POLICY "users_view_own_tickets" ON support_tickets
-  FOR SELECT
-  USING (user_id = auth.uid());
-
 -- Librarians can see tickets from their institution
 CREATE POLICY "librarians_view_institution_tickets" ON support_tickets
   FOR SELECT
@@ -105,10 +100,17 @@ CREATE POLICY "librarians_view_institution_tickets" ON support_tickets
     )
   );
 
--- Users can create tickets
-CREATE POLICY "users_create_tickets" ON support_tickets
+-- Only librarians and super admins can create tickets
+CREATE POLICY "librarians_super_admins_create_tickets" ON support_tickets
   FOR INSERT
-  WITH CHECK (user_id = auth.uid());
+  WITH CHECK (
+    user_id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM user_profiles
+      WHERE user_profiles.id = auth.uid()
+      AND user_profiles.role IN ('librarian', 'super_admin')
+    )
+  );
 
 -- Super admins can update all tickets
 CREATE POLICY "super_admins_update_tickets" ON support_tickets
@@ -137,50 +139,51 @@ CREATE POLICY "librarians_update_institution_tickets" ON support_tickets
 -- 5. RLS Policies for Ticket Messages
 -- =============================================
 
--- Users can see messages for tickets they have access to
-CREATE POLICY "users_view_ticket_messages" ON ticket_messages
+-- Librarians and super admins can see messages for tickets they have access to
+CREATE POLICY "librarians_super_admins_view_ticket_messages" ON ticket_messages
   FOR SELECT
   USING (
     EXISTS (
       SELECT 1 FROM support_tickets
       WHERE support_tickets.id = ticket_messages.ticket_id
-      AND (
-        support_tickets.user_id = auth.uid()
-        OR EXISTS (
-          SELECT 1 FROM user_profiles
-          WHERE user_profiles.id = auth.uid()
-          AND (
-            user_profiles.role = 'super_admin'
-            OR (
-              user_profiles.role = 'librarian'
-              AND user_profiles.institution_id = support_tickets.institution_id
-            )
+      AND EXISTS (
+        SELECT 1 FROM user_profiles
+        WHERE user_profiles.id = auth.uid()
+        AND (
+          user_profiles.role = 'super_admin'
+          OR (
+            user_profiles.role = 'librarian'
+            AND user_profiles.institution_id = support_tickets.institution_id
           )
         )
       )
     )
   );
 
--- Users can create messages for tickets they have access to
-CREATE POLICY "users_create_ticket_messages" ON ticket_messages
+-- Librarians and super admins can create messages for tickets they have access to
+CREATE POLICY "librarians_super_admins_create_ticket_messages" ON ticket_messages
   FOR INSERT
   WITH CHECK (
     user_id = auth.uid()
     AND EXISTS (
+      SELECT 1 FROM user_profiles
+      WHERE user_profiles.id = auth.uid()
+      AND user_profiles.role IN ('librarian', 'super_admin')
+    )
+    AND EXISTS (
       SELECT 1 FROM support_tickets
       WHERE support_tickets.id = ticket_messages.ticket_id
       AND (
-        support_tickets.user_id = auth.uid()
+        EXISTS (
+          SELECT 1 FROM user_profiles up
+          WHERE up.id = auth.uid()
+          AND up.role = 'super_admin'
+        )
         OR EXISTS (
-          SELECT 1 FROM user_profiles
-          WHERE user_profiles.id = auth.uid()
-          AND (
-            user_profiles.role = 'super_admin'
-            OR (
-              user_profiles.role = 'librarian'
-              AND user_profiles.institution_id = support_tickets.institution_id
-            )
-          )
+          SELECT 1 FROM user_profiles up
+          WHERE up.id = auth.uid()
+          AND up.role = 'librarian'
+          AND up.institution_id = support_tickets.institution_id
         )
       )
     )
