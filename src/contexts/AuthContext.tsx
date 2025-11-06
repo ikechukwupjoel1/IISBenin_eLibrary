@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import { startSession, endSession } from '../utils/sessionTracking';
+// import { startSession, endSession } from '../utils/sessionTracking';
 
 type UserProfile = {
   id: string;
@@ -139,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         
         // Start session tracking
-        await startSession();
+        // await startSession(); // Temporarily disabled due to RLS issues
       }
       setLoading(false);
     };
@@ -202,7 +202,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(userProfile);
           
           // Start session tracking
-          await startSession();
+          // await startSession(); // Temporarily disabled due to RLS issues
           
           if (userProfile.role === 'super_admin') {
             setInstitution(null);
@@ -261,7 +261,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(profileData);
         
         // Start session tracking
-        await startSession();
+        // await startSession(); // Temporarily disabled due to RLS issues
         
         if (profileData.institution_id) {
           const institutionData = await loadInstitution(profileData.institution_id);
@@ -304,7 +304,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     // End session tracking
-    await endSession();
+    // await endSession(); // Temporarily disabled due to RLS issues
     
     if (profile?.role !== 'student' && profile?.role !== 'staff') {
       const { error } = await supabase.auth.signOut();
