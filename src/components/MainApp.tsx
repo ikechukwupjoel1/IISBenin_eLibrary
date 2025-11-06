@@ -1,7 +1,6 @@
 
 
-import { useState, lazy, Suspense, useRef, useEffect } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { useState, lazy, Suspense } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Dashboard } from './Dashboard';
 import { BookManagement } from './BookManagement';
@@ -38,26 +37,6 @@ const LoadingFallback = () => (
 function MainApp() {
   const { profile, institution, signOut, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setOpenDropdown(null);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Handle keyboard navigation
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      setOpenDropdown(null);
-    }
-  };
   
   // Wait for profile to load to prevent flash of wrong dashboard
   if (loading || !profile) {
@@ -68,36 +47,25 @@ function MainApp() {
     );
   }
   
-  // Dynamic tab logic: role and feature-flag filtering with grouped menus
+  // Dynamic tab logic: role and feature-flag filtering
   const allTabs = [
     { id: 'dashboard', label: 'Dashboard', roles: ['librarian', 'staff', 'student', 'super_admin'] },
-    
-    // Library group
-    { id: 'books', label: 'Books', roles: ['librarian', 'staff'], group: 'library' },
-    { id: 'borrowing', label: 'Borrowing', roles: ['librarian', 'staff', 'student'], group: 'library' },
-    { id: 'myBooks', label: 'My Books', roles: ['student', 'staff'], group: 'library' },
-    { id: 'digitalLibrary', label: 'Digital Library', roles: ['librarian', 'staff', 'student'], group: 'library' },
-    { id: 'waiting', label: 'Waiting List', roles: ['student', 'staff'], group: 'library' },
-    { id: 'reservations', label: 'Reservations', roles: ['librarian', 'staff', 'student'], featureFlag: 'reservations', group: 'library' },
-    
-    // Management (librarian only)
+    { id: 'books', label: 'Books', roles: ['librarian', 'staff'] },
+    { id: 'borrowing', label: 'Borrowing', roles: ['librarian', 'staff', 'student'] },
+    { id: 'myBooks', label: 'My Books', roles: ['student', 'staff'] },
     { id: 'students', label: 'Students', roles: ['librarian'] },
     { id: 'staff', label: 'Staff', roles: ['librarian'] },
-    
-    // Communication
     { id: 'messaging', label: 'Messaging', roles: ['librarian', 'staff'], featureFlag: 'messages' },
     { id: 'announcements', label: 'Announcements', roles: ['librarian', 'staff', 'student'] },
-    
-    // Community group
-    { id: 'leaderboard', label: 'Leaderboard', roles: ['librarian', 'staff', 'student'], featureFlag: 'leaderboard', group: 'community' },
-    { id: 'bookClubs', label: 'Book Clubs', roles: ['librarian', 'staff', 'student'], featureFlag: 'bookclubs', group: 'community' },
-    { id: 'challenges', label: 'Challenges', roles: ['librarian', 'staff', 'student'], featureFlag: 'challenges', group: 'community' },
-    { id: 'readingChallenge', label: 'Reading Challenge', roles: ['librarian', 'staff', 'student'], featureFlag: 'challenges', group: 'community' },
-    
-    // Reports group
-    { id: 'reviews', label: 'Reviews', roles: ['librarian', 'staff', 'student'], featureFlag: 'reviews', group: 'reports' },
-    { id: 'bookReportReview', label: 'Review Reports', roles: ['librarian'], group: 'reports' },
-    
+    { id: 'leaderboard', label: 'Leaderboard', roles: ['librarian', 'staff', 'student'], featureFlag: 'leaderboard' },
+    { id: 'bookClubs', label: 'Book Clubs', roles: ['librarian', 'staff', 'student'], featureFlag: 'bookclubs' },
+    { id: 'challenges', label: 'Challenges', roles: ['librarian', 'staff', 'student'], featureFlag: 'challenges' },
+    { id: 'readingChallenge', label: 'Reading Challenge', roles: ['librarian', 'staff', 'student'], featureFlag: 'challenges' },
+    { id: 'reviews', label: 'Reviews', roles: ['librarian', 'staff', 'student'], featureFlag: 'reviews' },
+    { id: 'bookReportReview', label: 'Review Reports', roles: ['librarian'] },
+    { id: 'digitalLibrary', label: 'Digital Library', roles: ['librarian', 'staff', 'student'] },
+    { id: 'waiting', label: 'Waiting List', roles: ['student', 'staff'] },
+    { id: 'reservations', label: 'Reservations', roles: ['librarian', 'staff', 'student'], featureFlag: 'reservations' },
     { id: 'settings', label: 'Settings', roles: ['librarian'] },
   ];
   const tabs = allTabs.filter(tab => {
@@ -141,15 +109,12 @@ function MainApp() {
           </div>
         </div>
       </header>
-      <div className="mb-4 sm:mb-6 relative" ref={dropdownRef}>
-        <nav className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200">
-          <div className="flex sm:flex-wrap justify-center gap-1 sm:gap-2 p-2 overflow-x-auto scrollbar-hide">
-          {/* Group tabs by category */}
-          {tabs.filter(t => !t.group).map((tab) => (
+      <nav className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200">
+        <div className="flex sm:flex-wrap justify-start sm:justify-center gap-1 sm:gap-2 p-2 overflow-x-auto overflow-y-visible">
+          {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              onKeyDown={handleKeyDown}
               className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap text-xs sm:text-sm flex-shrink-0 min-h-[44px] ${
                 activeTab === tab.id
                   ? 'bg-blue-600 text-white'
@@ -159,108 +124,8 @@ function MainApp() {
               <span>{tab.label}</span>
             </button>
           ))}
-          
-          {/* Library dropdown */}
-          {tabs.some(t => t.group === 'library') && (
-            <div className="relative static sm:relative">
-              <button
-                onClick={() => setOpenDropdown(openDropdown === 'library' ? null : 'library')}
-                onKeyDown={handleKeyDown}
-                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap text-xs sm:text-sm flex-shrink-0 min-h-[44px] ${
-                  tabs.filter(t => t.group === 'library').some(t => t.id === activeTab)
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <span>Library</span>
-                <ChevronDown className="w-4 h-4" />
-              </button>
-              {openDropdown === 'library' && (
-                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl py-1 min-w-[160px] z-[100]">
-                  {tabs.filter(t => t.group === 'library').map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => { setActiveTab(tab.id); setOpenDropdown(null); }}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${
-                        activeTab === tab.id ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          
-          {/* Community dropdown */}
-          {tabs.some(t => t.group === 'community') && (
-            <div className="relative static sm:relative">
-              <button
-                onClick={() => setOpenDropdown(openDropdown === 'community' ? null : 'community')}
-                onKeyDown={handleKeyDown}
-                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap text-xs sm:text-sm flex-shrink-0 min-h-[44px] ${
-                  tabs.filter(t => t.group === 'community').some(t => t.id === activeTab)
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <span>Community</span>
-                <ChevronDown className="w-4 h-4" />
-              </button>
-              {openDropdown === 'community' && (
-                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl py-1 min-w-[160px] z-[100]">
-                  {tabs.filter(t => t.group === 'community').map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => { setActiveTab(tab.id); setOpenDropdown(null); }}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${
-                        activeTab === tab.id ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          
-          {/* Reports dropdown */}
-          {tabs.some(t => t.group === 'reports') && (
-            <div className="relative static sm:relative">
-              <button
-                onClick={() => setOpenDropdown(openDropdown === 'reports' ? null : 'reports')}
-                onKeyDown={handleKeyDown}
-                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap text-xs sm:text-sm flex-shrink-0 min-h-[44px] ${
-                  tabs.filter(t => t.group === 'reports').some(t => t.id === activeTab)
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <span>Reports</span>
-                <ChevronDown className="w-4 h-4" />
-              </button>
-              {openDropdown === 'reports' && (
-                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl py-1 min-w-[160px] z-[100]">
-                  {tabs.filter(t => t.group === 'reports').map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => { setActiveTab(tab.id); setOpenDropdown(null); }}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${
-                        activeTab === tab.id ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
-        </nav>
-      </div>
+      </nav>
       <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-3 sm:py-6 relative z-10">
         <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 md:p-6 overflow-hidden">
           <Suspense fallback={<LoadingFallback />}>
