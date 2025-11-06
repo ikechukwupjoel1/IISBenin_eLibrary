@@ -9,6 +9,26 @@ import { StaffManagement } from './StaffManagement';
 import { SuperAdminDashboard } from './SuperAdminDashboard';
 import { LibrarySettings } from './LibrarySettings';
 import { BorrowingSystem } from './BorrowingSystem';
+import { 
+  LayoutDashboard, 
+  BookOpen, 
+  ArrowLeftRight, 
+  Library, 
+  GraduationCap, 
+  Users, 
+  MessageSquare, 
+  Megaphone,
+  Trophy,
+  BookMarked,
+  Target,
+  Flame,
+  Star,
+  FileText,
+  Wifi,
+  Clock,
+  Calendar,
+  Settings
+} from 'lucide-react';
 
 // Lazy load components that are not immediately needed
 const Leaderboard = lazy(() => import('./Leaderboard').then(m => ({ default: m.Leaderboard })));
@@ -49,24 +69,24 @@ function MainApp() {
   
   // Dynamic tab logic: role and feature-flag filtering
   const allTabs = [
-    { id: 'dashboard', label: 'Dashboard', roles: ['librarian', 'staff', 'student', 'super_admin'] },
-    { id: 'books', label: 'Books', roles: ['librarian', 'staff'] },
-    { id: 'borrowing', label: 'Borrowing', roles: ['librarian', 'staff', 'student'] },
-    { id: 'myBooks', label: 'My Books', roles: ['student', 'staff'] },
-    { id: 'students', label: 'Students', roles: ['librarian'] },
-    { id: 'staff', label: 'Staff', roles: ['librarian'] },
-    { id: 'messaging', label: 'Messaging', roles: ['librarian', 'staff'], featureFlag: 'messages' },
-    { id: 'announcements', label: 'Announcements', roles: ['librarian', 'staff', 'student'] },
-    { id: 'leaderboard', label: 'Leaderboard', roles: ['librarian', 'staff', 'student'], featureFlag: 'leaderboard' },
-    { id: 'bookClubs', label: 'Book Clubs', roles: ['librarian', 'staff', 'student'], featureFlag: 'bookclubs' },
-    { id: 'challenges', label: 'Challenges', roles: ['librarian', 'staff', 'student'], featureFlag: 'challenges' },
-    { id: 'readingChallenge', label: 'Reading Challenge', roles: ['librarian', 'staff', 'student'], featureFlag: 'challenges' },
-    { id: 'reviews', label: 'Reviews', roles: ['librarian', 'staff', 'student'], featureFlag: 'reviews' },
-    { id: 'bookReportReview', label: 'Review Reports', roles: ['librarian'] },
-    { id: 'digitalLibrary', label: 'Digital Library', roles: ['librarian', 'staff', 'student'] },
-    { id: 'waiting', label: 'Waiting List', roles: ['student', 'staff'] },
-    { id: 'reservations', label: 'Reservations', roles: ['librarian', 'staff', 'student'], featureFlag: 'reservations' },
-    { id: 'settings', label: 'Settings', roles: ['librarian'] },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['librarian', 'staff', 'student', 'super_admin'] },
+    { id: 'books', label: 'Books', icon: BookOpen, roles: ['librarian', 'staff'] },
+    { id: 'borrowing', label: 'Borrowing', icon: ArrowLeftRight, roles: ['librarian', 'staff', 'student'] },
+    { id: 'myBooks', label: 'My Books', icon: Library, roles: ['student', 'staff'] },
+    { id: 'students', label: 'Students', icon: GraduationCap, roles: ['librarian'] },
+    { id: 'staff', label: 'Staff', icon: Users, roles: ['librarian'] },
+    { id: 'messaging', label: 'Messaging', icon: MessageSquare, roles: ['librarian', 'staff'], featureFlag: 'messages' },
+    { id: 'announcements', label: 'Announcements', icon: Megaphone, roles: ['librarian', 'staff', 'student'] },
+    { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, roles: ['librarian', 'staff', 'student'], featureFlag: 'leaderboard' },
+    { id: 'bookClubs', label: 'Book Clubs', icon: BookMarked, roles: ['librarian', 'staff', 'student'], featureFlag: 'bookclubs' },
+    { id: 'challenges', label: 'Challenges', icon: Target, roles: ['librarian', 'staff', 'student'], featureFlag: 'challenges' },
+    { id: 'readingChallenge', label: 'Reading Challenge', icon: Flame, roles: ['librarian', 'staff', 'student'], featureFlag: 'challenges' },
+    { id: 'reviews', label: 'Reviews', icon: Star, roles: ['librarian', 'staff', 'student'], featureFlag: 'reviews' },
+    { id: 'bookReportReview', label: 'Review Reports', icon: FileText, roles: ['librarian'] },
+    { id: 'digitalLibrary', label: 'Digital Library', icon: Wifi, roles: ['librarian', 'staff', 'student'] },
+    { id: 'waiting', label: 'Waiting List', icon: Clock, roles: ['student', 'staff'] },
+    { id: 'reservations', label: 'Reservations', icon: Calendar, roles: ['librarian', 'staff', 'student'], featureFlag: 'reservations' },
+    { id: 'settings', label: 'Settings', icon: Settings, roles: ['librarian'] },
   ];
   const tabs = allTabs.filter(tab => {
     if (!profile?.role || !tab.roles.includes(profile.role)) return false;
@@ -109,22 +129,29 @@ function MainApp() {
           </div>
         </div>
       </header>
-      <nav className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200">
-        <div className="flex sm:flex-wrap justify-start sm:justify-center gap-1 sm:gap-2 p-2 overflow-x-auto overflow-y-visible">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap text-xs sm:text-sm flex-shrink-0 min-h-[44px] ${
-                activeTab === tab.id
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <span>{tab.label}</span>
-            </button>
-          ))}
+      <nav className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 relative">
+        <div className="flex sm:flex-wrap justify-start sm:justify-center gap-1 sm:gap-2 p-2 overflow-x-auto overflow-y-visible scroll-smooth">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                title={tab.label}
+                className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-lg font-medium transition-all duration-200 whitespace-nowrap text-xs sm:text-sm flex-shrink-0 min-h-[44px] min-w-[44px] ${
+                  activeTab === tab.id
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-gray-700 hover:bg-gray-100 hover:shadow-sm'
+                }`}
+              >
+                <Icon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                <span className="hidden xs:inline">{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
+        {/* Fade gradient indicator for scrollable content on mobile */}
+        <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white via-white/80 to-transparent pointer-events-none sm:hidden rounded-r-lg" />
       </nav>
       <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-3 sm:py-6 relative z-10">
         <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 md:p-6 overflow-hidden">
