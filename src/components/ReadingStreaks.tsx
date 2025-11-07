@@ -67,7 +67,7 @@ export default function ReadingStreaks({ userId }: { userId: string }) {
 
       // Get or create user progress
       let { data: progressData, error: progressError } = await supabase
-        .from('reading_progress')
+        .from('user_reading_progress')
         .select('*')
         .eq('user_id', userId)
         .single();
@@ -75,7 +75,7 @@ export default function ReadingStreaks({ userId }: { userId: string }) {
       if (progressError && progressError.code === 'PGRST116') {
         // Create new progress record
         const { data: newProgress, error: createError } = await supabase
-          .from('reading_progress')
+          .from('user_reading_progress')
           .insert([{
             user_id: userId,
             books_read: 0,
@@ -166,7 +166,7 @@ export default function ReadingStreaks({ userId }: { userId: string }) {
   const updateWeeklyGoal = async () => {
     try {
       const { error } = await supabase
-        .from('reading_progress')
+        .from('user_reading_progress')
         .update({ weekly_goal: weeklyGoal })
         .eq('user_id', userId);
 
