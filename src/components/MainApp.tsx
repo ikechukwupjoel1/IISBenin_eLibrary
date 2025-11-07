@@ -180,7 +180,7 @@ function MainApp() {
       <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-3 sm:py-6 relative z-10">
         <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 md:p-6 overflow-hidden">
           <Suspense fallback={<LoadingFallback />}>
-            {activeTab === 'dashboard' && (profile?.role === 'super_admin' ? <SuperAdminDashboard /> : <Dashboard />)}
+            {activeTab === 'dashboard' && (profile?.role === 'super_admin' ? <SuperAdminDashboard /> : <Dashboard onNavigate={setActiveTab} />)}
             {activeTab === 'books' && <BookManagement />}
             {activeTab === 'borrowing' && <BorrowingSystem />}
             {activeTab === 'myBooks' && <MyBooks />}

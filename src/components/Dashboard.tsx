@@ -39,7 +39,11 @@ type BorrowRecordWithStudent = {
   students: { name: string } | null;
 };
 
-export function Dashboard() {
+interface DashboardProps {
+  onNavigate?: (tab: string) => void;
+}
+
+export function Dashboard({ onNavigate }: DashboardProps) {
   const { profile, institution } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -266,6 +270,7 @@ export function Dashboard() {
       color: 'bg-blue-500',
       bgColor: 'bg-blue-50',
       roles: ['librarian', 'staff', 'student'],
+      navigateTo: 'books',
     },
     {
       title: 'Borrowed Books',
@@ -275,6 +280,7 @@ export function Dashboard() {
       color: 'bg-green-500',
       bgColor: 'bg-green-50',
       roles: ['librarian', 'staff', 'student'],
+      navigateTo: profile?.role === 'student' ? 'myBooks' : 'borrowing',
     },
     {
       title: 'Total Students',
@@ -284,6 +290,7 @@ export function Dashboard() {
       color: 'bg-slate-500',
       bgColor: 'bg-slate-50',
       roles: ['librarian', 'staff'],
+      navigateTo: 'students',
     },
     {
       title: 'Total Staff',
@@ -293,6 +300,7 @@ export function Dashboard() {
       color: 'bg-teal-500',
       bgColor: 'bg-teal-50',
       roles: ['librarian'], // Only librarians can see staff count
+      navigateTo: 'staff',
     },
     {
       title: profile?.role === 'student' ? 'My Overdue Books' : 'Overdue Books',
@@ -302,6 +310,7 @@ export function Dashboard() {
       color: 'bg-red-500',
       bgColor: 'bg-red-50',
       roles: ['librarian', 'staff', 'student'], // Students can see their own overdue books
+      navigateTo: profile?.role === 'student' ? 'myBooks' : 'borrowing',
     },
     {
       title: 'Pending Reports',
@@ -311,6 +320,7 @@ export function Dashboard() {
       color: 'bg-indigo-500',
       bgColor: 'bg-indigo-50',
       roles: ['librarian', 'staff'],
+      navigateTo: 'bookReportReview',
     },
   ], [stats, profile?.role]);
 
@@ -374,7 +384,19 @@ export function Dashboard() {
           {statCards.map((card) => {
             const Icon = card.icon;
             return (
-              <div key={card.title} className="bg-white/95 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-gray-200 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer active:scale-95">
+              <div 
+                key={card.title} 
+                className="bg-white/95 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-gray-200 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer active:scale-95"
+                onClick={() => card.navigateTo && onNavigate?.(card.navigateTo)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if ((e.key === 'Enter' || e.key === ' ') && card.navigateTo) {
+                    e.preventDefault();
+                    onNavigate?.(card.navigateTo);
+                  }
+                }}
+              >
                 <div className="flex items-center justify-between mb-3 sm:mb-4">
                   <div className={`bg-gradient-to-br ${card.gradient} p-2 sm:p-3 rounded-lg shadow-md`}>
                     <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
