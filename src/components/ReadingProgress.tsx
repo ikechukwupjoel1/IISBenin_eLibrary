@@ -254,20 +254,20 @@ export function ReadingProgress() {
       <div className="flex items-center gap-3">
         <BookOpen className="w-8 h-8 text-blue-600" />
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Reading Progress Tracker</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Track your daily reading sessions and progress</p>
+          <h2 className="text-2xl font-bold text-gray-900">Reading Progress Tracker</h2>
+          <p className="text-sm text-gray-600">Track your daily reading sessions and progress</p>
         </div>
       </div>
 
       {/* Active Books - Card Selection */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+      <div className="bg-gray-50 rounded-lg shadow-sm p-6 border border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <BookOpen className="w-5 h-5 text-blue-600" />
           Currently Reading
         </h3>
 
         {activeBorrows.length === 0 ? (
-          <p className="text-gray-600 dark:text-gray-400 text-center py-8">
+          <p className="text-gray-600 text-center py-8">
             No active borrowed books. Borrow a book to start tracking your reading!
           </p>
         ) : (
@@ -318,14 +318,14 @@ export function ReadingProgress() {
       </div>
 
       {/* Recent Sessions */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+      <div className="bg-gray-50 rounded-lg shadow-sm p-6 border border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <Calendar className="w-5 h-5 text-green-600" />
           Recent Reading Sessions
         </h3>
 
         {progressSessions.length === 0 ? (
-          <p className="text-gray-600 dark:text-gray-400 text-center py-8">
+          <p className="text-gray-600 text-center py-8">
             No reading sessions yet. Start tracking your progress!
           </p>
         ) : (
@@ -333,13 +333,13 @@ export function ReadingProgress() {
             {progressSessions.slice(0, 10).map((session) => (
               <div
                 key={session.id}
-                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200"
               >
                 <div className="flex-1">
-                  <h4 className="font-medium text-gray-900 dark:text-white">
+                  <h4 className="font-medium text-gray-900">
                     {session.book_title}
                   </h4>
-                  <div className="flex items-center gap-4 mt-1 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-4 h-4" />
                       {new Date(session.session_date).toLocaleDateString()}
