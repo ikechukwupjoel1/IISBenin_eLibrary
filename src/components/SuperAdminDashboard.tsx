@@ -14,6 +14,8 @@ import { AuditLogs } from './SuperAdmin/AuditLogs/AuditLogs';
 import { SecurityCompliance } from './SuperAdmin/Compliance/SecurityCompliance';
 import { CommunicationsCenter } from './SuperAdmin/Communications/CommunicationsCenter';
 import { ContentOversight } from './SuperAdmin/Content/ContentOversight';
+import AnalyticsDashboard from './SuperAdmin/Analytics/AnalyticsDashboard';
+import BulkOperations from './SuperAdmin/BulkOps/BulkOperations';
 
 type Institution = {
   id: string;
@@ -482,6 +484,12 @@ export function SuperAdminDashboard() {
               <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'content-oversight' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {setActiveSection('content-oversight'); setSidebarOpen(false);}}>Content Oversight</button>
             </li>
             <li>
+              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'advanced-analytics' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {setActiveSection('advanced-analytics'); setSidebarOpen(false);}}>Advanced Analytics</button>
+            </li>
+            <li>
+              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'bulk-operations' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {setActiveSection('bulk-operations'); setSidebarOpen(false);}}>Bulk Operations</button>
+            </li>
+            <li>
               <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'impersonation' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {setActiveSection('impersonation'); setSidebarOpen(false);}}>Impersonation</button>
             </li>
           </ul>
@@ -762,6 +770,22 @@ export function SuperAdminDashboard() {
 
         {/* Content Oversight Tab */}
         {activeSection === 'content-oversight' && <ContentOversight />}
+
+        {/* Advanced Analytics Tab */}
+        {activeSection === 'advanced-analytics' && (
+          <div>
+            <h2 className="text-base sm:text-lg md:text-2xl font-bold text-gray-900 mb-6">Advanced Analytics & Reporting</h2>
+            <AnalyticsDashboard />
+          </div>
+        )}
+
+        {/* Bulk Operations Tab */}
+        {activeSection === 'bulk-operations' && (
+          <div>
+            <h2 className="text-base sm:text-lg md:text-2xl font-bold text-gray-900 mb-6">Bulk Operations</h2>
+            <BulkOperations />
+          </div>
+        )}
 
         {/* Impersonation Tab */}
         {activeSection === 'impersonation' && (
