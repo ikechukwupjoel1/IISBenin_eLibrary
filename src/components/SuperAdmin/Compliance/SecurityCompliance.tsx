@@ -104,26 +104,32 @@ export function SecurityCompliance() {
   const fetchExportRequests = async () => {
     setExportLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data: requests, error } = await supabase
         .from('data_export_requests')
-        .select(`
-          *,
-          user:user_id (
-            email,
-            user_profiles (full_name)
-          )
-        `)
+        .select('*')
         .order('requested_at', { ascending: false })
         .limit(100);
 
       if (error) throw error;
 
+      // Fetch user details separately
+      const userIds = requests?.map((r: any) => r.user_id).filter(Boolean) || [];
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('id, full_name, email')
+        .in('id', userIds);
+
+      const profileMap = new Map(profiles?.map((p: any) => [p.id, p]) || []);
+
       setExportRequests(
-        data?.map((req: any) => ({
-          ...req,
-          user_name: req.user?.user_profiles?.[0]?.full_name || 'Unknown',
-          user_email: req.user?.email || 'Unknown'
-        })) || []
+        requests?.map((req: any) => {
+          const profile = profileMap.get(req.user_id);
+          return {
+            ...req,
+            user_name: profile?.full_name || 'Unknown',
+            user_email: profile?.email || 'Unknown'
+          };
+        }) || []
       );
     } catch (error: any) {
       toast.error('Failed to fetch export requests: ' + error.message);
@@ -135,26 +141,32 @@ export function SecurityCompliance() {
   const fetchDeletionRequests = async () => {
     setDeletionLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data: requests, error } = await supabase
         .from('account_deletion_requests')
-        .select(`
-          *,
-          user:user_id (
-            email,
-            user_profiles (full_name)
-          )
-        `)
+        .select('*')
         .order('requested_at', { ascending: false })
         .limit(100);
 
       if (error) throw error;
 
+      // Fetch user details separately
+      const userIds = requests?.map((r: any) => r.user_id).filter(Boolean) || [];
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('id, full_name, email')
+        .in('id', userIds);
+
+      const profileMap = new Map(profiles?.map((p: any) => [p.id, p]) || []);
+
       setDeletionRequests(
-        data?.map((req: any) => ({
-          ...req,
-          user_name: req.user?.user_profiles?.[0]?.full_name || 'Unknown',
-          user_email: req.user?.email || 'Unknown'
-        })) || []
+        requests?.map((req: any) => {
+          const profile = profileMap.get(req.user_id);
+          return {
+            ...req,
+            user_name: profile?.full_name || 'Unknown',
+            user_email: profile?.email || 'Unknown'
+          };
+        }) || []
       );
     } catch (error: any) {
       toast.error('Failed to fetch deletion requests: ' + error.message);
