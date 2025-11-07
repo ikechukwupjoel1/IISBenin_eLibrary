@@ -72,7 +72,7 @@ function MainApp() {
   const allTabs = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['librarian', 'staff', 'student', 'super_admin'] },
     { id: 'books', label: 'Books', icon: BookOpen, roles: ['librarian', 'staff'] },
-    { id: 'borrowing', label: 'Borrowing', icon: ArrowLeftRight, roles: ['librarian', 'staff', 'student'] },
+    { id: 'borrowing', label: 'Borrowing', icon: ArrowLeftRight, roles: ['librarian', 'staff'] },
     { id: 'myBooks', label: 'My Books', icon: Library, roles: ['student', 'staff'] },
     { id: 'students', label: 'Students', icon: GraduationCap, roles: ['librarian'] },
     { id: 'staff', label: 'Staff', icon: Users, roles: ['librarian'] },
