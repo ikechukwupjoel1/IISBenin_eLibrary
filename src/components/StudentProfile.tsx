@@ -2,14 +2,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { User, Lock, Upload, Camera, Eye, EyeOff, CheckCircle } from 'lucide-react';
-import { LoadingSkeleton } from './ui/LoadingSkeleton';
+import { Lock, Eye, EyeOff, CheckCircle, User } from 'lucide-react';
 
 export function StudentProfile() {
   const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -24,12 +21,6 @@ export function StudentProfile() {
     score: 0,
     feedback: ''
   });
-
-  useEffect(() => {
-    if (profile?.avatar_url) {
-      setAvatarUrl(profile.avatar_url);
-    }
-  }, [profile]);
 
   useEffect(() => {
     checkPasswordStrength(passwordForm.newPassword);
@@ -65,63 +56,6 @@ export function StudentProfile() {
       score,
       feedback: feedback.length > 0 ? feedback.join(', ') : strengthText
     });
-  };
-
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      setUploading(true);
-
-      if (!event.target.files || event.target.files.length === 0) {
-        return;
-      }
-
-      const file = event.target.files[0];
-      const fileSize = file.size / 1024 / 1024; // Convert to MB
-
-      // Validate file size (max 2MB)
-      if (fileSize > 2) {
-        toast.error('File size must be less than 2MB');
-        return;
-      }
-
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please upload an image file');
-        return;
-      }
-
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${profile?.id}-${Math.random()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
-
-      // Upload image to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      // Update user profile with avatar URL
-      const { error: updateError } = await supabase
-        .from('user_profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', profile?.id);
-
-      if (updateError) throw updateError;
-
-      setAvatarUrl(publicUrl);
-      toast.success('Profile picture updated successfully!');
-    } catch (error) {
-      console.error('Error uploading avatar:', error);
-      toast.error('Failed to upload profile picture');
-    } finally {
-      setUploading(false);
-    }
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -198,73 +132,23 @@ export function StudentProfile() {
         </p>
       </div>
 
-      {/* Profile Picture Section */}
+      {/* Profile Avatar Section */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
         <div className="flex items-start gap-6">
-          <div className="relative">
-            <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold overflow-hidden">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
-              ) : (
-                profile?.full_name?.charAt(0).toUpperCase() || 'U'
-              )}
-            </div>
-            <label
-              htmlFor="avatar-upload"
-              className={`absolute bottom-0 right-0 p-2 bg-blue-600 rounded-full cursor-pointer hover:bg-blue-700 transition-colors ${
-                uploading ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              {uploading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                <Camera className="h-5 w-5 text-white" />
-              )}
-            </label>
-            <input
-              id="avatar-upload"
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarUpload}
-              disabled={uploading}
-              className="hidden"
-            />
+          <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold">
+            {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
           </div>
 
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              Profile Picture
+              Profile Avatar
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Upload a profile picture to personalize your account. Maximum file size: 2MB.
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              Your profile displays your initial in a unique color gradient.
             </p>
-            <div className="flex items-center gap-3">
-              <label
-                htmlFor="avatar-upload"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer inline-flex items-center gap-2 transition-colors disabled:opacity-50"
-              >
-                <Upload className="h-4 w-4" />
-                {uploading ? 'Uploading...' : 'Upload Photo'}
-              </label>
-              {avatarUrl && (
-                <button
-                  onClick={async () => {
-                    try {
-                      await supabase
-                        .from('user_profiles')
-                        .update({ avatar_url: null })
-                        .eq('id', profile?.id);
-                      setAvatarUrl(null);
-                      toast.success('Profile picture removed');
-                    } catch (error) {
-                      toast.error('Failed to remove picture');
-                    }
-                  }}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  Remove
-                </button>
-              )}
+            <div className="text-sm text-gray-500 dark:text-gray-500">
+              <p className="font-medium">{profile?.full_name || 'User'}</p>
+              <p>{profile?.email || ''}</p>
             </div>
           </div>
         </div>
