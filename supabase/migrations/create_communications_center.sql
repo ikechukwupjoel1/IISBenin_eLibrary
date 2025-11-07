@@ -145,6 +145,7 @@ ALTER TABLE announcement_views ENABLE ROW LEVEL SECURITY;
 ALTER TABLE email_campaign_events ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for Broadcast Announcements
+DROP POLICY IF EXISTS "super_admins_manage_broadcasts" ON broadcast_announcements;
 CREATE POLICY "super_admins_manage_broadcasts" ON broadcast_announcements
   FOR ALL USING (
     EXISTS (
@@ -154,6 +155,7 @@ CREATE POLICY "super_admins_manage_broadcasts" ON broadcast_announcements
     )
   );
 
+DROP POLICY IF EXISTS "users_view_published_broadcasts" ON broadcast_announcements;
 CREATE POLICY "users_view_published_broadcasts" ON broadcast_announcements
   FOR SELECT USING (
     status = 'published'
@@ -176,6 +178,7 @@ CREATE POLICY "users_view_published_broadcasts" ON broadcast_announcements
   );
 
 -- RLS Policies for Email Campaigns
+DROP POLICY IF EXISTS "super_admins_manage_campaigns" ON email_campaigns;
 CREATE POLICY "super_admins_manage_campaigns" ON email_campaigns
   FOR ALL USING (
     EXISTS (
@@ -186,6 +189,7 @@ CREATE POLICY "super_admins_manage_campaigns" ON email_campaigns
   );
 
 -- RLS Policies for Email Templates
+DROP POLICY IF EXISTS "super_admins_manage_templates" ON email_templates;
 CREATE POLICY "super_admins_manage_templates" ON email_templates
   FOR ALL USING (
     EXISTS (
@@ -195,13 +199,16 @@ CREATE POLICY "super_admins_manage_templates" ON email_templates
     )
   );
 
+DROP POLICY IF EXISTS "users_view_templates" ON email_templates;
 CREATE POLICY "users_view_templates" ON email_templates
   FOR SELECT USING (true);
 
 -- RLS Policies for Notification Queue
+DROP POLICY IF EXISTS "users_view_own_notifications" ON notification_queue;
 CREATE POLICY "users_view_own_notifications" ON notification_queue
   FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "super_admins_manage_notifications" ON notification_queue;
 CREATE POLICY "super_admins_manage_notifications" ON notification_queue
   FOR ALL USING (
     EXISTS (
@@ -212,9 +219,11 @@ CREATE POLICY "super_admins_manage_notifications" ON notification_queue
   );
 
 -- RLS Policies for Announcement Views
+DROP POLICY IF EXISTS "users_manage_own_views" ON announcement_views;
 CREATE POLICY "users_manage_own_views" ON announcement_views
   FOR ALL USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "super_admins_view_all_tracking" ON announcement_views;
 CREATE POLICY "super_admins_view_all_tracking" ON announcement_views
   FOR SELECT USING (
     EXISTS (
@@ -225,6 +234,7 @@ CREATE POLICY "super_admins_view_all_tracking" ON announcement_views
   );
 
 -- RLS Policies for Campaign Events
+DROP POLICY IF EXISTS "super_admins_view_campaign_events" ON email_campaign_events;
 CREATE POLICY "super_admins_view_campaign_events" ON email_campaign_events
   FOR SELECT USING (
     EXISTS (
