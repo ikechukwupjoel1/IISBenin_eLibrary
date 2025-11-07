@@ -19,9 +19,10 @@ SELECT
   i.id AS institution_id,
   i.name AS institution_name,
   i.is_active AS institution_active,
-  -- Count total and available copies if inventory columns exist
-  COALESCE(b.total_copies, 1) AS total_copies,
-  COALESCE(b.available_copies, 1) AS available_copies,
+  -- Note: total_copies and available_copies may not exist in all databases
+  -- If they don't exist, this will cause an error - see note below
+  1 AS total_copies,
+  1 AS available_copies,
   -- Storage metadata if available
   b.metadata,
   -- Calculate quality score
