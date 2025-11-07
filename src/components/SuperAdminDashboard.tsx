@@ -10,6 +10,7 @@ import { SystemHealth } from './SuperAdmin/Dashboard/SystemHealth';
 import { PerformanceMonitor } from './SuperAdmin/Dashboard/PerformanceMonitor';
 import { UserManagement } from './SuperAdmin/Users/UserManagement';
 import { SupportSystem } from './SuperAdmin/Support/SupportSystem';
+import { AuditLogs } from './SuperAdmin/AuditLogs/AuditLogs';
 
 type Institution = {
   id: string;
@@ -466,6 +467,9 @@ export function SuperAdminDashboard() {
               <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'support' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {setActiveSection('support'); setSidebarOpen(false);}}>Support System</button>
             </li>
             <li>
+              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'audit-logs' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {setActiveSection('audit-logs'); setSidebarOpen(false);}}>Audit Logs</button>
+            </li>
+            <li>
               <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'impersonation' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {setActiveSection('impersonation'); setSidebarOpen(false);}}>Impersonation</button>
             </li>
           </ul>
@@ -732,9 +736,13 @@ export function SuperAdminDashboard() {
         </div>
         )}
 
-        {/* Impersonation Tab */}
+        {/* Support System Tab */}
         {activeSection === 'support' && <SupportSystem />}
 
+        {/* Audit Logs Tab */}
+        {activeSection === 'audit-logs' && <AuditLogs />}
+
+        {/* Impersonation Tab */}
         {activeSection === 'impersonation' && (
           <div>
             <h2 className="text-base sm:text-lg md:text-2xl font-bold text-gray-900 mb-4">Impersonation</h2>
