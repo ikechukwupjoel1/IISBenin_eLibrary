@@ -5,40 +5,82 @@
 -- PART 1: Views for Content Oversight
 -- =============================================================================
 
--- Global Book Catalog View (cross-institution)
-CREATE OR REPLACE VIEW global_book_catalog AS
-SELECT 
-  b.id,
-  b.title,
-  b.author_publisher,
-  b.isbn,
-  b.category,
-  b.status,
-  b.created_at,
-  b.updated_at,
-  i.id AS institution_id,
-  i.name AS institution_name,
-  i.is_active AS institution_active,
-  -- Note: total_copies and available_copies may not exist in all databases
-  -- If they don't exist, this will cause an error - see note below
-  1 AS total_copies,
-  1 AS available_copies,
-  -- Storage metadata if available
-  b.metadata,
-  -- Calculate quality score
-  (
-    CASE WHEN b.title IS NOT NULL AND LENGTH(TRIM(b.title)) > 3 THEN 25 ELSE 0 END +
-    CASE WHEN b.author_publisher IS NOT NULL AND LENGTH(TRIM(b.author_publisher)) > 2 THEN 25 ELSE 0 END +
-    CASE WHEN b.isbn IS NOT NULL AND LENGTH(TRIM(b.isbn)) >= 10 THEN 30 ELSE 0 END +
-    CASE WHEN b.category IS NOT NULL AND b.category != '' THEN 20 ELSE 0 END
-  ) AS quality_score,
-  -- Flags for issues
-  CASE WHEN b.isbn IS NULL OR LENGTH(TRIM(b.isbn)) < 10 THEN true ELSE false END AS missing_isbn,
-  CASE WHEN b.category IS NULL OR b.category = '' THEN true ELSE false END AS missing_category,
-  CASE WHEN LENGTH(TRIM(b.title)) < 3 THEN true ELSE false END AS title_too_short
-FROM books b
-LEFT JOIN institutions i ON i.id = b.institution_id
-WHERE b.institution_id IS NOT NULL;
+DO $do$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'books' AND column_name = 'metadata'
+  ) THEN
+    EXECUTE $view$
+    CREATE OR REPLACE VIEW global_book_catalog AS
+    SELECT 
+      b.id,
+      b.title,
+      b.author_publisher,
+      b.isbn,
+      b.category,
+      b.status,
+      b.created_at,
+      b.updated_at,
+      i.id AS institution_id,
+      i.name AS institution_name,
+      i.is_active AS institution_active,
+      -- Note: total_copies and available_copies may not exist in all databases
+      -- If they don't exist, this will cause an error - see note below
+      1 AS total_copies,
+      1 AS available_copies,
+      -- Storage metadata if available
+      b.metadata,
+      -- Calculate quality score
+      (
+        CASE WHEN b.title IS NOT NULL AND LENGTH(TRIM(b.title)) > 3 THEN 25 ELSE 0 END +
+        CASE WHEN b.author_publisher IS NOT NULL AND LENGTH(TRIM(b.author_publisher)) > 2 THEN 25 ELSE 0 END +
+        CASE WHEN b.isbn IS NOT NULL AND LENGTH(TRIM(b.isbn)) >= 10 THEN 30 ELSE 0 END +
+        CASE WHEN b.category IS NOT NULL AND b.category != '' THEN 20 ELSE 0 END
+      ) AS quality_score,
+      -- Flags for issues
+      CASE WHEN b.isbn IS NULL OR LENGTH(TRIM(b.isbn)) < 10 THEN true ELSE false END AS missing_isbn,
+      CASE WHEN b.category IS NULL OR b.category = '' THEN true ELSE false END AS missing_category,
+      CASE WHEN LENGTH(TRIM(b.title)) < 3 THEN true ELSE false END AS title_too_short
+    FROM books b
+    LEFT JOIN institutions i ON i.id = b.institution_id
+    WHERE b.institution_id IS NOT NULL;
+    $view$;
+  ELSE
+    EXECUTE $view$
+    CREATE OR REPLACE VIEW global_book_catalog AS
+    SELECT 
+      b.id,
+      b.title,
+      b.author_publisher,
+      b.isbn,
+      b.category,
+      b.status,
+      b.created_at,
+      b.updated_at,
+      i.id AS institution_id,
+      i.name AS institution_name,
+      i.is_active AS institution_active,
+      1 AS total_copies,
+      1 AS available_copies,
+      -- metadata column not present in this DB, provide safe fallback
+      NULL::jsonb AS metadata,
+      (
+        CASE WHEN b.title IS NOT NULL AND LENGTH(TRIM(b.title)) > 3 THEN 25 ELSE 0 END +
+        CASE WHEN b.author_publisher IS NOT NULL AND LENGTH(TRIM(b.author_publisher)) > 2 THEN 25 ELSE 0 END +
+        CASE WHEN b.isbn IS NOT NULL AND LENGTH(TRIM(b.isbn)) >= 10 THEN 30 ELSE 0 END +
+        CASE WHEN b.category IS NOT NULL AND b.category != '' THEN 20 ELSE 0 END
+      ) AS quality_score,
+      CASE WHEN b.isbn IS NULL OR LENGTH(TRIM(b.isbn)) < 10 THEN true ELSE false END AS missing_isbn,
+      CASE WHEN b.category IS NULL OR b.category = '' THEN true ELSE false END AS missing_category,
+      CASE WHEN LENGTH(TRIM(b.title)) < 3 THEN true ELSE false END AS title_too_short
+    FROM books b
+    LEFT JOIN institutions i ON i.id = b.institution_id
+    WHERE b.institution_id IS NOT NULL;
+    $view$;
+  END IF;
+END
+$do$;
 
 -- Duplicate ISBN Detection View
 CREATE OR REPLACE VIEW duplicate_isbns AS
@@ -60,27 +102,62 @@ HAVING COUNT(*) > 1
 ORDER BY COUNT(*) DESC;
 
 -- Book Metadata Quality View
-CREATE OR REPLACE VIEW book_quality_metrics AS
-SELECT 
-  b.institution_id,
-  i.name AS institution_name,
-  COUNT(*) AS total_books,
-  COUNT(CASE WHEN b.isbn IS NOT NULL AND LENGTH(TRIM(b.isbn)) >= 10 THEN 1 END) AS books_with_isbn,
-  COUNT(CASE WHEN b.category IS NOT NULL AND b.category != '' THEN 1 END) AS books_with_category,
-  COUNT(CASE WHEN LENGTH(TRIM(b.title)) >= 3 THEN 1 END) AS books_with_valid_title,
-  COUNT(CASE WHEN LENGTH(TRIM(b.author_publisher)) >= 2 THEN 1 END) AS books_with_author,
-  ROUND(AVG(
-    CASE WHEN b.title IS NOT NULL AND LENGTH(TRIM(b.title)) > 3 THEN 25 ELSE 0 END +
-    CASE WHEN b.author_publisher IS NOT NULL AND LENGTH(TRIM(b.author_publisher)) > 2 THEN 25 ELSE 0 END +
-    CASE WHEN b.isbn IS NOT NULL AND LENGTH(TRIM(b.isbn)) >= 10 THEN 30 ELSE 0 END +
-    CASE WHEN b.category IS NOT NULL AND b.category != '' THEN 20 ELSE 0 END
-  ), 2) AS avg_quality_score,
-  COUNT(CASE WHEN b.metadata IS NOT NULL THEN 1 END) AS books_with_metadata
-FROM books b
-LEFT JOIN institutions i ON i.id = b.institution_id
-WHERE b.institution_id IS NOT NULL
-GROUP BY b.institution_id, i.name
-ORDER BY avg_quality_score ASC;
+DO $do$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'books' AND column_name = 'metadata'
+  ) THEN
+    EXECUTE $view$
+    CREATE OR REPLACE VIEW book_quality_metrics AS
+    SELECT 
+      b.institution_id,
+      i.name AS institution_name,
+      COUNT(*) AS total_books,
+      COUNT(CASE WHEN b.isbn IS NOT NULL AND LENGTH(TRIM(b.isbn)) >= 10 THEN 1 END) AS books_with_isbn,
+      COUNT(CASE WHEN b.category IS NOT NULL AND b.category != '' THEN 1 END) AS books_with_category,
+      COUNT(CASE WHEN LENGTH(TRIM(b.title)) >= 3 THEN 1 END) AS books_with_valid_title,
+      COUNT(CASE WHEN LENGTH(TRIM(b.author_publisher)) >= 2 THEN 1 END) AS books_with_author,
+      ROUND(AVG(
+        CASE WHEN b.title IS NOT NULL AND LENGTH(TRIM(b.title)) > 3 THEN 25 ELSE 0 END +
+        CASE WHEN b.author_publisher IS NOT NULL AND LENGTH(TRIM(b.author_publisher)) > 2 THEN 25 ELSE 0 END +
+        CASE WHEN b.isbn IS NOT NULL AND LENGTH(TRIM(b.isbn)) >= 10 THEN 30 ELSE 0 END +
+        CASE WHEN b.category IS NOT NULL AND b.category != '' THEN 20 ELSE 0 END
+      ), 2) AS avg_quality_score,
+      COUNT(CASE WHEN b.metadata IS NOT NULL THEN 1 END) AS books_with_metadata
+    FROM books b
+    LEFT JOIN institutions i ON i.id = b.institution_id
+    WHERE b.institution_id IS NOT NULL
+    GROUP BY b.institution_id, i.name
+    ORDER BY avg_quality_score ASC;
+    $view$;
+  ELSE
+    EXECUTE $view$
+    CREATE OR REPLACE VIEW book_quality_metrics AS
+    SELECT 
+      b.institution_id,
+      i.name AS institution_name,
+      COUNT(*) AS total_books,
+      COUNT(CASE WHEN b.isbn IS NOT NULL AND LENGTH(TRIM(b.isbn)) >= 10 THEN 1 END) AS books_with_isbn,
+      COUNT(CASE WHEN b.category IS NOT NULL AND b.category != '' THEN 1 END) AS books_with_category,
+      COUNT(CASE WHEN LENGTH(TRIM(b.title)) >= 3 THEN 1 END) AS books_with_valid_title,
+      COUNT(CASE WHEN LENGTH(TRIM(b.author_publisher)) >= 2 THEN 1 END) AS books_with_author,
+      ROUND(AVG(
+        CASE WHEN b.title IS NOT NULL AND LENGTH(TRIM(b.title)) > 3 THEN 25 ELSE 0 END +
+        CASE WHEN b.author_publisher IS NOT NULL AND LENGTH(TRIM(b.author_publisher)) > 2 THEN 25 ELSE 0 END +
+        CASE WHEN b.isbn IS NOT NULL AND LENGTH(TRIM(b.isbn)) >= 10 THEN 30 ELSE 0 END +
+        CASE WHEN b.category IS NOT NULL AND b.category != '' THEN 20 ELSE 0 END
+      ), 2) AS avg_quality_score,
+      0 AS books_with_metadata
+    FROM books b
+    LEFT JOIN institutions i ON i.id = b.institution_id
+    WHERE b.institution_id IS NOT NULL
+    GROUP BY b.institution_id, i.name
+    ORDER BY avg_quality_score ASC;
+    $view$;
+  END IF;
+END
+$do$;
 
 -- =============================================================================
 -- PART 2: Storage Usage by Institution
@@ -88,28 +165,56 @@ ORDER BY avg_quality_score ASC;
 
 -- Note: This view assumes storage.objects table is accessible
 -- If using Supabase Storage, this will need to be adjusted based on your storage setup
-CREATE OR REPLACE VIEW institution_storage_usage AS
-SELECT 
-  i.id AS institution_id,
-  i.name AS institution_name,
-  COUNT(b.id) AS total_books,
-  -- Estimate storage based on metadata if available
-  COALESCE(SUM(CAST(b.metadata->>'file_size' AS BIGINT)), 0) AS total_storage_bytes,
-  COALESCE(SUM(
-    CASE WHEN b.metadata->>'content_type' LIKE 'image%' 
-    THEN CAST(b.metadata->>'file_size' AS BIGINT) 
-    ELSE 0 END
-  ), 0) AS image_storage_bytes,
-  COALESCE(SUM(
-    CASE WHEN b.metadata->>'content_type' LIKE 'application/pdf%' 
-    THEN CAST(b.metadata->>'file_size' AS BIGINT) 
-    ELSE 0 END
-  ), 0) AS pdf_storage_bytes,
-  COUNT(CASE WHEN b.metadata->>'cover_image_url' IS NOT NULL THEN 1 END) AS books_with_covers
-FROM institutions i
-LEFT JOIN books b ON b.institution_id = i.id
-GROUP BY i.id, i.name
-ORDER BY total_storage_bytes DESC;
+DO $do$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'books' AND column_name = 'metadata'
+  ) THEN
+    EXECUTE $view$
+    CREATE OR REPLACE VIEW institution_storage_usage AS
+    SELECT 
+      i.id AS institution_id,
+      i.name AS institution_name,
+      COUNT(b.id) AS total_books,
+      -- Estimate storage based on metadata if available
+      COALESCE(SUM(CAST(b.metadata->>'file_size' AS BIGINT)), 0) AS total_storage_bytes,
+      COALESCE(SUM(
+        CASE WHEN b.metadata->>'content_type' LIKE 'image%' 
+        THEN CAST(b.metadata->>'file_size' AS BIGINT) 
+        ELSE 0 END
+      ), 0) AS image_storage_bytes,
+      COALESCE(SUM(
+        CASE WHEN b.metadata->>'content_type' LIKE 'application/pdf%' 
+        THEN CAST(b.metadata->>'file_size' AS BIGINT) 
+        ELSE 0 END
+      ), 0) AS pdf_storage_bytes,
+      COUNT(CASE WHEN b.metadata->>'cover_image_url' IS NOT NULL THEN 1 END) AS books_with_covers
+    FROM institutions i
+    LEFT JOIN books b ON b.institution_id = i.id
+    GROUP BY i.id, i.name
+    ORDER BY total_storage_bytes DESC;
+    $view$;
+  ELSE
+    EXECUTE $view$
+    CREATE OR REPLACE VIEW institution_storage_usage AS
+    SELECT 
+      i.id AS institution_id,
+      i.name AS institution_name,
+      COUNT(b.id) AS total_books,
+      -- metadata column not present in this DB, provide safe fallback
+      0 AS total_storage_bytes,
+      0 AS image_storage_bytes,
+      0 AS pdf_storage_bytes,
+      0 AS books_with_covers
+    FROM institutions i
+    LEFT JOIN books b ON b.institution_id = i.id
+    GROUP BY i.id, i.name
+    ORDER BY total_storage_bytes DESC;
+    $view$;
+  END IF;
+END
+$do$;
 
 -- =============================================================================
 -- PART 3: Content Oversight Tables
