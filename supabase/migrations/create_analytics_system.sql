@@ -17,7 +17,7 @@ SELECT
   COUNT(DISTINCT br.id) FILTER (WHERE br.status = 'active') AS active_borrows,
   COUNT(DISTINCT br.id) FILTER (WHERE br.status = 'returned') AS completed_borrows,
   COUNT(DISTINCT br.id) FILTER (WHERE br.status = 'overdue') AS overdue_borrows,
-  AVG(EXTRACT(EPOCH FROM (br.returned_at - br.borrowed_at))/86400) FILTER (WHERE br.returned_at IS NOT NULL) AS avg_borrow_duration_days,
+  AVG(EXTRACT(EPOCH FROM (br.return_date - br.borrowed_at))/86400) FILTER (WHERE br.return_date IS NOT NULL) AS avg_borrow_duration_days,
   MAX(br.borrowed_at) AS last_borrowed_at,
   DATE_TRUNC('month', NOW()) AS analytics_month
 FROM books b
@@ -67,7 +67,7 @@ SELECT
   COUNT(DISTINCT br.id) FILTER (WHERE br.borrowed_at >= NOW() - INTERVAL '30 days') AS borrows_last_30_days,
   COUNT(DISTINCT br.id) FILTER (WHERE br.status = 'active') AS current_active_borrows,
   COUNT(DISTINCT br.id) FILTER (WHERE br.status = 'overdue') AS current_overdue,
-  AVG(EXTRACT(EPOCH FROM (br.returned_at - br.borrowed_at))/86400) FILTER (WHERE br.returned_at IS NOT NULL) AS avg_borrow_duration,
+  AVG(EXTRACT(EPOCH FROM (br.return_date - br.borrowed_at))/86400) FILTER (WHERE br.return_date IS NOT NULL) AS avg_borrow_duration,
   DATE_TRUNC('month', NOW()) AS analytics_month
 FROM institutions i
 LEFT JOIN user_profiles up ON i.id = up.institution_id
@@ -281,9 +281,9 @@ BEGIN
     (SELECT COUNT(*) FROM auth.users WHERE DATE(created_at) = p_date),
     (SELECT COUNT(*) FROM books WHERE DATE(created_at) = p_date),
     (SELECT COUNT(*) FROM borrowing_records WHERE DATE(borrowed_at) = p_date),
-    (SELECT COUNT(*) FROM borrowing_records WHERE DATE(returned_at) = p_date),
+    (SELECT COUNT(*) FROM borrowing_records WHERE DATE(return_date) = p_date),
     (SELECT AVG(borrow_count) FROM (SELECT COUNT(*) AS borrow_count FROM borrowing_records GROUP BY user_id) t),
-    (SELECT AVG(EXTRACT(EPOCH FROM (returned_at - borrowed_at))/86400) FROM borrowing_records WHERE returned_at IS NOT NULL),
+    (SELECT AVG(EXTRACT(EPOCH FROM (return_date - borrowed_at))/86400) FROM borrowing_records WHERE return_date IS NOT NULL),
     v_top_books,
     v_top_categories,
     v_top_institutions
@@ -338,7 +338,7 @@ BEGIN
       COUNT(br.id) FILTER (WHERE br.status = 'active'),
       COUNT(DISTINCT br.user_id),
       COUNT(br.id) FILTER (WHERE br.borrowed_at >= NOW() - INTERVAL '30 days'),
-      AVG(EXTRACT(EPOCH FROM (br.returned_at - br.borrowed_at))/86400) FILTER (WHERE br.returned_at IS NOT NULL),
+      AVG(EXTRACT(EPOCH FROM (br.return_date - br.borrowed_at))/86400) FILTER (WHERE br.return_date IS NOT NULL),
       -- Popularity score: borrows in last 30 days / total books * 100
       (COUNT(br.id) FILTER (WHERE br.borrowed_at >= NOW() - INTERVAL '30 days')::DECIMAL / NULLIF(COUNT(DISTINCT b.id), 0)) * 100
     FROM books b
@@ -385,8 +385,8 @@ BEGIN
     EXTRACT(HOUR FROM br.borrowed_at)::INTEGER,
     EXTRACT(DOW FROM br.borrowed_at)::INTEGER,
     COUNT(*) FILTER (WHERE DATE(br.borrowed_at) = p_date),
-    COUNT(*) FILTER (WHERE DATE(br.returned_at) = p_date),
-    AVG(EXTRACT(EPOCH FROM (br.returned_at - br.borrowed_at))/3600) FILTER (WHERE br.returned_at IS NOT NULL),
+    COUNT(*) FILTER (WHERE DATE(br.return_date) = p_date),
+    AVG(EXTRACT(EPOCH FROM (br.return_date - br.borrowed_at))/3600) FILTER (WHERE br.return_date IS NOT NULL),
     (
       SELECT b.category
       FROM books b
