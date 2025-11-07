@@ -66,7 +66,7 @@ export default function ReadingStreaks({ userId }: { userId: string }) {
     try {
       setLoading(true);
 
-      // Get or create user progress
+      // Get or create user progress using helper function
       let { data: progressData, error: progressError } = await supabase
         .from('user_reading_progress')
         .select('*')
@@ -74,24 +74,14 @@ export default function ReadingStreaks({ userId }: { userId: string }) {
         .single();
 
       if (progressError && progressError.code === 'PGRST116') {
-        // Create new progress record
+        // Record doesn't exist - create it using RPC function
         const { data: newProgress, error: createError } = await supabase
-          .from('user_reading_progress')
-          .insert([{
-            user_id: userId,
-            books_read: 0,
-            current_streak: 0,
-            longest_streak: 0,
-            reading_level: 'Beginner',
-            total_pages_read: 0,
-            achievements: [],
-            weekly_goal: 3,
-            last_read_date: null,
-          }])
-          .select()
-          .single();
+          .rpc('initialize_user_reading_progress', { p_user_id: userId });
 
-        if (createError) throw createError;
+        if (createError) {
+          console.error('Failed to initialize reading progress:', createError);
+          throw createError;
+        }
         progressData = newProgress;
       } else if (progressError) {
         throw progressError;
