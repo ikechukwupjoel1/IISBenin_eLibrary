@@ -382,24 +382,34 @@ BEGIN
   )
   SELECT
     p_date,
-    EXTRACT(HOUR FROM br.borrow_date)::INTEGER,
-    EXTRACT(DOW FROM br.borrow_date)::INTEGER,
-    COUNT(*) FILTER (WHERE DATE(br.borrow_date) = p_date),
-    COUNT(*) FILTER (WHERE DATE(br.return_date) = p_date),
-    AVG(EXTRACT(EPOCH FROM (br.return_date - br.borrow_date))/3600) FILTER (WHERE br.return_date IS NOT NULL),
+    hour_of_day,
+    day_of_week,
+    COUNT(*) FILTER (WHERE DATE(br.borrow_date) = p_date) AS borrow_count,
+    COUNT(*) FILTER (WHERE DATE(br.return_date) = p_date) AS return_count,
+    AVG(EXTRACT(EPOCH FROM (br.return_date - br.borrow_date))/3600) FILTER (WHERE br.return_date IS NOT NULL) AS avg_duration_hours,
     (
       SELECT b.category
       FROM books b
       JOIN borrowing_records br2 ON b.id = br2.book_id
       WHERE DATE(br2.borrow_date) = p_date 
-        AND EXTRACT(HOUR FROM br2.borrow_date) = EXTRACT(HOUR FROM br.borrow_date)
+        AND EXTRACT(HOUR FROM br2.borrow_date) = hour_of_day
       GROUP BY b.category
       ORDER BY COUNT(*) DESC
       LIMIT 1
-    )
-  FROM borrowing_records br
-  WHERE DATE(br.borrow_date) = p_date
-  GROUP BY EXTRACT(HOUR FROM br.borrow_date), EXTRACT(DOW FROM br.borrow_date);
+    ) AS most_borrowed_category
+  FROM (
+    SELECT 
+      EXTRACT(HOUR FROM br.borrow_date)::INTEGER AS hour_of_day,
+      EXTRACT(DOW FROM br.borrow_date)::INTEGER AS day_of_week
+    FROM borrowing_records br
+    WHERE DATE(br.borrow_date) = p_date
+    GROUP BY EXTRACT(HOUR FROM br.borrow_date), EXTRACT(DOW FROM br.borrow_date)
+  ) AS time_groups
+  LEFT JOIN borrowing_records br ON 
+    EXTRACT(HOUR FROM br.borrow_date) = time_groups.hour_of_day
+    AND EXTRACT(DOW FROM br.borrow_date) = time_groups.day_of_week
+    AND DATE(br.borrow_date) = p_date
+  GROUP BY hour_of_day, day_of_week;
   
   GET DIAGNOSTICS v_count = ROW_COUNT;
   
