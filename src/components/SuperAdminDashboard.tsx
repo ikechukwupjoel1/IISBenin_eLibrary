@@ -11,6 +11,7 @@ import { PerformanceMonitor } from './SuperAdmin/Dashboard/PerformanceMonitor';
 import { UserManagement } from './SuperAdmin/Users/UserManagement';
 import { SupportSystem } from './SuperAdmin/Support/SupportSystem';
 import { AuditLogs } from './SuperAdmin/AuditLogs/AuditLogs';
+import { SecurityCompliance } from './SuperAdmin/Compliance/SecurityCompliance';
 
 type Institution = {
   id: string;
@@ -470,6 +471,9 @@ export function SuperAdminDashboard() {
               <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'audit-logs' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {setActiveSection('audit-logs'); setSidebarOpen(false);}}>Audit Logs</button>
             </li>
             <li>
+              <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'compliance' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {setActiveSection('compliance'); setSidebarOpen(false);}}>Security & Compliance</button>
+            </li>
+            <li>
               <button className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${activeSection === 'impersonation' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => {setActiveSection('impersonation'); setSidebarOpen(false);}}>Impersonation</button>
             </li>
           </ul>
@@ -741,6 +745,9 @@ export function SuperAdminDashboard() {
 
         {/* Audit Logs Tab */}
         {activeSection === 'audit-logs' && <AuditLogs />}
+
+        {/* Security & Compliance Tab */}
+        {activeSection === 'compliance' && <SecurityCompliance />}
 
         {/* Impersonation Tab */}
         {activeSection === 'impersonation' && (
