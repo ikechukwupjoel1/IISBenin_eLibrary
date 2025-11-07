@@ -6,7 +6,6 @@ import BackgroundCarousel from './BackgroundCarousel';
 import schoolLogo from '../assets/Iisbenin logo.png';
 import { useAuth } from '../contexts/AuthContext';
 import { LoadingSkeleton } from './ui/LoadingSkeleton';
-import { Announcements } from './Announcements';
 import { QuoteOfTheDay } from './QuoteOfTheDay';
 import { ReadingProgress } from './ReadingProgress';
 import ReadingStreaks from './ReadingStreaks';
@@ -369,8 +368,6 @@ export function Dashboard() {
         </div>
 
         <QuoteOfTheDay />
-
-        <Announcements />
         
         {/* Stats Cards - Mobile Responsive Grid */}
         <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
