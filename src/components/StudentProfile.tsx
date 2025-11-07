@@ -128,7 +128,7 @@ export function StudentProfile() {
       <div>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Profile Settings</h2>
         <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Manage your profile picture and password
+          Manage your profile and password
         </p>
       </div>
 
@@ -141,14 +141,15 @@ export function StudentProfile() {
 
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              Profile Avatar
+              {profile?.full_name || 'User'}
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-              Your profile displays your initial in a unique color gradient.
-            </p>
-            <div className="text-sm text-gray-500 dark:text-gray-500">
-              <p className="font-medium">{profile?.full_name || 'User'}</p>
-              <p>{profile?.email || ''}</p>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                {profile?.role?.replace('_', ' ').toUpperCase() || 'USER'}
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-500">
+                {profile?.email || ''}
+              </p>
             </div>
           </div>
         </div>
