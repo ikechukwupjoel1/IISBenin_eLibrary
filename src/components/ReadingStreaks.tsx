@@ -52,6 +52,7 @@ const READING_LEVELS = [
 export default function ReadingStreaks({ userId }: { userId: string }) {
   const [progress, setProgress] = useState<UserProgress | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [weeklyGoal, setWeeklyGoal] = useState(3);
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [newAchievement, setNewAchievement] = useState<Achievement | null>(null);
@@ -115,8 +116,9 @@ export default function ReadingStreaks({ userId }: { userId: string }) {
 
       // Check and update streak
       await updateStreak(progressData);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching progress:', error);
+      setError(error?.message || 'Failed to load reading progress');
     } finally {
       setLoading(false);
     }
@@ -272,7 +274,8 @@ export default function ReadingStreaks({ userId }: { userId: string }) {
   if (!progress) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-600">Failed to load reading progress</p>
+        <p className="text-red-600 font-semibold mb-2">Failed to load reading progress</p>
+        {error && <p className="text-sm text-gray-600">{error}</p>}
       </div>
     );
   }
