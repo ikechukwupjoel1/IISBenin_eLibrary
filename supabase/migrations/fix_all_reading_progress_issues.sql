@@ -1,8 +1,10 @@
 -- Comprehensive fix for reading progress errors
 -- Run this in Supabase SQL Editor
 
--- Step 1: Ensure reading_progress table exists with correct schema
-CREATE TABLE IF NOT EXISTS reading_progress (
+-- Step 1: Drop and recreate reading_progress table with correct schema
+DROP TABLE IF EXISTS reading_progress CASCADE;
+
+CREATE TABLE reading_progress (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   borrow_record_id uuid REFERENCES borrow_records(id) ON DELETE CASCADE,
   user_id uuid REFERENCES user_profiles(id) ON DELETE CASCADE,
@@ -24,8 +26,10 @@ CREATE TABLE IF NOT EXISTS reading_progress (
   UNIQUE(borrow_record_id, session_date)
 );
 
--- Step 2: Ensure user_reading_progress table exists
-CREATE TABLE IF NOT EXISTS user_reading_progress (
+-- Step 2: Drop and recreate user_reading_progress table
+DROP TABLE IF EXISTS user_reading_progress CASCADE;
+
+CREATE TABLE user_reading_progress (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid REFERENCES user_profiles(id) ON DELETE CASCADE UNIQUE,
   
