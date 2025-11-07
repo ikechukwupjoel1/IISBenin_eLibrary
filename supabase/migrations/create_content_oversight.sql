@@ -18,8 +18,7 @@ SELECT
   b.updated_at,
   i.id AS institution_id,
   i.name AS institution_name,
-  i.type AS institution_type,
-  i.location AS institution_location,
+  i.is_active AS institution_active,
   -- Count total and available copies if inventory columns exist
   COALESCE(b.total_copies, 1) AS total_copies,
   COALESCE(b.available_copies, 1) AS available_copies,

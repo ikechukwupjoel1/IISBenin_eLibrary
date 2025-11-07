@@ -18,7 +18,7 @@ type GlobalBook = {
   status: string;
   institution_id: string;
   institution_name: string;
-  institution_type: string;
+  institution_active: boolean;
   total_copies: number;
   available_copies: number;
   quality_score: number;
